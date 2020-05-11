@@ -70,6 +70,13 @@ class Trainer(object):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr, betas=(beta1, beta2), eps=epsilon)
 
     def report_epoch(self, e):
+        self.logger.info('parameter lambda[:5]: {}'.format(self.model.pos_embedding_lambda[:5]))
+        self.logger.info('parameter mu_l[0, :5]: {}'.format(self.model.pos_embedding_mu_l[0, :5]))
+        self.logger.info('parameter mu_r[0, :5]: {}'.format(self.model.pos_embedding_mu_r[0, :5]))
+        self.logger.info('parameter lambda norm: {}'.format(self.model.pos_embedding_lambda.norm()))
+        self.logger.info('parameter mu_l norm: {}'.format(self.model.pos_embedding_mu_l.norm()))
+        self.logger.info('parameter mu_r norm: {}'.format(self.model.pos_embedding_mu_r.norm()))
+
         self.logger.info('Finish epoch {}'.format(e))
         self.logger.info('    It takes {}'.format(ut.format_seconds(self.epoch_time)))
         self.logger.info('    Avergage # words/second    {}'.format(self.epoch_weights / self.epoch_time))
@@ -94,7 +101,7 @@ class Trainer(object):
 
     def run_log(self, b, e, batch_data):
         start = time.time()
-        src_toks, trg_toks, targets = batch_data
+        src_toks, src_trees, trg_toks, targets = batch_data
         src_toks_cuda = src_toks.to(self.device)
         trg_toks_cuda = trg_toks.to(self.device)
         targets_cuda = targets.to(self.device)
@@ -103,7 +110,7 @@ class Trainer(object):
         self.optimizer.zero_grad()
 
         # get loss
-        ret = self.model(src_toks_cuda, trg_toks_cuda, targets_cuda)
+        ret = self.model(src_toks_cuda, src_trees, trg_toks_cuda, targets_cuda) # calls some functions, ends up calling model.forward()
         loss = ret['loss']
         nll_loss = ret['nll_loss']
         if self.normalize_loss == ac.LOSS_TOK:

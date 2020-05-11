@@ -1,0 +1,26 @@
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8 gcc/8.3.0
+Loading pytorch/1.1.0
+  Loading requirement: cuda/10.0 cudnn/7.4
+rm: cannot remove ‘*.best_trans’: No such file or directory
+rm: cannot remove ‘*.beam_trans’: No such file or directory
+Traceback (most recent call last):
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.1.0/build/lib/python3.7/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.1.0/build/lib/python3.7/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/__main__.py", line 30, in <module>
+    trainer.train()
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/train.py", line 206, in train
+    self.maybe_validate(just_validate=True)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/train.py", line 250, in maybe_validate
+    self.validator.validate_and_save(self.model)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/validator.py", line 287, in validate_and_save
+    self.evaluate(model)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/validator.py", line 208, in evaluate
+    self.evaluate_bleu(model)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/validator.py", line 151, in evaluate_bleu
+    rets = model.beam_decode(src_toks_cuda)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/model.py", line 166, in beam_decode
+    assert False, "src_toks type: {}, dtype: {}".format(src_toks.type(), src_toks.dtype)
+AssertionError: src_toks type: torch.cuda.LongTensor, dtype: torch.int64

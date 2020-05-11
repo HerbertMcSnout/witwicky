@@ -1,0 +1,19 @@
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8 gcc/8.3.0
+Loading pytorch/1.0.0
+  Loading requirement: cuda/10.0 cudnn/7.4
+rm: cannot remove ‘*.best_trans’: No such file or directory
+rm: cannot remove ‘*.beam_trans’: No such file or directory
+Traceback (most recent call last):
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/__main__.py", line 6, in <module>
+    from nmt.train import Trainer
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/train.py", line 10, in <module>
+    from nmt.model import Model
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/model.py", line 125
+    assert , "Failed on batch toks = {}\n\n\ntrees = {}".format(src_toks, src_trees)
+           ^
+SyntaxError: invalid syntax

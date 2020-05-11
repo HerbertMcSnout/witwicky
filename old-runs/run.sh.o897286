@@ -1,0 +1,30 @@
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8 gcc/8.3.0
+Loading pytorch/1.0.0
+  Loading requirement: cuda/10.0 cudnn/7.4
+rm: cannot remove ‘*.best_trans’: No such file or directory
+rm: cannot remove ‘*.beam_trans’: No such file or directory
+Use of uninitialized value in division (/) at /afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/../scripts/multi-bleu.perl line 139, <STDIN> line 500.
+Use of uninitialized value in division (/) at /afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/../scripts/multi-bleu.perl line 139, <STDIN> line 500.
+Use of uninitialized value in division (/) at /afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/../scripts/multi-bleu.perl line 139, <STDIN> line 500.
+Use of uninitialized value in division (/) at /afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/../scripts/multi-bleu.perl line 139, <STDIN> line 500.
+Use of uninitialized value in division (/) at /afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/../scripts/multi-bleu.perl line 139, <STDIN> line 500.
+Use of uninitialized value in division (/) at /afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/../scripts/multi-bleu.perl line 139, <STDIN> line 500.
+Use of uninitialized value in division (/) at /afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/../scripts/multi-bleu.perl line 139, <STDIN> line 500.
+Use of uninitialized value in division (/) at /afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/../scripts/multi-bleu.perl line 139, <STDIN> line 500.
+Traceback (most recent call last):
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/__main__.py", line 30, in <module>
+    trainer.train()
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/train.py", line 211, in train
+    self.run_log(b, e, batch_data)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/train.py", line 117, in run_log
+    ret = self.model(src_toks_cuda, src_trees, trg_toks_cuda, targets_cuda) # calls some functions, ends up calling model.forward()
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/site-packages/torch/nn/modules/module.py", line 489, in __call__
+    result = self.forward(*input, **kwargs)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/model.py", line 120, in forward
+    assert self.pos_embedding_mu_l[0,0].item() == self.pos_embedding_mu_l[0,0].item(), "Failed on batch toks = {}\n\n\ntrees = {}".format(toks, trees)
+NameError: name 'toks' is not defined

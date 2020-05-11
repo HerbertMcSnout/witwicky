@@ -119,9 +119,9 @@ class Translator(object):
             self.logger.info('Start translating {}'.format(self.input_file))
             start = time.time()
             count = 0
-            for (src_toks, original_idxs) in self.data_manager.get_trans_input(self.input_file):
+            for (src_toks, original_idxs, src_trees) in self.data_manager.get_trans_input(self.input_file):
                 src_toks_cuda = src_toks.to(device)
-                rets = model.beam_decode(src_toks_cuda)
+                rets = model.beam_decode(src_toks_cuda, src_trees)
 
                 for i, ret in enumerate(rets):
                     probs = ret['probs'].cpu().detach().numpy().reshape([-1])

@@ -9,7 +9,12 @@ import torch
 import nmt.utils as ut
 import nmt.all_constants as ac
 
+import nmt.tree as tree
+
 numpy.random.seed(ac.SEED)
+
+# TODO: This wasn't here originally; remove it?
+torch.random.manual_seed(ac.SEED)
 
 
 class DataManager(object):
@@ -122,12 +127,13 @@ class DataManager(object):
                 count += 1
                 if count % 10000 == 0:
                     self.logger.info('    processing line {}'.format(count))
-
-                src_line = src_line.strip().split()
-                trg_line = trg_line.strip().split()
-                if 0 < len(src_line) <= self.max_train_length and 0 < len(trg_line) <= self.max_train_length:
-                    src_vocab.update(src_line)
-                    trg_vocab.update(trg_line)
+                #src_line = src_line.strip().split()
+                src_line_parsed = tree.parse(src_line)
+                src_line_words = src_line_parsed.flatten()
+                trg_line_words = trg_line.strip().split()
+                if 0 < len(src_line_words) <= self.max_train_length and 0 < len(trg_line_words) <= self.max_train_length:
+                    src_vocab.update(src_line_words)
+                    trg_vocab.update(trg_line_words)
 
         _write_vocab_file(src_vocab, max_src_vocab_size, src_vocab_file)
         _write_vocab_file(trg_vocab, max_trg_vocab_size, trg_vocab_file)
@@ -270,20 +276,24 @@ class DataManager(object):
                 open(joint_file, 'w') as tokens_f:
 
             for src_line, trg_line in zip(src_f, trg_f):
-                src_toks = src_line.strip().split()
+                src_prsd = tree.parse(src_line)
                 trg_toks = trg_line.strip().split()
 
-                if 0 < len(src_toks) <= self.max_train_length and 0 < len(trg_toks) <= self.max_train_length:
+                if 0 < src_prsd.weight() <= self.max_train_length and 0 < len(trg_toks) <= self.max_train_length:
                     num_lines += 1
                     if num_lines % 10000 == 0:
                         self.logger.info('    converting line {}'.format(num_lines))
+                    src_prsd.map_(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+                    src_prsd.push(ac.EOS_ID)
 
-                    src_ids = [self.src_vocab.get(w, ac.UNK_ID) for w in src_toks] + [ac.EOS_ID]
+                    #assert not src_prsd.is_leaf(), "is {}: {}".format(src_prsd, src_line)
+
+                    src_ids = src_prsd.flatten() #+ [ac.EOS_ID]
                     trg_ids = [ac.BOS_ID] + [self.trg_vocab.get(w, ac.UNK_ID) for w in trg_toks]
+                    #src_prsd = src_prsd.map(lambda x: self.src_vocab.get(x, ac.UNK_ID))
+                    #trg_prsd = trg_prsd.map(lambda x: self.trg_vocab.get(x, ac.UNK_ID))
                     tok_count += max(len(src_ids), len(trg_ids)) + 1
-                    src_ids = map(str, src_ids)
-                    trg_ids = map(str, trg_ids)
-                    data = u'{}|||{}\n'.format(u' '.join(src_ids), u' '.join(trg_ids))
+                    data = u'{}|||{}\n'.format(str(src_prsd), u' '.join(map(str, trg_ids)))
                     tokens_f.write(data)
 
         with open(joint_tok_count, 'w') as f:
@@ -294,7 +304,7 @@ class DataManager(object):
         drop_mask = numpy.logical_and(drop_mask, data != ac.PAD_ID)
         data[drop_mask] = ac.UNK_ID
 
-    def _prepare_one_batch(self, b_src_input, b_src_seq_length, b_trg_input, b_trg_seq_length):
+    def _prepare_one_batch(self, b_src_input, b_src_seq_length, b_src_trees, b_trg_input, b_trg_seq_length):
         batch_size = len(b_src_input)
         max_src_length = max(b_src_seq_length)
         max_trg_length = max(b_trg_seq_length)
@@ -308,9 +318,9 @@ class DataManager(object):
             trg_input_batch[i] = list(b_trg_input[i]) + (max_trg_length - b_trg_seq_length[i]) * [ac.PAD_ID]
             trg_target_batch[i] = list(b_trg_input[i][1:]) + [ac.EOS_ID] + (max_trg_length - b_trg_seq_length[i]) * [ac.PAD_ID]
 
-        return src_input_batch, trg_input_batch, trg_target_batch
+        return src_input_batch, b_src_trees, trg_input_batch, trg_target_batch
 
-    def prepare_batches(self, src_inputs, src_seq_lengths, trg_inputs, trg_seq_lengths, batch_size, mode=ac.TRAINING):
+    def prepare_batches(self, src_inputs, src_seq_lengths, src_trees, trg_inputs, trg_seq_lengths, batch_size, mode=ac.TRAINING):
         if not src_inputs.size:
             return [], [], []
 
@@ -319,10 +329,12 @@ class DataManager(object):
         sorted_idxs = numpy.argsort(src_seq_lengths if self.batch_sort_src else trg_seq_lengths)
         src_inputs = src_inputs[sorted_idxs]
         src_seq_lengths = src_seq_lengths[sorted_idxs]
+        src_trees = numpy.array(src_trees)[sorted_idxs]
         trg_inputs = trg_inputs[sorted_idxs]
         trg_seq_lengths = trg_seq_lengths[sorted_idxs]
 
         src_input_batches = []
+        src_trees_batches = []
         trg_input_batches = []
         trg_target_batches = []
 
@@ -340,26 +352,28 @@ class DataManager(object):
                 else:
                     e_idx += 1
 
-            batch_data = self._prepare_one_batch(
+            src_input_batch, src_trees_batch, trg_input_batch, trg_target_batch = self._prepare_one_batch(
                 src_inputs[s_idx:e_idx],
                 src_seq_lengths[s_idx:e_idx],
+                src_trees[s_idx:e_idx],
                 trg_inputs[s_idx:e_idx],
                 trg_seq_lengths[s_idx:e_idx])
 
-            if mode == ac.TRAINING:
-                self.replace_with_unk(batch_data[0]) # src
-                self.replace_with_unk(batch_data[1]) # trg
-
-            src_input_batches.append(batch_data[0])
-            trg_input_batches.append(batch_data[1])
-            trg_target_batches.append(batch_data[2])
+            if mode == ac.TRAINING: # TODO: replace_with_unk in the trees? (I don't think it's necessary, actually...; when we flatten their position embeddings, they flatten to the same order as their tokens ids, so actual values at the leaves are irrelevant)
+                self.replace_with_unk(src_input_batch) # src
+                self.replace_with_unk(trg_input_batch) # trg
             s_idx = e_idx
+            src_input_batches.append(src_input_batch)
+            src_trees_batches.append(src_trees_batch)
+            trg_input_batches.append(trg_input_batch)
+            trg_target_batches.append(trg_target_batch)
 
-        return src_input_batches, trg_input_batches, trg_target_batches
+        return src_input_batches, src_trees_batches, trg_input_batches, trg_target_batches
 
     def process_n_batches(self, n_batches_string_list):
         src_inputs = []
         src_seq_lengths = []
+        src_trees = []
         trg_inputs = []
         trg_seq_lengths = []
 
@@ -369,17 +383,22 @@ class DataManager(object):
             if data:
                 num_samples += 1
                 data = data.split('|||')
-                _src_input = data[0].strip().split()
-                _trg_input = data[1].strip().split()
-                _src_input = list(map(int, _src_input))
-                _trg_input = list(map(int, _trg_input))
+                _src_tree = tree.parse(data[0]).map_(int)
+                _src_toks = _src_tree.flatten()
+                _trg_toks = list(map(int, data[1].strip().split()))
+                
+                #_src_input = data[0].strip().split()
+                #_trg_input = data[1].strip().split()
+                #_src_input = list(map(int, _src_input))
+                #_trg_input = list(map(int, _trg_input))
 
-                _src_len = len(_src_input)
-                _trg_len = len(_trg_input)
+                _src_len = len(_src_toks)
+                _trg_len = len(_trg_toks)
 
-                src_inputs.append(_src_input)
+                src_inputs.append(_src_toks)
                 src_seq_lengths.append(_src_len)
-                trg_inputs.append(_trg_input)
+                src_trees.append(_src_tree)
+                trg_inputs.append(_trg_toks)
                 trg_seq_lengths.append(_trg_len)
 
         # convert to numpy array for sorting & reindexing
@@ -388,7 +407,7 @@ class DataManager(object):
         trg_inputs = numpy.array(trg_inputs)
         trg_seq_lengths = numpy.array(trg_seq_lengths)
 
-        return src_inputs, src_seq_lengths, trg_inputs, trg_seq_lengths
+        return src_inputs, src_seq_lengths, src_trees, trg_inputs, trg_seq_lengths
 
     def get_batch(self, mode=ac.TRAINING, num_preload=1000, alternate_batch_size=None):
         ids_file = self.ids_files[mode]
@@ -405,10 +424,13 @@ class DataManager(object):
                 if not next_n_lines:
                     break
 
-                src_inputs, src_seq_lengths, trg_inputs, trg_seq_lengths = self.process_n_batches(next_n_lines)
-                batches = self.prepare_batches(src_inputs, src_seq_lengths, trg_inputs, trg_seq_lengths, self.batch_size if alternate_batch_size is None else alternate_batch_size, mode=mode)
-                for batch_data in zip(*batches):
-                    yield (torch.from_numpy(x).type(torch.long) for x in batch_data)
+                src_inputs, src_seq_lengths, src_trees, trg_inputs, trg_seq_lengths = self.process_n_batches(next_n_lines)
+                batches = self.prepare_batches(src_inputs, src_seq_lengths, src_trees, trg_inputs, trg_seq_lengths, self.batch_size if alternate_batch_size is None else alternate_batch_size, mode=mode)
+                for src_inputs, src_trees, trg_inputs, trg_target in zip(*batches):
+                    yield (torch.from_numpy(src_inputs).type(torch.long),
+                           src_trees,
+                           torch.from_numpy(trg_inputs).type(torch.long),
+                           torch.from_numpy(trg_target).type(torch.long))
 
     def get_trans_input(self, input_file):
         """Read lines from input_file and convert them to minibatches.
@@ -422,16 +444,22 @@ class DataManager(object):
         """
         data = []
         data_lengths = []
+        trees = []
         with open(input_file, 'r') as f:
             for line in f:
-                toks = line.strip().split()
-                data.append([self.src_vocab.get(w, ac.UNK_ID) for w in toks] + [ac.EOS_ID])
-                data_lengths.append(len(data[-1]))
+                src_tree = tree.parse(line)
+                src_tree.map_(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+                src_tree.push(ac.EOS_ID)
+                toks = src_tree.flatten() # + [ac.EOS_ID]
+                data.append(toks)
+                data_lengths.append(len(toks))
+                trees.append(src_tree)
 
         data_lengths = numpy.array(data_lengths)
         sorted_idxs = numpy.argsort(data_lengths)
         data_lengths = data_lengths[sorted_idxs]
         data = numpy.array(data)[sorted_idxs]
+        trees = numpy.array(trees)[sorted_idxs]
 
         batch_size = self.batch_size // self.beam_size
         s_idx = 0
@@ -451,6 +479,7 @@ class DataManager(object):
             for i in range(s_idx, e_idx):
                 src_inputs[i - s_idx] = list(data[i]) + (max_in_batch - data_lengths[i]) * [ac.PAD_ID]
             original_idxs = sorted_idxs[s_idx:e_idx]
+            batch_trees = trees[s_idx:e_idx]
             s_idx = e_idx
 
-            yield torch.from_numpy(src_inputs).type(torch.long), original_idxs
+            yield torch.from_numpy(src_inputs).type(torch.long), original_idxs, batch_trees

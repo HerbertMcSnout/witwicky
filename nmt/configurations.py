@@ -304,3 +304,23 @@ def hu2en():
     config['val_trans_out']     = os.path.join(config['save_to'], 'validation_trans.txt')
     config['val_beam_out']      = os.path.join(config['save_to'], 'beam_trans.txt')
     return config
+
+def fun2com():
+    config = base_config()
+    config['model_name'] = 'fun2com'
+    config['save_to'] = './nmt/saved_models/{}'.format(config['model_name'])
+    config['src_lang'] = 'fun'
+    config['trg_lang'] = 'com'
+    config['data_dir'] = './nmt/data/fun2com'
+    config['val_trans_out'] = os.path.join(config['save_to'], 'validation_trans.txt')
+    config['val_beam_out'] = os.path.join(config['save_to'], 'beam_trans.txt')
+    config['max_train_length'] = 2000
+    # Regarding above, for the sampled first 1/10 of train.ast written to train.fun,
+    # the longest line has 969 words; for dev.fun (first 10k lines), 921 words;
+    # for test.fun (all ~90k lines), 984 words. All these have fewer than 1000 words.
+    config['share_vocab'] = False
+    config['max_epochs'] = 10
+    config['learned_pos'] = False
+    #config['src_vocab_size'] = 72472 # approx. 23 lines / batch
+    #config['src_vocab_size'] = 1686 # (for 1000 lines...)
+    return config

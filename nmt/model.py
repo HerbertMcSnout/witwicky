@@ -23,12 +23,28 @@ class Model(nn.Module):
         max_pos_length = self.config['max_pos_length']
         learned_pos = self.config['learned_pos']
 
+        #lam = torch.Tensor(embed_dim)
+        # normal_ looks like it doesn't always scale to exactly the right norm, so we need to correct it
+        #nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
+        #lam.mul(1 / lam.norm())
+
+
+        self.pos_embedding_mu_l = Parameter(torch.Tensor(embed_dim, embed_dim))
+        self.pos_embedding_mu_r = Parameter(torch.Tensor(embed_dim, embed_dim))
+        self.pos_embedding_lambda = Parameter(torch.Tensor(embed_dim))
+        #self.pos_embedding_lambda = Parameter(lam)
+        nn.init.orthogonal_(self.pos_embedding_mu_l)
+        nn.init.orthogonal_(self.pos_embedding_mu_r)
+        nn.init.normal_(self.pos_embedding_lambda, mean=0, std=embed_dim ** -0.5)
+
         # get positonal embedding
         if not learned_pos:
-            self.pos_embedding = ut.get_positional_encoding(embed_dim, max_pos_length)
+            self.pos_embedding_linear = ut.get_positional_encoding(embed_dim, max_pos_length)
         else:
-            self.pos_embedding = Parameter(torch.Tensor(max_pos_length, embed_dim))
-            nn.init.normal_(self.pos_embedding, mean=0, std=embed_dim ** -0.5)
+            #self.pos_embedding = Parameter(torch.Tensor(max_pos_length, embed_dim))
+            #nn.init.normal_(self.pos_embedding, mean=0, std=embed_dim ** -0.5)
+            self.pos_embedding_linear = Parameter(torch.Tensor(max_pos_length, embed_dim))
+            nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
 
         # get word embeddings
         src_vocab_size, trg_vocab_size = ut.get_vocab_sizes(self.config)
@@ -79,29 +95,46 @@ class Model(nn.Module):
                 else:
                     nn.init.constant_(p, 0.)
 
-    def get_input(self, toks, is_src=True):
-        embeds = self.src_embedding if is_src else self.trg_embedding
+    def get_input(self, toks, trees=None):
+        # max_len = toks.size()[-1]
+        embeds = self.src_embedding if trees is not None else self.trg_embedding
         word_embeds = embeds(toks) # [bsz, max_len, embed_dim]
+
         if self.config['fix_norm']:
             word_embeds = ut.normalize(word_embeds, scale=False)
         else:
             word_embeds = word_embeds * self.embed_scale
 
-        if toks.size()[-1] > self.pos_embedding.size()[-2]:
-            ut.get_logger().error("Sentence length ({}) is longer than max_pos_length ({}); please increase max_pos_length".format(toks.size()[-1], self.pos_embedding.size()[0]))
+        if toks.size()[-1] > self.config['max_pos_length']:
+            ut.get_logger().error("Sentence length ({}) is longer than max_pos_length ({}); please increase max_pos_length".format(toks.size()[-1], self.config['max_pos_length']))
 
-        pos_embeds = self.pos_embedding[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
+        #print("max_pos_length: {}, embed_dim: {}, lambda norm: {}, mu_l[:3, :1]: {}, mu_r[:3, :1]: {}".format(self.config['max_pos_length'], self.config['embed_dim'], self.pos_embedding_lambda.norm().item(), self.pos_embedding_mu_l[:3, :1], self.pos_embedding_mu_r[:3, :1]))
+        if trees is not None:
+            pos_embeds = torch.stack([tree.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1], self.config['embed_dim']) for tree in trees]) # [bsz, max_len, embed_dim]
+        else:
+            pos_embeds = self.pos_embedding_linear[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
         return word_embeds + pos_embeds
 
-    def forward(self, src_toks, trg_toks, targets):
+    def forward(self, src_toks, src_trees, trg_toks, targets):
+
+        if self.pos_embedding_mu_l[0,0].item() != self.pos_embedding_mu_l[0,0].item(): # if nan
+            print("WARNING (this will almost certainly cause a crash): pos_embedding parameters are nan!")
+            print("src_toks start: {}".format(src_toks[:,:5]))
+            print("src_toks end: {}".format(src_toks[:,-5:]))
+            print("trg_toks start: {}".format(trg_toks[:,:5]))
+            print("trg_toks end: {}".format(trg_toks[:,-5:]))
+            print("targets: {}".format(targets))
+            print("src_toks.size(): {}; src_trees.weight(): {}; trg_toks.size(): {}; targets = {}".format(src_toks.size(), [tree.weight() for tree in src_trees], trg_toks.size(), targets.size()))
+            print(*src_trees, sep="\n")
+
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
         decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1])), diagonal=1).type(trg_toks.type()) == 1
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
-        encoder_inputs = self.get_input(src_toks, is_src=True)
+        encoder_inputs = self.get_input(src_toks, src_trees)
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
 
-        decoder_inputs = self.get_input(trg_toks, is_src=False)
+        decoder_inputs = self.get_input(trg_toks)
         decoder_outputs = self.decoder(decoder_inputs, decoder_mask, encoder_outputs, encoder_mask)
 
         logits = self.logit_fn(decoder_outputs)
@@ -133,7 +166,7 @@ class Model(nn.Module):
         logits[:, ~self.trg_vocab_mask] = -1e9
         return logits
 
-    def beam_decode(self, src_toks):
+    def beam_decode(self, src_toks, src_trees):
         """Translate a minibatch of sentences. 
 
         Arguments: src_toks[i,j] is the jth word of sentence i.
@@ -141,8 +174,9 @@ class Model(nn.Module):
         Return: See encoders.Decoder.beam_decode
         """
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
-        encoder_inputs = self.get_input(src_toks, is_src=True)
+        encoder_inputs = self.get_input(src_toks, src_trees)
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
+        #assert False, "src_toks type: {}, dtype: {}".format(src_toks.type(), src_toks.dtype)
         max_lengths = torch.sum(src_toks != ac.PAD_ID, dim=-1).type(src_toks.type()) + 50
 
         def get_trg_inp(ids, time_step):
@@ -153,7 +187,7 @@ class Model(nn.Module):
             else:
                 word_embeds = word_embeds * self.embed_scale
 
-            pos_embeds = self.pos_embedding[time_step, :].reshape(1, 1, -1)
+            pos_embeds = self.pos_embedding_linear[time_step, :].reshape(1, 1, -1)
             return word_embeds + pos_embeds
 
         def logprob(decoder_output):

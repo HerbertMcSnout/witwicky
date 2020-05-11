@@ -1,0 +1,33 @@
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8 gcc/8.3.0
+Loading pytorch/1.0.0
+  Loading requirement: cuda/10.0 cudnn/7.4
+rm: cannot remove ‘*.best_trans’: No such file or directory
+rm: cannot remove ‘*.beam_trans’: No such file or directory
+Traceback (most recent call last):
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/__main__.py", line 30, in <module>
+    trainer.train()
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/train.py", line 211, in train
+    self.run_log(b, e, batch_data)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/train.py", line 117, in run_log
+    ret = self.model(src_toks_cuda, src_trees, trg_toks_cuda, targets_cuda) # calls some functions, ends up calling model.forward()
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/site-packages/torch/nn/modules/module.py", line 489, in __call__
+    result = self.forward(*input, **kwargs)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/model.py", line 121, in forward
+    encoder_inputs = self.get_input(src_toks, src_trees)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/model.py", line 111, in get_input
+    pos_embeds = torch.stack([tree.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1], self.config['embed_dim']) for tree in trees]) # [bsz, max_len, embed_dim]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/model.py", line 111, in <listcomp>
+    pos_embeds = torch.stack([tree.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1], self.config['embed_dim']) for tree in trees]) # [bsz, max_len, embed_dim]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 107, in get_pos_embedding
+    assert False, "Inside norm: {}\nOutside norm: {}".format(inside.map(lambda i: i[4].item()), outside.map(lambda o: o.norm().item()))
+AssertionError: Inside norm: -0.045171648263931274 ( -0.045171648263931274 ( -0.045171648263931274 -0.045171648263931274 ) ( -0.045171648263931274 ( -0.045171648263931274 -0.045171648263931274 ) ) ( -0.045171648263931274 -0.045171648263931274 -0.045171648263931274 ) -0.045171648263931274 -0.045171648263931274 ) -0.045171648263931274
+Outside norm: 1.310857892036438 ( 1.119218111038208 ( 1.0257618427276611 1.0466115474700928 ) ( 1.0520761013031006 ( 0.9345201849937439 0.9156845808029175 ) ) ( 1.3677709102630615 1.1457239389419556 1.3847832679748535 ) 1.2229679822921753 1.460871696472168 ) 1.5003821849822998
+test norm: 1.0210905075073242, test[4]: -0.019810868427157402
+mu_l norm: 22.627416610717773, [4, 2]: -0.07638326287269592
+mu_r norm: 22.627416610717773, [4, 2]: -0.0638464167714119
+lambda norm: 0.9966536164283752

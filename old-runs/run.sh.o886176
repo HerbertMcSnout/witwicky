@@ -1,0 +1,395 @@
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8 gcc/8.3.0
+Loading pytorch/1.0.0
+  Loading requirement: cuda/10.0 cudnn/7.4
+rm: cannot remove ‘*.nobpe’: No such file or directory
+rm: cannot remove ‘*.best_trans’: No such file or directory
+rm: cannot remove ‘*.beam_trans’: No such file or directory
+Traceback (most recent call last):
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/__main__.py", line 29, in <module>
+    trainer = Trainer(args)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/train.py", line 41, in __init__
+    self.data_manager = DataManager(self.config)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/data_manager.py", line 69, in __init__
+    self.setup()
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/data_manager.py", line 75, in setup
+    self.parallel_data_to_token_ids(mode=ac.VALIDATING)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/data_manager.py", line 292, in parallel_data_to_token_ids
+    data = u'{}|||{}\n'.format(str(src_prsd), u' '.join(map(str, trg_ids)))
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+  [Previous line repeated 1 more time]
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 16, in __str__
+    else: return str(self.l) + " " + "( " + str(self.r) + " )"
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/tree.py", line 15, in __str__
+    elif self.r.is_leaf(): return str(self.l) + " " + str(self.r)
+RecursionError: maximum recursion depth exceeded while getting the str of an object

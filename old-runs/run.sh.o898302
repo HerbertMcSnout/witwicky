@@ -1,0 +1,34 @@
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8 gcc/8.3.0
+Loading pytorch/1.0.0
+  Loading requirement: cuda/10.0 cudnn/7.4
+rm: cannot remove ‘*.best_trans’: No such file or directory
+rm: cannot remove ‘*.beam_trans’: No such file or directory
+Traceback (most recent call last):
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/__main__.py", line 30, in <module>
+    trainer.train()
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/train.py", line 211, in train
+    self.run_log(b, e, batch_data)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/train.py", line 117, in run_log
+    ret = self.model(src_toks_cuda, src_trees, trg_toks_cuda, targets_cuda) # calls some functions, ends up calling model.forward()
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/site-packages/torch/nn/modules/module.py", line 489, in __call__
+    result = self.forward(*input, **kwargs)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/nmt/model.py", line 135, in forward
+    decoder_outputs = self.decoder(decoder_inputs, decoder_mask, encoder_outputs, encoder_mask)
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/site-packages/torch/nn/modules/module.py", line 489, in __call__
+    result = self.forward(*input, **kwargs)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/layers/encoders.py", line 96, in forward
+    x, _ = enc_dec_att(q=x, k=encoder_out, v=encoder_out, mask=encoder_mask)
+  File "/afs/crc.nd.edu/x86_64_linux/p/pytorch/1.0.0/build-new/lib/python3.6/site-packages/torch/nn/modules/module.py", line 489, in __call__
+    result = self.forward(*input, **kwargs)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/layers/sublayers.py", line 40, in forward
+    q, k, v = self.split_heads(q, k, v)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/layers/sublayers.py", line 67, in split_heads
+    k = _split_and_transpose(k)
+  File "/afs/crc.nd.edu/group/nlp/04/cmcdona8/witwicky2/layers/sublayers.py", line 64, in _split_and_transpose
+    return tensor.reshape(bsz, length, self.num_heads, self.head_dim).transpose(1, 2).reshape(bsz * self.num_heads, -1, self.head_dim)
+RuntimeError: CUDA out of memory. Tried to allocate 7.88 MiB (GPU 0; 11.93 GiB total capacity; 11.04 GiB already allocated; 6.69 MiB free; 401.72 MiB cached)
