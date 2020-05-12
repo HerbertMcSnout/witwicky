@@ -284,14 +284,9 @@ class DataManager(object):
                     if num_lines % 10000 == 0:
                         self.logger.info('    converting line {}'.format(num_lines))
                     src_prsd.map_(lambda w: self.src_vocab.get(w, ac.UNK_ID))
-                    src_prsd.push(ac.EOS_ID)
 
-                    #assert not src_prsd.is_leaf(), "is {}: {}".format(src_prsd, src_line)
-
-                    src_ids = src_prsd.flatten() #+ [ac.EOS_ID]
+                    src_ids = src_prsd.flatten()
                     trg_ids = [ac.BOS_ID] + [self.trg_vocab.get(w, ac.UNK_ID) for w in trg_toks]
-                    #src_prsd = src_prsd.map(lambda x: self.src_vocab.get(x, ac.UNK_ID))
-                    #trg_prsd = trg_prsd.map(lambda x: self.trg_vocab.get(x, ac.UNK_ID))
                     tok_count += max(len(src_ids), len(trg_ids)) + 1
                     data = u'{}|||{}\n'.format(str(src_prsd), u' '.join(map(str, trg_ids)))
                     tokens_f.write(data)
@@ -449,8 +444,7 @@ class DataManager(object):
             for line in f:
                 src_tree = tree.parse(line)
                 src_tree.map_(lambda w: self.src_vocab.get(w, ac.UNK_ID))
-                src_tree.push(ac.EOS_ID)
-                toks = src_tree.flatten() # + [ac.EOS_ID]
+                toks = src_tree.flatten()
                 data.append(toks)
                 data_lengths.append(len(toks))
                 trees.append(src_tree)
