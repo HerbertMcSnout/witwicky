@@ -77,21 +77,21 @@ class Tree:
     else:
       l = self.l.pos_embedding_inside(mu_l, mu_r, lam, embed_dim)
       r = self.r.pos_embedding_inside(mu_l, mu_r, lam, embed_dim)
-      v = (mu_l @ l.v) * (mu_r @ r.v) #* (embed_dim ** 0.5)
-      return Tree(l, r, renormalize(v))
+      v = (mu_l @ l.v) * (mu_r @ r.v) * (embed_dim ** 0.5)
+      return Tree(l, r, v)
 
   def pos_embedding_outside(self, inside, mu_l, mu_r, p, embed_dim):
-    ll = None
-    rr = None
+    l = None
+    r = None
     if not self.is_leaf():
-      lp = torch.einsum("i,ij,i->j", p, mu_l, mu_r @ inside.r.v) #* (embed_dim ** 0.5)
-      rp = torch.einsum("i,i,ij->j", p, mu_l @ inside.l.v, mu_r) #* (embed_dim ** 0.5)
+      lp = torch.einsum("i,ij,i->j", p, mu_l, mu_r @ inside.r.v) * (embed_dim ** 0.5)
+      rp = torch.einsum("i,i,ij->j", p, mu_l @ inside.l.v, mu_r) * (embed_dim ** 0.5)
       #lp = torch.einsum("i,ij,ik,k->j", p, mu_l, mu_r, inside.r.v) * (embed_dim ** 0.5)
       #rp = torch.einsum("i,ij,ik,j->k", p, mu_l, mu_r, inside.l.v) * (embed_dim ** 0.5)
-      ll = self.l.pos_embedding_outside(inside.l, mu_l, mu_r, lp, embed_dim)
-      rr = self.r.pos_embedding_outside(inside.r, mu_l, mu_r, rp, embed_dim)
+      l = self.l.pos_embedding_outside(inside.l, mu_l, mu_r, lp, embed_dim)
+      r = self.r.pos_embedding_outside(inside.r, mu_l, mu_r, rp, embed_dim)
     #print("outside norm is {}".format(p.norm()))
-    return Tree(l=ll, r=rr, v=renormalize(p))
+    return Tree(l, r, p)
 
   def get_pos_embedding(self, mu_l, mu_r, lam, max_len, embed_dim):
     dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor

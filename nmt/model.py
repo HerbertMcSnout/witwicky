@@ -36,6 +36,7 @@ class Model(nn.Module):
         nn.init.orthogonal_(self.pos_embedding_mu_l)
         nn.init.orthogonal_(self.pos_embedding_mu_r)
         nn.init.normal_(self.pos_embedding_lambda, mean=0, std=embed_dim ** -0.5)
+        self.pos_embedding_lambda.div_(self.pos_embedding_lambda.norm()) # make sure lam.norm() = 1, exactly
 
         # get positonal embedding
         if not learned_pos:
