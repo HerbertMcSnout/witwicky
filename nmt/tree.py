@@ -73,12 +73,12 @@ class Tree:
 
   def pos_embedding_inside(self, mu_l, mu_r, lam, embed_dim):
     if self.is_leaf():
-      return Tree(v=lam)
+      return Tree(v=renormalize(lam))
     else:
       l = self.l.pos_embedding_inside(mu_l, mu_r, lam, embed_dim)
       r = self.r.pos_embedding_inside(mu_l, mu_r, lam, embed_dim)
       v = (mu_l @ l.v) * (mu_r @ r.v) * (embed_dim ** 0.5)
-      return Tree(l, r, v)
+      return Tree(l, r, renormalize(v))
 
   def pos_embedding_outside(self, inside, mu_l, mu_r, p, embed_dim):
     l = None
@@ -91,7 +91,9 @@ class Tree:
       l = self.l.pos_embedding_outside(inside.l, mu_l, mu_r, lp, embed_dim)
       r = self.r.pos_embedding_outside(inside.r, mu_l, mu_r, rp, embed_dim)
     #print("outside norm is {}".format(p.norm()))
-    return Tree(l, r, p)
+    # This could plausibly get out of hand if p becomes very close to zero (or becomes enormous?)
+    # Perhaps we should renormalize lp and rp, so as to keep it close to 1 as we go along?
+    return Tree(l, r, renormalize(p))
 
   def get_pos_embedding(self, mu_l, mu_r, lam, max_len, embed_dim):
     dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor

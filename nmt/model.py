@@ -26,7 +26,7 @@ class Model(nn.Module):
         #lam = torch.Tensor(embed_dim)
         # normal_ looks like it doesn't always scale to exactly the right norm, so we need to correct it
         #nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
-        #lam.mul(1 / lam.norm())
+        #lam.div_(1 / lam.norm())
 
 
         self.pos_embedding_mu_l = Parameter(torch.Tensor(embed_dim, embed_dim))
@@ -36,7 +36,8 @@ class Model(nn.Module):
         nn.init.orthogonal_(self.pos_embedding_mu_l)
         nn.init.orthogonal_(self.pos_embedding_mu_r)
         nn.init.normal_(self.pos_embedding_lambda, mean=0, std=embed_dim ** -0.5)
-        self.pos_embedding_lambda.div_(self.pos_embedding_lambda.norm()) # make sure lam.norm() = 1, exactly
+        #with torch.no_grad():
+        #    self.pos_embedding_lambda.div_(self.pos_embedding_lambda.norm()) # make sure lam.norm() = 1, exactly
 
         # get positonal embedding
         if not learned_pos:
