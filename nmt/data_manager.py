@@ -284,6 +284,7 @@ class DataManager(object):
                     if num_lines % 10000 == 0:
                         self.logger.info('    converting line {}'.format(num_lines))
                     src_prsd.map_(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+                    #src_prsd.push(ac.EOS_ID)
 
                     src_ids = src_prsd.flatten()
                     trg_ids = [ac.BOS_ID] + [self.trg_vocab.get(w, ac.UNK_ID) for w in trg_toks]
@@ -324,7 +325,7 @@ class DataManager(object):
         sorted_idxs = numpy.argsort(src_seq_lengths if self.batch_sort_src else trg_seq_lengths)
         src_inputs = src_inputs[sorted_idxs]
         src_seq_lengths = src_seq_lengths[sorted_idxs]
-        src_trees = numpy.array(src_trees)[sorted_idxs]
+        src_trees = src_trees[sorted_idxs]
         trg_inputs = trg_inputs[sorted_idxs]
         trg_seq_lengths = trg_seq_lengths[sorted_idxs]
 
@@ -354,9 +355,11 @@ class DataManager(object):
                 trg_inputs[s_idx:e_idx],
                 trg_seq_lengths[s_idx:e_idx])
 
-            if mode == ac.TRAINING: # TODO: replace_with_unk in the trees? (I don't think it's necessary, actually...; when we flatten their position embeddings, they flatten to the same order as their tokens ids, so actual values at the leaves are irrelevant)
+            if mode == ac.TRAINING:
                 self.replace_with_unk(src_input_batch) # src
                 self.replace_with_unk(trg_input_batch) # trg
+                # Make sure that we never use the values in trees again
+                #src_trees_batch = [t.map_(lambda x: 0 if x is not None else x) for t in src_trees_batch]
             s_idx = e_idx
             src_input_batches.append(src_input_batch)
             src_trees_batches.append(src_trees_batch)
@@ -401,6 +404,7 @@ class DataManager(object):
         src_seq_lengths = numpy.array(src_seq_lengths)
         trg_inputs = numpy.array(trg_inputs)
         trg_seq_lengths = numpy.array(trg_seq_lengths)
+        src_trees = numpy.array(src_trees)
 
         return src_inputs, src_seq_lengths, src_trees, trg_inputs, trg_seq_lengths
 

@@ -6,6 +6,22 @@ from layers import Encoder, Decoder
 import nmt.all_constants as ac
 import nmt.utils as ut
 
+def check_tensor_h(x, name, f):
+    with open(f, "a") as fh:
+        if not torch.isfinite(x).all():
+            fh.write("{} are nan/inf! size: {}; sum: {}; norm: {}; min: {}; max: {}; infs at: {}; nans at: {}\n" \
+                     .format(name, x.size(), x.sum(), x.norm(), x.min(), x.max(), torch.isinf(x).nonzero(), torch.isnan(x).nonzero()))
+        elif x.dtype in [torch.double, torch.float, torch.half]:
+            fh.write("{} okay; size: {}; sum: {}; norm: {}; min: {}; max: {};\n".format(name, x.size(), x.sum(), x.norm(), x.min(), x.max()))
+        else:
+            fh.write("{} okay; size: {}; sum: {}; min: {}; max: {};\n".format(name, x.size(), x.sum(), x.min(), x.max()))
+
+def check_tensor(x, name, f, check_grad=False):
+    if f is not None:
+        check_tensor_h(x, name, f)
+        if x.requires_grad and check_grad:
+            x.register_hook(lambda x: check_tensor_h(x, name + " backward", f))
+
 
 class Model(nn.Module):
     """Model"""
@@ -28,7 +44,7 @@ class Model(nn.Module):
         #nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
         #lam.div_(1 / lam.norm())
 
-
+        
         self.pos_embedding_mu_l = Parameter(torch.Tensor(embed_dim, embed_dim))
         self.pos_embedding_mu_r = Parameter(torch.Tensor(embed_dim, embed_dim))
         self.pos_embedding_lambda = Parameter(torch.Tensor(embed_dim))
@@ -39,6 +55,10 @@ class Model(nn.Module):
         #with torch.no_grad():
         #    self.pos_embedding_lambda.div_(self.pos_embedding_lambda.norm()) # make sure lam.norm() = 1, exactly
 
+        print("\ninitial mu_l norm: {}, mu_l[0, :5] = {}".format(self.pos_embedding_mu_l.norm().item(), self.pos_embedding_mu_l[0, :5]))
+        print("\ninitial mu_r norm: {}, mu_r[0, :5] = {}".format(self.pos_embedding_mu_r.norm().item(), self.pos_embedding_mu_r[0, :5]))
+        print("\ninitial lambda norm: {}, lambda[:5] = {}".format(self.pos_embedding_lambda.norm().item(), self.pos_embedding_lambda[:5]))
+
         # get positonal embedding
         if not learned_pos:
             self.pos_embedding_linear = ut.get_positional_encoding(embed_dim, max_pos_length)
@@ -48,9 +68,14 @@ class Model(nn.Module):
             self.pos_embedding_linear = Parameter(torch.Tensor(max_pos_length, embed_dim))
             nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
 
+
+
         # get word embeddings
+        # TODO: src_vocab_mask is assigned but never used
         src_vocab_size, trg_vocab_size = ut.get_vocab_sizes(self.config)
+        ut.get_logger().info("src_vocab_size: {}, trg_vocab_size: {}".format(src_vocab_size, trg_vocab_size))
         self.src_vocab_mask, self.trg_vocab_mask = ut.get_vocab_masks(self.config, src_vocab_size, trg_vocab_size)
+        print("src_vocab_mask.size(): {}; trg_vocab_mask.size(): {}".format(self.src_vocab_mask.shape, self.trg_vocab_mask.shape))
         if tie_mode == ac.ALL_TIED:
             src_vocab_size = trg_vocab_size = self.trg_vocab_mask.shape[0]
 
@@ -60,7 +85,7 @@ class Model(nn.Module):
         self.src_embedding = nn.Embedding(src_vocab_size, embed_dim)
         self.trg_embedding = nn.Embedding(trg_vocab_size, embed_dim)
         self.out_embedding = self.trg_embedding.weight
-        self.embed_scale = embed_dim ** 0.5
+        self.embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
 
         if tie_mode == ac.ALL_TIED:
             self.src_embedding.weight = self.trg_embedding.weight
@@ -97,7 +122,7 @@ class Model(nn.Module):
                 else:
                     nn.init.constant_(p, 0.)
 
-    def get_input(self, toks, trees=None):
+    def get_input(self, toks, trees=None, f=None):
         # max_len = toks.size()[-1]
         embeds = self.src_embedding if trees is not None else self.trg_embedding
         word_embeds = embeds(toks) # [bsz, max_len, embed_dim]
@@ -110,41 +135,42 @@ class Model(nn.Module):
         if toks.size()[-1] > self.config['max_pos_length']:
             ut.get_logger().error("Sentence length ({}) is longer than max_pos_length ({}); please increase max_pos_length".format(toks.size()[-1], self.config['max_pos_length']))
 
-        #print("max_pos_length: {}, embed_dim: {}, lambda norm: {}, mu_l[:3, :1]: {}, mu_r[:3, :1]: {}".format(self.config['max_pos_length'], self.config['embed_dim'], self.pos_embedding_lambda.norm().item(), self.pos_embedding_mu_l[:3, :1], self.pos_embedding_mu_r[:3, :1]))
         if trees is not None:
-            pos_embeds = torch.stack([tree.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1], self.config['embed_dim']) for tree in trees]) # [bsz, max_len, embed_dim]
+            pos_embeds = torch.stack([tree.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1]) for tree in trees]) # [bsz, max_len, embed_dim]
         else:
             pos_embeds = self.pos_embedding_linear[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
+        check_tensor(word_embeds, "word_embeds", f)
+        check_tensor(pos_embeds, "pos_embeds", f)
         return word_embeds + pos_embeds
 
-    def forward(self, src_toks, src_trees, trg_toks, targets):
+    def forward(self, src_toks, src_trees, trg_toks, targets, b=None, e=None):
 
-        if self.pos_embedding_mu_l[0,0].item() != self.pos_embedding_mu_l[0,0].item(): # if nan
-            print("WARNING (this will almost certainly cause a crash): pos_embedding parameters are nan!")
-            print("src_toks start: {}".format(src_toks[:,:5]))
-            print("src_toks end: {}".format(src_toks[:,-5:]))
-            print("trg_toks start: {}".format(trg_toks[:,:5]))
-            print("trg_toks end: {}".format(trg_toks[:,-5:]))
-            print("targets: {}".format(targets))
-            print("src_toks.size(): {}; src_trees.weight(): {}; trg_toks.size(): {}; targets = {}".format(src_toks.size(), [tree.weight() for tree in src_trees], trg_toks.size(), targets.size()))
-            print(*src_trees, sep="\n")
+        f = "batch-logs/epoch-{}-batch-{}.log".format(e, b) if e is not None and b is not None else None
 
+        check_tensor(self.embed_scale, "embed_scale", f)
+        check_tensor(self.pos_embedding_linear, "pos_embedding_linear", f)
+        check_tensor(self.pos_embedding_lambda, "pos_embedding_lambda", f)
+        check_tensor(self.pos_embedding_mu_l, "pos_embedding_mu_l", f)
+        check_tensor(self.pos_embedding_mu_r, "pos_embedding_mu_r", f)
+        
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
         decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1])), diagonal=1).type(trg_toks.type()) == 1
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
-        encoder_inputs = self.get_input(src_toks, src_trees)
+        encoder_inputs = self.get_input(src_toks, src_trees, f)
+        
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
 
-        decoder_inputs = self.get_input(trg_toks)
+        decoder_inputs = self.get_input(trg_toks, f=f)
         decoder_outputs = self.decoder(decoder_inputs, decoder_mask, encoder_outputs, encoder_mask)
 
-        logits = self.logit_fn(decoder_outputs)
+        logits = self.logit_fn(decoder_outputs, f)
         neglprobs = F.log_softmax(logits, -1)
         neglprobs = neglprobs * self.trg_vocab_mask.type(neglprobs.type()).reshape(1, -1)
         targets = targets.reshape(-1, 1)
         non_pad_mask = targets != ac.PAD_ID
-        nll_loss = -neglprobs.gather(dim=-1, index=targets)[non_pad_mask]
+        nll_loss = -neglprobs.gather(dim=-1, index=targets)
+        nll_loss = nll_loss[non_pad_mask]
         smooth_loss = -neglprobs.sum(dim=-1, keepdim=True)[non_pad_mask]
 
         nll_loss = nll_loss.sum()
@@ -161,7 +187,7 @@ class Model(nn.Module):
             'nll_loss': nll_loss
         }
 
-    def logit_fn(self, decoder_output):
+    def logit_fn(self, decoder_output, f):
         softmax_weight = self.out_embedding if not self.config['fix_norm'] else ut.normalize(self.out_embedding, scale=True)
         logits = F.linear(decoder_output, softmax_weight, bias=self.out_bias)
         logits = logits.reshape(-1, logits.size()[-1])

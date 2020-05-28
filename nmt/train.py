@@ -77,6 +77,7 @@ class Trainer(object):
         self.logger.info('parameter mu_l norm: {}'.format(self.model.pos_embedding_mu_l.norm()))
         self.logger.info('parameter mu_r norm: {}'.format(self.model.pos_embedding_mu_r.norm()))
 
+        self.logger.info('{} batches'.format(self.epoch_batches_done))
         self.logger.info('Finish epoch {}'.format(e))
         self.logger.info('    It takes {}'.format(ut.format_seconds(self.epoch_time)))
         self.logger.info('    Avergage # words/second    {}'.format(self.epoch_weights / self.epoch_time))
@@ -100,6 +101,7 @@ class Trainer(object):
         self.logger.info('    true train perplexity: {}'.format(train_true_perp))
 
     def run_log(self, b, e, batch_data):
+      with torch.autograd.detect_anomaly():
         start = time.time()
         src_toks, src_trees, trg_toks, targets = batch_data
         src_toks_cuda = src_toks.to(self.device)
@@ -110,7 +112,7 @@ class Trainer(object):
         self.optimizer.zero_grad()
 
         # get loss
-        ret = self.model(src_toks_cuda, src_trees, trg_toks_cuda, targets_cuda) # calls some functions, ends up calling model.forward()
+        ret = self.model(src_toks_cuda, src_trees, trg_toks_cuda, targets_cuda, b, e + 1)
         loss = ret['loss']
         nll_loss = ret['nll_loss']
         if self.normalize_loss == ac.LOSS_TOK:

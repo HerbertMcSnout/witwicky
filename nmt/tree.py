@@ -1,7 +1,11 @@
 import torch
 
-def renormalize(t):
-  return t / t.norm()
+#def renormalize(t):
+#  return t / t.norm()
+
+def clamp(t):
+  bound = t.size()[-1] ** -0.25
+  return torch.clamp(t, -bound, bound)
 
 class Tree:
 
@@ -71,37 +75,51 @@ class Tree:
     assert not (enforce_size and (self.is_leaf() or other.is_leaf())), "Can't zip trees of different shape"
     return Tree(self.l.zip(other.l), self.r.zip(other.r), (self.v, other.v))
 
-  def pos_embedding_inside(self, mu_l, mu_r, lam, embed_dim):
+  def get_pos_embedding_h(self, mu_u, mu_d, lam):
     if self.is_leaf():
-      return Tree(v=renormalize(lam))
+      return Tree(v=clamp(lam))
     else:
-      l = self.l.pos_embedding_inside(mu_l, mu_r, lam, embed_dim)
-      r = self.r.pos_embedding_inside(mu_l, mu_r, lam, embed_dim)
-      v = (mu_l @ l.v) * (mu_r @ r.v) * (embed_dim ** 0.5)
-      return Tree(l, r, renormalize(v))
+      l = self.l.get_pos_embedding_h(mu_u, mu_d, lam)
+      v = l.v @ mu_u
+      r = self.r.get_pos_embedding_h(mu_u, mu_d, mu_d @ v)
+      return Tree(l, r, clamp(v))
 
-  def pos_embedding_outside(self, inside, mu_l, mu_r, p, embed_dim):
-    l = None
-    r = None
-    if not self.is_leaf():
-      lp = torch.einsum("i,ij,i->j", p, mu_l, mu_r @ inside.r.v) * (embed_dim ** 0.5)
-      rp = torch.einsum("i,i,ij->j", p, mu_l @ inside.l.v, mu_r) * (embed_dim ** 0.5)
-      #lp = torch.einsum("i,ij,ik,k->j", p, mu_l, mu_r, inside.r.v) * (embed_dim ** 0.5)
-      #rp = torch.einsum("i,ij,ik,j->k", p, mu_l, mu_r, inside.l.v) * (embed_dim ** 0.5)
-      l = self.l.pos_embedding_outside(inside.l, mu_l, mu_r, lp, embed_dim)
-      r = self.r.pos_embedding_outside(inside.r, mu_l, mu_r, rp, embed_dim)
-    #print("outside norm is {}".format(p.norm()))
-    # This could plausibly get out of hand if p becomes very close to zero (or becomes enormous?)
-    # Perhaps we should renormalize lp and rp, so as to keep it close to 1 as we go along?
-    return Tree(l, r, renormalize(p))
-
-  def get_pos_embedding(self, mu_l, mu_r, lam, max_len, embed_dim):
+  def get_pos_embedding(self, mu_u, mu_d, lam, max_len):
     dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
-    inside = self.pos_embedding_inside(mu_l, mu_r, lam, embed_dim)
-    outside = self.pos_embedding_outside(inside, mu_l, mu_r, lam, embed_dim)
-    pe = inside.zip(outside).map(lambda io: torch.mul(io[0], io[1])).flatten()
-    pe += [torch.zeros(embed_dim).type(dtype)] * (max_len - len(pe))
-    return torch.stack(pe).type(dtype)
+    #device = lam.device
+    pe = self.get_pos_embedding_h(mu_u.type(dtype), mu_d.type(dtype), lam.type(dtype)).flatten()
+    pe += [torch.zeros(lam.size()[-1]).type(dtype) for _ in range(max_len - len(pe))]
+    return torch.stack(pe)
+
+#  def pos_embedding_inside(self, mu_l, mu_r, lam):
+#    if self.is_leaf():
+#      return Tree(v=renormalize(lam))
+#    else:
+#      l = self.l.pos_embedding_inside(mu_l, mu_r, lam)
+#      r = self.r.pos_embedding_inside(mu_l, mu_r, lam)
+#      v = (mu_l @ l.v) * (mu_r @ r.v) * (lam.size()[-1] ** 0.5)
+#      return Tree(l, r, renormalize(v))
+#
+#  def pos_embedding_outside(self, inside, mu_l, mu_r, p):
+#    l = None
+#    r = None
+#    if not self.is_leaf():
+#      lp = torch.einsum("i,ij,i->j", p, mu_l, mu_r @ inside.r.v) * (lam.size()[-1] ** 0.5)
+#      rp = torch.einsum("i,i,ij->j", p, mu_l @ inside.l.v, mu_r) * (lam.size()[-1] ** 0.5)
+#      #lp = torch.einsum("i,ij,ik,k->j", p, mu_l, mu_r, inside.r.v) * (lam.size()[-1] ** 0.5)
+#      #rp = torch.einsum("i,ij,ik,j->k", p, mu_l, mu_r, inside.l.v) * (lam.size()[-1] ** 0.5)
+#      l = self.l.pos_embedding_outside(inside.l, mu_l, mu_r, lp)
+#      r = self.r.pos_embedding_outside(inside.r, mu_l, mu_r, rp)
+#    return Tree(l, r, renormalize(p))
+#
+#  def get_pos_embedding(self, mu_l, mu_r, lam, max_len):
+#    dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+#    inside = self.pos_embedding_inside(mu_l, mu_r, lam)
+#    outside = self.pos_embedding_outside(inside, mu_l, mu_r, lam)
+#    #pe = inside.zip(outside).map(lambda io: torch.mul(io[0], io[1])).flatten()
+#    pe = outside.flatten()
+#    pe += [torch.zeros(lam.size()[-1]).type(dtype)] * (max_len - len(pe))
+#    return torch.stack(pe).type(dtype)
     
 #  def flatten(self, depth=0, path=0):
 #    if self.is_leaf(): return [(self.v, depth, path)]
@@ -180,6 +198,12 @@ def parse(fun_str):
 def parse_file(fp):
   with open(fp, "r") as f:
     return [parse(line) for line in f.readlines()]
+
+#(a b c d) -> 
+#
+#a: a1, d
+#
+#a1: b, c
 
 #import time
 #fp = "data/fun2com/dev.fun"

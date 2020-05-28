@@ -56,7 +56,7 @@ def get_vocab_masks(config, src_vocab_size, trg_vocab_size):
 
         mask[ac.PAD_ID] = 0.
         mask[ac.BOS_ID] = 0.
-        masks.append(torch.from_numpy(mask).type(torch.uint8))
+        masks.append(torch.from_numpy(mask).type(torch.bool)) # bool for torch versions >= 1.2.0; uint8 for versions < 1.2.0
 
     return masks
 

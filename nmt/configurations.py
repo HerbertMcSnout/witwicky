@@ -321,6 +321,15 @@ def fun2com():
     config['share_vocab'] = False
     config['max_epochs'] = 10
     config['learned_pos'] = False
+    #config['grad_clip'] = 5.0
+#    config['embed_dim'] = 64
+#    config['ff_dim']    = 64 * 4
+
+#    config['dropout'] = 0.1
+#    config['grad_clip'] = 0.25
+#    config['batch_size'] = 1
+#    config['normalize_loss'] = ac.LOSS_NONE
     #config['src_vocab_size'] = 72472 # approx. 23 lines / batch
     #config['src_vocab_size'] = 1686 # (for 1000 lines...)
+    #config['src_vocab_size'] = 2000
     return config
