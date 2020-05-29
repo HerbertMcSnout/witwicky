@@ -101,7 +101,7 @@ class Trainer(object):
         self.logger.info('    true train perplexity: {}'.format(train_true_perp))
 
     def run_log(self, b, e, batch_data):
-      with torch.autograd.detect_anomaly():
+      #with torch.autograd.detect_anomaly():
         start = time.time()
         src_toks, src_trees, trg_toks, targets = batch_data
         src_toks_cuda = src_toks.to(self.device)

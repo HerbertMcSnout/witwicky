@@ -38,33 +38,18 @@ class Model(nn.Module):
         fix_norm = self.config['fix_norm']
         max_pos_length = self.config['max_pos_length']
         learned_pos = self.config['learned_pos']
-
-        #lam = torch.Tensor(embed_dim)
-        # normal_ looks like it doesn't always scale to exactly the right norm, so we need to correct it
-        #nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
-        #lam.div_(1 / lam.norm())
-
         
         self.pos_embedding_mu_l = Parameter(torch.Tensor(embed_dim, embed_dim))
         self.pos_embedding_mu_r = Parameter(torch.Tensor(embed_dim, embed_dim))
         self.pos_embedding_lambda = Parameter(torch.Tensor(embed_dim))
-        #self.pos_embedding_lambda = Parameter(lam)
         nn.init.orthogonal_(self.pos_embedding_mu_l)
         nn.init.orthogonal_(self.pos_embedding_mu_r)
         nn.init.normal_(self.pos_embedding_lambda, mean=0, std=embed_dim ** -0.5)
-        #with torch.no_grad():
-        #    self.pos_embedding_lambda.div_(self.pos_embedding_lambda.norm()) # make sure lam.norm() = 1, exactly
-
-        print("\ninitial mu_l norm: {}, mu_l[0, :5] = {}".format(self.pos_embedding_mu_l.norm().item(), self.pos_embedding_mu_l[0, :5]))
-        print("\ninitial mu_r norm: {}, mu_r[0, :5] = {}".format(self.pos_embedding_mu_r.norm().item(), self.pos_embedding_mu_r[0, :5]))
-        print("\ninitial lambda norm: {}, lambda[:5] = {}".format(self.pos_embedding_lambda.norm().item(), self.pos_embedding_lambda[:5]))
 
         # get positonal embedding
         if not learned_pos:
             self.pos_embedding_linear = ut.get_positional_encoding(embed_dim, max_pos_length)
         else:
-            #self.pos_embedding = Parameter(torch.Tensor(max_pos_length, embed_dim))
-            #nn.init.normal_(self.pos_embedding, mean=0, std=embed_dim ** -0.5)
             self.pos_embedding_linear = Parameter(torch.Tensor(max_pos_length, embed_dim))
             nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
 
@@ -75,7 +60,6 @@ class Model(nn.Module):
         src_vocab_size, trg_vocab_size = ut.get_vocab_sizes(self.config)
         ut.get_logger().info("src_vocab_size: {}, trg_vocab_size: {}".format(src_vocab_size, trg_vocab_size))
         self.src_vocab_mask, self.trg_vocab_mask = ut.get_vocab_masks(self.config, src_vocab_size, trg_vocab_size)
-        print("src_vocab_mask.size(): {}; trg_vocab_mask.size(): {}".format(self.src_vocab_mask.shape, self.trg_vocab_mask.shape))
         if tie_mode == ac.ALL_TIED:
             src_vocab_size = trg_vocab_size = self.trg_vocab_mask.shape[0]
 
@@ -140,7 +124,10 @@ class Model(nn.Module):
         else:
             pos_embeds = self.pos_embedding_linear[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
         check_tensor(word_embeds, "word_embeds", f)
-        check_tensor(pos_embeds, "pos_embeds", f)
+        pos_sat = (pos_embeds ==  (pos_embeds.size()[-1] ** -0.25)).sum()
+        neg_sat = (pos_embeds == -(pos_embeds.size()[-1] ** -0.25)).sum()
+        avg_sat = (pos_sat + neg_sat) / float(pos_embeds.size()[0] * pos_embeds.size()[1])
+        check_tensor(pos_embeds, "pos_embeds (avg sat: {:.2f}/{})".format(avg_sat, pos_embeds.size()[-1]), f)
         return word_embeds + pos_embeds
 
     def forward(self, src_toks, src_trees, trg_toks, targets, b=None, e=None):
@@ -164,7 +151,7 @@ class Model(nn.Module):
         decoder_inputs = self.get_input(trg_toks, f=f)
         decoder_outputs = self.decoder(decoder_inputs, decoder_mask, encoder_outputs, encoder_mask)
 
-        logits = self.logit_fn(decoder_outputs, f)
+        logits = self.logit_fn(decoder_outputs)
         neglprobs = F.log_softmax(logits, -1)
         neglprobs = neglprobs * self.trg_vocab_mask.type(neglprobs.type()).reshape(1, -1)
         targets = targets.reshape(-1, 1)
@@ -187,7 +174,7 @@ class Model(nn.Module):
             'nll_loss': nll_loss
         }
 
-    def logit_fn(self, decoder_output, f):
+    def logit_fn(self, decoder_output):
         softmax_weight = self.out_embedding if not self.config['fix_norm'] else ut.normalize(self.out_embedding, scale=True)
         logits = F.linear(decoder_output, softmax_weight, bias=self.out_bias)
         logits = logits.reshape(-1, logits.size()[-1])

@@ -7,6 +7,10 @@ def clamp(t):
   bound = t.size()[-1] ** -0.25
   return torch.clamp(t, -bound, bound)
 
+def normalize_columns(t):
+  "Normalizes all the columns in t"
+  return t / ((t ** 2).sum(dim=0) ** 0.5)
+
 class Tree:
 
   def __init__(self, l=None, r=None, v=None):
@@ -80,13 +84,12 @@ class Tree:
       return Tree(v=clamp(lam))
     else:
       l = self.l.get_pos_embedding_h(mu_u, mu_d, lam)
-      v = l.v @ mu_u
+      v = mu_u @ l.v
       r = self.r.get_pos_embedding_h(mu_u, mu_d, mu_d @ v)
       return Tree(l, r, clamp(v))
 
   def get_pos_embedding(self, mu_u, mu_d, lam, max_len):
     dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
-    #device = lam.device
     pe = self.get_pos_embedding_h(mu_u.type(dtype), mu_d.type(dtype), lam.type(dtype)).flatten()
     pe += [torch.zeros(lam.size()[-1]).type(dtype) for _ in range(max_len - len(pe))]
     return torch.stack(pe)
