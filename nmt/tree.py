@@ -4,7 +4,7 @@ import torch
 #  return t / t.norm()
 
 def clamp(t):
-  bound = t.size()[-1] ** -0.25
+  bound = t.size()[-1] ** -0.5
   return torch.clamp(t, -bound, bound)
 
 def normalize_columns(t):

@@ -67,7 +67,19 @@ class Trainer(object):
         beta1 = self.config['beta1']
         beta2 = self.config['beta2']
         epsilon = self.config['epsilon']
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr, betas=(beta1, beta2), eps=epsilon)
+
+        # Set up parameter-specific options
+        params = []
+        for p in self.model.parameters():
+            ptr = p.data_ptr()
+            d = {'params': [p]}
+            if ptr in self.model.parameter_attrs:
+                attrs = self.model.parameter_attrs[ptr]
+                for k in attrs:
+                    d[k] = attrs[k]
+            params.append(d)
+        
+        self.optimizer = torch.optim.Adam(params, lr=self.lr, betas=(beta1, beta2), eps=epsilon)
 
     def report_epoch(self, e):
         self.logger.info('parameter lambda[:5]: {}'.format(self.model.pos_embedding_lambda[:5]))

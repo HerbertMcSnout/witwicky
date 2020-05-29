@@ -54,7 +54,6 @@ class Model(nn.Module):
             nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
 
 
-
         # get word embeddings
         # TODO: src_vocab_mask is assigned but never used
         src_vocab_size, trg_vocab_size = ut.get_vocab_sizes(self.config)
@@ -81,6 +80,15 @@ class Model(nn.Module):
             d = 0.01 # pure magic
             nn.init.uniform_(self.src_embedding.weight, a=-d, b=d)
             nn.init.uniform_(self.trg_embedding.weight, a=-d, b=d)
+
+        
+        # dict where keys are data_ptrs to dicts of parameter options
+        # see https://pytorch.org/docs/stable/optim.html#per-parameter-options
+        self.parameter_attrs = {}
+
+        # Debugging
+        self.hist_sats = []
+        self.hist_embed_scales = []
 
     def init_model(self):
         num_enc_layers = self.config['num_enc_layers']
@@ -124,8 +132,8 @@ class Model(nn.Module):
         else:
             pos_embeds = self.pos_embedding_linear[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
         check_tensor(word_embeds, "word_embeds", f)
-        pos_sat = (pos_embeds ==  (pos_embeds.size()[-1] ** -0.25)).sum()
-        neg_sat = (pos_embeds == -(pos_embeds.size()[-1] ** -0.25)).sum()
+        pos_sat = (pos_embeds ==  (pos_embeds.size()[-1] ** -0.5)).sum()
+        neg_sat = (pos_embeds == -(pos_embeds.size()[-1] ** -0.5)).sum()
         avg_sat = (pos_sat + neg_sat) / float(pos_embeds.size()[0] * pos_embeds.size()[1])
         check_tensor(pos_embeds, "pos_embeds (avg sat: {:.2f}/{})".format(avg_sat, pos_embeds.size()[-1]), f)
         return word_embeds + pos_embeds
