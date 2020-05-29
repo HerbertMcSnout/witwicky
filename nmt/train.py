@@ -12,6 +12,8 @@ from nmt.data_manager import DataManager
 import nmt.configurations as configurations
 from nmt.validator import Validator
 
+from copy import deepcopy
+
 if torch.cuda.is_available():
     torch.cuda.manual_seed(ac.SEED)
 else:
@@ -81,13 +83,12 @@ class Trainer(object):
         
         self.optimizer = torch.optim.Adam(params, lr=self.lr, betas=(beta1, beta2), eps=epsilon)
 
+        # Set up debug_stats
+        self.debug_path = join(self.config['save_to'], 'debug_stats.pth')
+        torch.save({}, self.debug_path)
+        self.initial_debug_stats = deepcopy(self.model.debug_stats)
+
     def report_epoch(self, e):
-        self.logger.info('parameter lambda[:5]: {}'.format(self.model.pos_embedding_lambda[:5]))
-        self.logger.info('parameter mu_l[0, :5]: {}'.format(self.model.pos_embedding_mu_l[0, :5]))
-        self.logger.info('parameter mu_r[0, :5]: {}'.format(self.model.pos_embedding_mu_r[0, :5]))
-        self.logger.info('parameter lambda norm: {}'.format(self.model.pos_embedding_lambda.norm()))
-        self.logger.info('parameter mu_l norm: {}'.format(self.model.pos_embedding_mu_l.norm()))
-        self.logger.info('parameter mu_r norm: {}'.format(self.model.pos_embedding_mu_r.norm()))
 
         self.logger.info('{} batches'.format(self.epoch_batches_done))
         self.logger.info('Finish epoch {}'.format(e))
@@ -111,6 +112,12 @@ class Trainer(object):
 
         self.logger.info('    smoothed train perplexity: {}'.format(train_smooth_perp))
         self.logger.info('    true train perplexity: {}'.format(train_true_perp))
+
+        # Save debug_stats
+        debug_stats = torch.load(self.debug_path)
+        debug_stats[e] = self.model.debug_stats
+        torch.save(debug_stats, self.debug_path)
+        self.model.debug_stats = deepcopy(self.initial_debug_stats)
 
     def run_log(self, b, e, batch_data):
       #with torch.autograd.detect_anomaly():

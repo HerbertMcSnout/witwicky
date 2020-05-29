@@ -16,9 +16,9 @@ module load python/3.7.3
 export PATH="~/.local/lib:$PATH"
 #set path = ($path ~/.local/lib)
 
-rm -r batch-logs/
+#rm -r batch-logs/
 
-mkdir batch-logs
+#mkdir batch-logs
 
 rm -r nmt/saved_models/fun2com/
 

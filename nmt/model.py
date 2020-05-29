@@ -6,21 +6,21 @@ from layers import Encoder, Decoder
 import nmt.all_constants as ac
 import nmt.utils as ut
 
-def check_tensor_h(x, name, f):
-    with open(f, "a") as fh:
-        if not torch.isfinite(x).all():
-            fh.write("{} are nan/inf! size: {}; sum: {}; norm: {}; min: {}; max: {}; infs at: {}; nans at: {}\n" \
-                     .format(name, x.size(), x.sum(), x.norm(), x.min(), x.max(), torch.isinf(x).nonzero(), torch.isnan(x).nonzero()))
-        elif x.dtype in [torch.double, torch.float, torch.half]:
-            fh.write("{} okay; size: {}; sum: {}; norm: {}; min: {}; max: {};\n".format(name, x.size(), x.sum(), x.norm(), x.min(), x.max()))
-        else:
-            fh.write("{} okay; size: {}; sum: {}; min: {}; max: {};\n".format(name, x.size(), x.sum(), x.min(), x.max()))
-
-def check_tensor(x, name, f, check_grad=False):
-    if f is not None:
-        check_tensor_h(x, name, f)
-        if x.requires_grad and check_grad:
-            x.register_hook(lambda x: check_tensor_h(x, name + " backward", f))
+#def check_tensor_h(x, name, f):
+#    with open(f, "a") as fh:
+#        if not torch.isfinite(x).all():
+#            fh.write("{} are nan/inf! size: {}; sum: {}; norm: {}; min: {}; max: {}; infs at: {}; nans at: {}\n" \
+#                     .format(name, x.size(), x.sum(), x.norm(), x.min(), x.max(), torch.isinf(x).nonzero(), torch.isnan(x).nonzero()))
+#        elif x.dtype in [torch.double, torch.float, torch.half]:
+#            fh.write("{} okay; size: {}; sum: {}; norm: {}; min: {}; max: {};\n".format(name, x.size(), x.sum(), x.norm(), x.min(), x.max()))
+#        else:
+#            fh.write("{} okay; size: {}; sum: {}; min: {}; max: {};\n".format(name, x.size(), x.sum(), x.min(), x.max()))
+#
+#def check_tensor(x, name, f, check_grad=False):
+#    if f is not None:
+#        check_tensor_h(x, name, f)
+#        if x.requires_grad and check_grad:
+#            x.register_hook(lambda x: check_tensor_h(x, name + " backward", f))
 
 
 class Model(nn.Module):
@@ -87,8 +87,7 @@ class Model(nn.Module):
         self.parameter_attrs = {}
 
         # Debugging
-        self.hist_sats = []
-        self.hist_embed_scales = []
+        self.debug_stats = {'sats':[], 'embed_scales':[], 'word_embeds':[], 'pos_embeds':[]}
 
     def init_model(self):
         num_enc_layers = self.config['num_enc_layers']
@@ -114,7 +113,7 @@ class Model(nn.Module):
                 else:
                     nn.init.constant_(p, 0.)
 
-    def get_input(self, toks, trees=None, f=None):
+    def get_input(self, toks, trees=None, training=False):
         # max_len = toks.size()[-1]
         embeds = self.src_embedding if trees is not None else self.trg_embedding
         word_embeds = embeds(toks) # [bsz, max_len, embed_dim]
@@ -131,32 +130,38 @@ class Model(nn.Module):
             pos_embeds = torch.stack([tree.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1]) for tree in trees]) # [bsz, max_len, embed_dim]
         else:
             pos_embeds = self.pos_embedding_linear[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
-        check_tensor(word_embeds, "word_embeds", f)
+        #check_tensor(word_embeds, "word_embeds", f)
         pos_sat = (pos_embeds ==  (pos_embeds.size()[-1] ** -0.5)).sum()
         neg_sat = (pos_embeds == -(pos_embeds.size()[-1] ** -0.5)).sum()
-        avg_sat = (pos_sat + neg_sat) / float(pos_embeds.size()[0] * pos_embeds.size()[1])
-        check_tensor(pos_embeds, "pos_embeds (avg sat: {:.2f}/{})".format(avg_sat, pos_embeds.size()[-1]), f)
+        avg_sat = (pos_sat + neg_sat) / float(pos_embeds.size()[0] * pos_embeds.size()[1] * pos_embeds.size()[2])
+        #check_tensor(pos_embeds, "pos_embeds (avg sat: {:.2f}%)".format(avg_sat*100), f)
+        if trees is not None and training:
+            self.debug_stats['sats'].append(avg_sat.item())
+            self.debug_stats['word_embeds'].append(word_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1]))
+            self.debug_stats['pos_embeds'].append(word_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1]))
         return word_embeds + pos_embeds
 
     def forward(self, src_toks, src_trees, trg_toks, targets, b=None, e=None):
 
-        f = "batch-logs/epoch-{}-batch-{}.log".format(e, b) if e is not None and b is not None else None
+        #f = "batch-logs/epoch-{}-batch-{}.log".format(e, b) if e is not None and b is not None else None
+        #check_tensor(self.embed_scale, "embed_scale", f)
+        #check_tensor(self.pos_embedding_linear, "pos_embedding_linear", f)
+        #check_tensor(self.pos_embedding_lambda, "pos_embedding_lambda", f)
+        #check_tensor(self.pos_embedding_mu_l, "pos_embedding_mu_l", f)
+        #check_tensor(self.pos_embedding_mu_r, "pos_embedding_mu_r", f)
+        self.debug_stats['embed_scales'].append(self.embed_scale.item())
 
-        check_tensor(self.embed_scale, "embed_scale", f)
-        check_tensor(self.pos_embedding_linear, "pos_embedding_linear", f)
-        check_tensor(self.pos_embedding_lambda, "pos_embedding_lambda", f)
-        check_tensor(self.pos_embedding_mu_l, "pos_embedding_mu_l", f)
-        check_tensor(self.pos_embedding_mu_r, "pos_embedding_mu_r", f)
+        
         
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
         decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1])), diagonal=1).type(trg_toks.type()) == 1
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
-        encoder_inputs = self.get_input(src_toks, src_trees, f)
+        encoder_inputs = self.get_input(src_toks, src_trees, training=True)
         
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
 
-        decoder_inputs = self.get_input(trg_toks, f=f)
+        decoder_inputs = self.get_input(trg_toks, training=True)
         decoder_outputs = self.decoder(decoder_inputs, decoder_mask, encoder_outputs, encoder_mask)
 
         logits = self.logit_fn(decoder_outputs)
