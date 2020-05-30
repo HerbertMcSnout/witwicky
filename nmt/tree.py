@@ -3,13 +3,16 @@ import torch
 #def renormalize(t):
 #  return t / t.norm()
 
+def get_clamp_bound(t):
+  return t.size()[-1] ** -0.5
+
 def clamp(t):
-  bound = t.size()[-1] ** -0.5
+  bound = get_clamp_bound(t)
   return torch.clamp(t, -bound, bound)
 
-def normalize_columns(t):
-  "Normalizes all the columns in t"
-  return t / ((t ** 2).sum(dim=0) ** 0.5)
+#def normalize_columns(t):
+#  "Normalizes all the columns in t"
+#  return t / ((t ** 2).sum(dim=0) ** 0.5)
 
 class Tree:
 
@@ -88,41 +91,41 @@ class Tree:
       r = self.r.get_pos_embedding_h(mu_u, mu_d, mu_d @ v)
       return Tree(l, r, clamp(v))
 
-  def get_pos_embedding(self, mu_u, mu_d, lam, max_len):
+  def get_pos_embedding2(self, mu_u, mu_d, lam, max_len):
     dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     pe = self.get_pos_embedding_h(mu_u.type(dtype), mu_d.type(dtype), lam.type(dtype)).flatten()
     pe += [torch.zeros(lam.size()[-1]).type(dtype) for _ in range(max_len - len(pe))]
     return torch.stack(pe)
 
-#  def pos_embedding_inside(self, mu_l, mu_r, lam):
-#    if self.is_leaf():
-#      return Tree(v=renormalize(lam))
-#    else:
-#      l = self.l.pos_embedding_inside(mu_l, mu_r, lam)
-#      r = self.r.pos_embedding_inside(mu_l, mu_r, lam)
-#      v = (mu_l @ l.v) * (mu_r @ r.v) * (lam.size()[-1] ** 0.5)
-#      return Tree(l, r, renormalize(v))
-#
-#  def pos_embedding_outside(self, inside, mu_l, mu_r, p):
-#    l = None
-#    r = None
-#    if not self.is_leaf():
-#      lp = torch.einsum("i,ij,i->j", p, mu_l, mu_r @ inside.r.v) * (lam.size()[-1] ** 0.5)
-#      rp = torch.einsum("i,i,ij->j", p, mu_l @ inside.l.v, mu_r) * (lam.size()[-1] ** 0.5)
-#      #lp = torch.einsum("i,ij,ik,k->j", p, mu_l, mu_r, inside.r.v) * (lam.size()[-1] ** 0.5)
-#      #rp = torch.einsum("i,ij,ik,j->k", p, mu_l, mu_r, inside.l.v) * (lam.size()[-1] ** 0.5)
-#      l = self.l.pos_embedding_outside(inside.l, mu_l, mu_r, lp)
-#      r = self.r.pos_embedding_outside(inside.r, mu_l, mu_r, rp)
-#    return Tree(l, r, renormalize(p))
-#
-#  def get_pos_embedding(self, mu_l, mu_r, lam, max_len):
-#    dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
-#    inside = self.pos_embedding_inside(mu_l, mu_r, lam)
-#    outside = self.pos_embedding_outside(inside, mu_l, mu_r, lam)
-#    #pe = inside.zip(outside).map(lambda io: torch.mul(io[0], io[1])).flatten()
-#    pe = outside.flatten()
-#    pe += [torch.zeros(lam.size()[-1]).type(dtype)] * (max_len - len(pe))
-#    return torch.stack(pe).type(dtype)
+  def pos_embedding_inside(self, mu_l, mu_r, lam):
+    if self.is_leaf():
+      return Tree(v=clamp(lam))
+    else:
+      l = self.l.pos_embedding_inside(mu_l, mu_r, lam)
+      r = self.r.pos_embedding_inside(mu_l, mu_r, lam)
+      v = (mu_l @ l.v) * (mu_r @ r.v) * (lam.size()[-1] ** 0.5)
+      return Tree(l, r, clamp(v))
+
+  def pos_embedding_outside(self, inside, mu_l, mu_r, p):
+    l = None
+    r = None
+    if not self.is_leaf():
+      lp = torch.einsum("i,ij,i->j", p, mu_l, mu_r @ inside.r.v) * (lam.size()[-1] ** 0.5)
+      #  = torch.einsum("i,ij,ik,k->j", p, mu_l, mu_r, inside.r.v) * (lam.size()[-1] ** 0.5)
+      rp = torch.einsum("i,i,ij->j", p, mu_l @ inside.l.v, mu_r) * (lam.size()[-1] ** 0.5)
+      #  = torch.einsum("i,ij,ik,j->k", p, mu_l, mu_r, inside.l.v) * (lam.size()[-1] ** 0.5)
+      l = self.l.pos_embedding_outside(inside.l, mu_l, mu_r, lp)
+      r = self.r.pos_embedding_outside(inside.r, mu_l, mu_r, rp)
+    return Tree(l, r, clamp(p))
+
+  def get_pos_embedding(self, mu_l, mu_r, lam, max_len):
+    dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+    inside = self.pos_embedding_inside(mu_l, mu_r, lam)
+    outside = self.pos_embedding_outside(inside, mu_l, mu_r, lam)
+    #pe = inside.zip(outside).map(lambda io: torch.mul(io[0], io[1])).flatten()
+    pe = outside.flatten()
+    pe += [torch.zeros(lam.size()[-1]).type(dtype)] * (max_len - len(pe))
+    return torch.stack(pe).type(dtype)
     
 #  def flatten(self, depth=0, path=0):
 #    if self.is_leaf(): return [(self.v, depth, path)]
