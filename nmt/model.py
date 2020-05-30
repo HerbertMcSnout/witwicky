@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from layers import Encoder, Decoder
 import nmt.all_constants as ac
 import nmt.utils as ut
+import nmt.tree as tr
 
 #def check_tensor_h(x, name, f):
 #    with open(f, "a") as fh:
@@ -68,7 +69,7 @@ class Model(nn.Module):
         self.src_embedding = nn.Embedding(src_vocab_size, embed_dim)
         self.trg_embedding = nn.Embedding(trg_vocab_size, embed_dim)
         self.out_embedding = self.trg_embedding.weight
-        self.embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
+        self.embed_scale = Parameter(torch.tensor([embed_dim ** 0.25])) # embed_dim ** 0.5
 
         if tie_mode == ac.ALL_TIED:
             self.src_embedding.weight = self.trg_embedding.weight
@@ -84,7 +85,7 @@ class Model(nn.Module):
         
         # dict where keys are data_ptrs to dicts of parameter options
         # see https://pytorch.org/docs/stable/optim.html#per-parameter-options
-        self.parameter_attrs = {}
+        self.parameter_attrs = {self.embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']}}
 
         # Debugging
         self.debug_stats = {'sats':[], 'embed_scales':[], 'word_embeds':[], 'pos_embeds':[]}
@@ -127,18 +128,19 @@ class Model(nn.Module):
             ut.get_logger().error("Sentence length ({}) is longer than max_pos_length ({}); please increase max_pos_length".format(toks.size()[-1], self.config['max_pos_length']))
 
         if trees is not None:
-            pos_embeds = torch.stack([tree.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1]) for tree in trees]) # [bsz, max_len, embed_dim]
+            pos_embeds = torch.stack([tree.get_pos_embedding2(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1]) for tree in trees]) # [bsz, max_len, embed_dim]
         else:
             pos_embeds = self.pos_embedding_linear[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
         #check_tensor(word_embeds, "word_embeds", f)
-        pos_sat = (pos_embeds ==  (pos_embeds.size()[-1] ** -0.5)).sum()
-        neg_sat = (pos_embeds == -(pos_embeds.size()[-1] ** -0.5)).sum()
-        avg_sat = (pos_sat + neg_sat) / float(pos_embeds.size()[0] * pos_embeds.size()[1] * pos_embeds.size()[2])
-        #check_tensor(pos_embeds, "pos_embeds (avg sat: {:.2f}%)".format(avg_sat*100), f)
-        if trees is not None and training:
-            self.debug_stats['sats'].append(avg_sat.item())
-            self.debug_stats['word_embeds'].append(word_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1]))
-            self.debug_stats['pos_embeds'].append(word_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1]))
+        with torch.no_grad():
+            pos_sat = (pos_embeds ==  tr.get_clamp_bound(pos_embeds)).sum()
+            neg_sat = (pos_embeds == -tr.get_clamp_bound(pos_embeds)).sum()
+            avg_sat = (pos_sat + neg_sat) / float(pos_embeds.size()[0] * pos_embeds.size()[1] * pos_embeds.size()[2])
+            #check_tensor(pos_embeds, "pos_embeds (avg sat: {:.2f}%)".format(avg_sat*100), f)
+            if trees is not None and training:
+                self.debug_stats['sats'].append(avg_sat.item())
+                self.debug_stats['word_embeds'].append((word_embeds.norm(dim=2).sum() / float(self.embed_scale.item() * pos_embeds.size()[0] * pos_embeds.size()[1])).item())
+                self.debug_stats['pos_embeds'].append((pos_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1])).item())
         return word_embeds + pos_embeds
 
     def forward(self, src_toks, src_trees, trg_toks, targets, b=None, e=None):
@@ -150,8 +152,6 @@ class Model(nn.Module):
         #check_tensor(self.pos_embedding_mu_l, "pos_embedding_mu_l", f)
         #check_tensor(self.pos_embedding_mu_r, "pos_embedding_mu_r", f)
         self.debug_stats['embed_scales'].append(self.embed_scale.item())
-
-        
         
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
         decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1])), diagonal=1).type(trg_toks.type()) == 1

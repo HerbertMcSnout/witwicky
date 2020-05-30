@@ -92,6 +92,8 @@ def base_config():
     config['min_lr']            = 1e-5
     config['patience']          = 3
 
+    config['embed_scale_lr']    = 0.03
+
     # Gradient clipping
     config['grad_clip']         = 1.0 # if no clip, just set it to some big value like 1e9
 
@@ -327,7 +329,7 @@ def fun2com():
 
 #    config['dropout'] = 0.1
 #    config['grad_clip'] = 0.25
-#    config['batch_size'] = 1
+    config['batch_size'] = 2048
 #    config['normalize_loss'] = ac.LOSS_NONE
     #config['src_vocab_size'] = 72472 # approx. 23 lines / batch
     #config['src_vocab_size'] = 1686 # (for 1000 lines...)
