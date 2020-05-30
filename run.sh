@@ -2,9 +2,9 @@
 #$ -M cmcdona8@nd.edu
 #$ -m ae
 # $ -q gpu
-#$ -q gpu-debug
+# $ -q gpu-debug
 # $ -q gpu@qa-1080ti-011
-# $ -q *@@nlp-gpu
+#$ -q *@@nlp-gpu
 #$ -l gpu_card=1
 #$ -N fun2com
 
