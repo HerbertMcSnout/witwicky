@@ -4,7 +4,14 @@ import torch
 #  return t / t.norm()
 
 def get_clamp_bound(t):
-  return t.size()[-1] ** -0.5
+  """
+  Makes sure that when you mv a square matrix with a vector,
+  even if repeated many times, no individual values can explode.
+  If d = t.size()[-1], then the max value should be d^-1, and
+  the max value of an element in the returned vector is
+    d*(d^-1)*(d^-1) = d^-1 = original max.
+  """
+  return t.size()[-1] ** -1 # -0.5
 
 def clamp(t):
   bound = get_clamp_bound(t)
@@ -84,16 +91,19 @@ class Tree:
 
   def get_pos_embedding_h(self, mu_u, mu_d, lam):
     if self.is_leaf():
-      return Tree(v=clamp(lam))
+      return Tree(v=lam)
     else:
       l = self.l.get_pos_embedding_h(mu_u, mu_d, lam)
       v = mu_u @ l.v
       r = self.r.get_pos_embedding_h(mu_u, mu_d, mu_d @ v)
-      return Tree(l, r, clamp(v))
+      return Tree(l, r, v)
 
   def get_pos_embedding2(self, mu_u, mu_d, lam, max_len):
     dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
-    pe = self.get_pos_embedding_h(mu_u.type(dtype), mu_d.type(dtype), lam.type(dtype)).flatten()
+    mu_u = clamp(mu_u.type(dtype))
+    mu_d = clamp(mu_d.type(dtype))
+    lam = clamp(lam.type(dtype))
+    pe = self.get_pos_embedding_h(mu_u, mu_d, lam).flatten()
     pe += [torch.zeros(lam.size()[-1]).type(dtype) for _ in range(max_len - len(pe))]
     return torch.stack(pe)
 
