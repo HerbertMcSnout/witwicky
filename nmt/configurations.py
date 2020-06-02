@@ -47,6 +47,10 @@ def base_config():
     # Tie word embeddings
     config['tie_mode']          = ac.ALL_TIED
 
+    # Penalize position embeddings that are too big
+    config['pos_norm_penalty']      = 5e-4
+    config['pos_norm_goal_fn']      = lambda embed_dim: (embed_dim / 2) ** 0.5
+
     # Whether to learn position encodings
     config['learned_pos']       = False
     # Position encoding size

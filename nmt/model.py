@@ -69,7 +69,7 @@ class Model(nn.Module):
         self.src_embedding = nn.Embedding(src_vocab_size, embed_dim)
         self.trg_embedding = nn.Embedding(trg_vocab_size, embed_dim)
         self.out_embedding = self.trg_embedding.weight
-        self.embed_scale = Parameter(torch.tensor([embed_dim ** 0.25])) # embed_dim ** 0.5
+        self.embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
 
         if tie_mode == ac.ALL_TIED:
             self.src_embedding.weight = self.trg_embedding.weight
@@ -88,7 +88,7 @@ class Model(nn.Module):
         self.parameter_attrs = {self.embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']}}
 
         # Debugging
-        self.debug_stats = {'sats':[], 'embed_scales':[], 'word_embeds':[], 'pos_embeds':[]}
+        self.debug_stats = {'embed_scales':[], 'word_embeds':[], 'pos_embeds':[]}
 
     def init_model(self):
         num_enc_layers = self.config['num_enc_layers']
@@ -128,19 +128,21 @@ class Model(nn.Module):
             ut.get_logger().error("Sentence length ({}) is longer than max_pos_length ({}); please increase max_pos_length".format(toks.size()[-1], self.config['max_pos_length']))
 
         if trees is not None:
-            pos_embeds = torch.stack([tree.get_pos_embedding2(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1]) for tree in trees]) # [bsz, max_len, embed_dim]
+            pos_embeds = torch.stack([tree.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1]) for tree in trees]) # [bsz, max_len, embed_dim]
         else:
             pos_embeds = self.pos_embedding_linear[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
         #check_tensor(word_embeds, "word_embeds", f)
         with torch.no_grad():
-            pos_sat = (pos_embeds ==  tr.get_clamp_bound(pos_embeds)).sum()
-            neg_sat = (pos_embeds == -tr.get_clamp_bound(pos_embeds)).sum()
-            avg_sat = (pos_sat + neg_sat) / float(pos_embeds.size()[0] * pos_embeds.size()[1] * pos_embeds.size()[2])
+            #pos_sat = (pos_embeds ==  tr.get_clamp_bound(pos_embeds)).sum()
+            #neg_sat = (pos_embeds == -tr.get_clamp_bound(pos_embeds)).sum()
+            #avg_sat = (pos_sat + neg_sat) / float(pos_embeds.size()[0] * pos_embeds.size()[1] * pos_embeds.size()[2])
             #check_tensor(pos_embeds, "pos_embeds (avg sat: {:.2f}%)".format(avg_sat*100), f)
             if trees is not None and training:
-                self.debug_stats['sats'].append(avg_sat.item())
+                #self.debug_stats['sats'].append(avg_sat.item())
                 self.debug_stats['word_embeds'].append((word_embeds.norm(dim=2).sum() / float(self.embed_scale.item() * pos_embeds.size()[0] * pos_embeds.size()[1])).item())
                 self.debug_stats['pos_embeds'].append((pos_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1])).item())
+        if trees is not None and training:
+            return word_embeds, pos_embeds.type(word_embeds.type())
         return word_embeds + pos_embeds
 
     def forward(self, src_toks, src_trees, trg_toks, targets, b=None, e=None):
@@ -157,7 +159,8 @@ class Model(nn.Module):
         decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1])), diagonal=1).type(trg_toks.type()) == 1
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
-        encoder_inputs = self.get_input(src_toks, src_trees, training=True)
+        word_embeds, pos_embeds = self.get_input(src_toks, src_trees, training=True)
+        encoder_inputs = word_embeds + pos_embeds
         
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
 
@@ -181,6 +184,13 @@ class Model(nn.Module):
             loss = (1.0 - label_smoothing) * nll_loss + label_smoothing * smooth_loss / self.trg_vocab_mask.type(smooth_loss.type()).sum()
         else:
             loss = nll_loss
+
+        pos_embeds = pos_embeds.type(loss.type())
+        # Penalize position embeddings that have norms different than the desired sqrt(embed_dim/2)
+        pe_norms = pos_embeds.norm(dim=2)
+        pe_goal_norm = self.config['pos_norm_goal_fn'](self.config['embed_dim'])
+        pe_errs = torch.clamp(pe_norms - pe_goal_norm, min=0) ** 2
+        loss += pe_errs.sum(dim=[0,1]) * self.config['pos_norm_penalty'] #.type(loss.type())
 
         return {
             'loss': loss,

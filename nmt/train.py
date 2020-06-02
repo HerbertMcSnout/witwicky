@@ -134,6 +134,7 @@ class Trainer(object):
         ret = self.model(src_toks_cuda, src_trees, trg_toks_cuda, targets_cuda, b, e + 1)
         loss = ret['loss']
         nll_loss = ret['nll_loss']
+
         if self.normalize_loss == ac.LOSS_TOK:
             opt_loss = loss / (targets_cuda != ac.PAD_ID).type(loss.type()).sum()
         elif self.normalize_loss == ac.LOSS_BATCH:
