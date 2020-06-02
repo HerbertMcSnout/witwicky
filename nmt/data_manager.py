@@ -279,7 +279,7 @@ class DataManager(object):
                 src_prsd = tree.parse(src_line)
                 trg_toks = trg_line.strip().split()
 
-                if 0 < src_prsd.weight() <= self.max_train_length and 0 < len(trg_toks) <= self.max_train_length:
+                if 0 < src_prsd.size() <= self.max_train_length and 0 < len(trg_toks) <= self.max_train_length:
                     num_lines += 1
                     if num_lines % 10000 == 0:
                         self.logger.info('    converting line {}'.format(num_lines))
