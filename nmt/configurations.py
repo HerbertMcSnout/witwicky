@@ -333,17 +333,42 @@ def fun2com():
     config['max_epochs'] = 10
 
     config['struct'] = struct.tree
-
-    #config['learned_pos'] = False
-    #config['grad_clip'] = 5.0
-#    config['embed_dim'] = 64
-#    config['ff_dim']    = 64 * 4
-
-#    config['dropout'] = 0.1
-#    config['grad_clip'] = 0.25
     config['batch_size'] = 2048
-#    config['normalize_loss'] = ac.LOSS_NONE
     #config['src_vocab_size'] = 72472 # approx. 23 lines / batch
     #config['src_vocab_size'] = 1686 # (for 1000 lines...)
     #config['src_vocab_size'] = 2000
+    return config
+
+def fun2com2():
+    config = base_config()
+    config['model_name'] = 'fun2com2'
+    config['save_to'] = './nmt/saved_models/{}'.format(config['model_name'])
+    config['src_lang'] = 'fun'
+    config['trg_lang'] = 'com'
+    config['data_dir'] = './nmt/data/fun2com2'
+    config['log_file'] = './nmt/DEBUG-2.log'
+    config['val_trans_out'] = os.path.join(config['save_to'], 'validation_trans.txt')
+    config['val_beam_out'] = os.path.join(config['save_to'], 'beam_trans.txt')
+    config['max_train_length'] = 2000
+    config['share_vocab'] = False
+    config['max_epochs'] = 10
+    config['struct'] = struct.tree2
+    config['batch_size'] = 2048
+    return config
+
+def fun2coml():
+    config = base_config()
+    config['model_name'] = 'fun2coml'
+    config['save_to'] = './nmt/saved_models/{}'.format(config['model_name'])
+    config['src_lang'] = 'fun'
+    config['trg_lang'] = 'com'
+    config['data_dir'] = './nmt/data/fun2com-l'
+    config['log_file'] = './nmt/DEBUG-l.log'
+    config['val_trans_out'] = os.path.join(config['save_to'], 'validation_trans.txt')
+    config['val_beam_out'] = os.path.join(config['save_to'], 'beam_trans.txt')
+    config['max_train_length'] = 2000
+    config['share_vocab'] = False
+    config['max_epochs'] = 10
+    config['struct'] = struct.sequence
+    config['batch_size'] = 2048
     return config
