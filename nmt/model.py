@@ -160,7 +160,7 @@ class Model(nn.Module):
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
         word_embeds, pos_embeds = self.get_input(src_toks, src_trees, training=True)
-        encoder_inputs = word_embeds + pos_embeds
+        encoder_inputs = word_embeds + pos_embeds * self.config['pos_norm_scale'](self.config['embed_dim'])
         
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
 
@@ -186,10 +186,9 @@ class Model(nn.Module):
             loss = nll_loss
 
         pos_embeds = pos_embeds.type(loss.type())
-        # Penalize position embeddings that have norms different than the desired sqrt(embed_dim/2)
+        # Penalize position embeddings that have (pre-scaled) norms greater than 1
         pe_norms = pos_embeds.norm(dim=2)
-        pe_goal_norm = self.config['pos_norm_goal_fn'](self.config['embed_dim'])
-        pe_errs = torch.clamp(pe_norms - pe_goal_norm, min=0) ** 2
+        pe_errs = torch.clamp(pe_norms - 1, min=0)
         loss += pe_errs.sum(dim=[0,1]) * self.config['pos_norm_penalty'] #.type(loss.type())
 
         return {
