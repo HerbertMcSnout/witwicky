@@ -9,8 +9,6 @@ import torch
 import nmt.utils as ut
 import nmt.all_constants as ac
 
-import nmt.tree as tree
-
 numpy.random.seed(ac.SEED)
 
 # TODO: This wasn't here originally; remove it?
@@ -33,6 +31,7 @@ class DataManager(object):
         self.word_dropout = config['word_dropout']
         self.batch_sort_src = config['batch_sort_src']
         self.max_train_length = config['max_train_length']
+        self.parse_struct = config['struct'].parse
 
         self.vocab_sizes = {
             self.src_lang: config['src_vocab_size'],
@@ -128,7 +127,7 @@ class DataManager(object):
                 if count % 10000 == 0:
                     self.logger.info('    processing line {}'.format(count))
                 #src_line = src_line.strip().split()
-                src_line_parsed = tree.parse(src_line)
+                src_line_parsed = self.parse_struct(src_line)
                 src_line_words = src_line_parsed.flatten()
                 trg_line_words = trg_line.strip().split()
                 if 0 < len(src_line_words) <= self.max_train_length and 0 < len(trg_line_words) <= self.max_train_length:
@@ -276,14 +275,14 @@ class DataManager(object):
                 open(joint_file, 'w') as tokens_f:
 
             for src_line, trg_line in zip(src_f, trg_f):
-                src_prsd = tree.parse(src_line)
+                src_prsd = self.parse_struct(src_line)
                 trg_toks = trg_line.strip().split()
 
                 if 0 < src_prsd.size() <= self.max_train_length and 0 < len(trg_toks) <= self.max_train_length:
                     num_lines += 1
                     if num_lines % 10000 == 0:
                         self.logger.info('    converting line {}'.format(num_lines))
-                    src_prsd.map_(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+                    src_prsd = src_prsd.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
                     #src_prsd.push(ac.EOS_ID)
 
                     src_ids = src_prsd.flatten()
@@ -300,7 +299,7 @@ class DataManager(object):
         drop_mask = numpy.logical_and(drop_mask, data != ac.PAD_ID)
         data[drop_mask] = ac.UNK_ID
 
-    def _prepare_one_batch(self, b_src_input, b_src_seq_length, b_src_trees, b_trg_input, b_trg_seq_length):
+    def _prepare_one_batch(self, b_src_input, b_src_seq_length, b_src_structs, b_trg_input, b_trg_seq_length):
         batch_size = len(b_src_input)
         max_src_length = max(b_src_seq_length)
         max_trg_length = max(b_trg_seq_length)
@@ -314,9 +313,9 @@ class DataManager(object):
             trg_input_batch[i] = list(b_trg_input[i]) + (max_trg_length - b_trg_seq_length[i]) * [ac.PAD_ID]
             trg_target_batch[i] = list(b_trg_input[i][1:]) + [ac.EOS_ID] + (max_trg_length - b_trg_seq_length[i]) * [ac.PAD_ID]
 
-        return src_input_batch, b_src_trees, trg_input_batch, trg_target_batch
+        return src_input_batch, b_src_structs, trg_input_batch, trg_target_batch
 
-    def prepare_batches(self, src_inputs, src_seq_lengths, src_trees, trg_inputs, trg_seq_lengths, batch_size, mode=ac.TRAINING):
+    def prepare_batches(self, src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths, batch_size, mode=ac.TRAINING):
         if not src_inputs.size:
             return [], [], []
 
@@ -325,12 +324,12 @@ class DataManager(object):
         sorted_idxs = numpy.argsort(src_seq_lengths if self.batch_sort_src else trg_seq_lengths)
         src_inputs = src_inputs[sorted_idxs]
         src_seq_lengths = src_seq_lengths[sorted_idxs]
-        src_trees = src_trees[sorted_idxs]
+        src_structs = src_structs[sorted_idxs]
         trg_inputs = trg_inputs[sorted_idxs]
         trg_seq_lengths = trg_seq_lengths[sorted_idxs]
 
         src_input_batches = []
-        src_trees_batches = []
+        src_structs_batches = []
         trg_input_batches = []
         trg_target_batches = []
 
@@ -348,30 +347,30 @@ class DataManager(object):
                 else:
                     e_idx += 1
 
-            src_input_batch, src_trees_batch, trg_input_batch, trg_target_batch = self._prepare_one_batch(
+            src_input_batch, src_structs_batch, trg_input_batch, trg_target_batch = self._prepare_one_batch(
                 src_inputs[s_idx:e_idx],
                 src_seq_lengths[s_idx:e_idx],
-                src_trees[s_idx:e_idx],
+                src_structs[s_idx:e_idx],
                 trg_inputs[s_idx:e_idx],
                 trg_seq_lengths[s_idx:e_idx])
 
             if mode == ac.TRAINING:
                 self.replace_with_unk(src_input_batch) # src
                 self.replace_with_unk(trg_input_batch) # trg
-                # Make sure that we never use the values in trees again
-                #src_trees_batch = [t.map_(lambda x: 0 if x is not None else x) for t in src_trees_batch]
+                # Make sure that we never use the values in structs again
+                #src_structs_batch = [t.map(lambda x: 0 if x is not None else x) for t in src_structs_batch]
             s_idx = e_idx
             src_input_batches.append(src_input_batch)
-            src_trees_batches.append(src_trees_batch)
+            src_structs_batches.append(src_structs_batch)
             trg_input_batches.append(trg_input_batch)
             trg_target_batches.append(trg_target_batch)
 
-        return src_input_batches, src_trees_batches, trg_input_batches, trg_target_batches
+        return src_input_batches, src_structs_batches, trg_input_batches, trg_target_batches
 
     def process_n_batches(self, n_batches_string_list):
         src_inputs = []
         src_seq_lengths = []
-        src_trees = []
+        src_structs = []
         trg_inputs = []
         trg_seq_lengths = []
 
@@ -381,21 +380,16 @@ class DataManager(object):
             if data:
                 num_samples += 1
                 data = data.split('|||')
-                _src_tree = tree.parse(data[0]).map_(int)
-                _src_toks = _src_tree.flatten()
+                _src_struct = self.parse_struct(data[0]).map(int)
+                _src_toks = _src_struct.flatten()
                 _trg_toks = list(map(int, data[1].strip().split()))
-                
-                #_src_input = data[0].strip().split()
-                #_trg_input = data[1].strip().split()
-                #_src_input = list(map(int, _src_input))
-                #_trg_input = list(map(int, _trg_input))
 
                 _src_len = len(_src_toks)
                 _trg_len = len(_trg_toks)
 
                 src_inputs.append(_src_toks)
                 src_seq_lengths.append(_src_len)
-                src_trees.append(_src_tree)
+                src_structs.append(_src_struct)
                 trg_inputs.append(_trg_toks)
                 trg_seq_lengths.append(_trg_len)
 
@@ -404,9 +398,9 @@ class DataManager(object):
         src_seq_lengths = numpy.array(src_seq_lengths)
         trg_inputs = numpy.array(trg_inputs)
         trg_seq_lengths = numpy.array(trg_seq_lengths)
-        src_trees = numpy.array(src_trees)
+        src_structs = numpy.array(src_structs)
 
-        return src_inputs, src_seq_lengths, src_trees, trg_inputs, trg_seq_lengths
+        return src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths
 
     def get_batch(self, mode=ac.TRAINING, num_preload=1000, alternate_batch_size=None):
         ids_file = self.ids_files[mode]
@@ -423,11 +417,11 @@ class DataManager(object):
                 if not next_n_lines:
                     break
 
-                src_inputs, src_seq_lengths, src_trees, trg_inputs, trg_seq_lengths = self.process_n_batches(next_n_lines)
-                batches = self.prepare_batches(src_inputs, src_seq_lengths, src_trees, trg_inputs, trg_seq_lengths, self.batch_size if alternate_batch_size is None else alternate_batch_size, mode=mode)
-                for src_inputs, src_trees, trg_inputs, trg_target in zip(*batches):
+                src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths = self.process_n_batches(next_n_lines)
+                batches = self.prepare_batches(src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths, self.batch_size if alternate_batch_size is None else alternate_batch_size, mode=mode)
+                for src_inputs, src_structs, trg_inputs, trg_target in zip(*batches):
                     yield (torch.from_numpy(src_inputs).type(torch.long),
-                           src_trees,
+                           src_structs,
                            torch.from_numpy(trg_inputs).type(torch.long),
                            torch.from_numpy(trg_target).type(torch.long))
 
@@ -443,21 +437,21 @@ class DataManager(object):
         """
         data = []
         data_lengths = []
-        trees = []
+        structs = []
         with open(input_file, 'r') as f:
             for line in f:
-                src_tree = tree.parse(line)
-                src_tree.map_(lambda w: self.src_vocab.get(w, ac.UNK_ID))
-                toks = src_tree.flatten()
+                src_struct = self.parse_struct(line)
+                src_struct = src_struct.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+                toks = src_struct.flatten()
                 data.append(toks)
                 data_lengths.append(len(toks))
-                trees.append(src_tree)
+                structs.append(src_struct)
 
         data_lengths = numpy.array(data_lengths)
         sorted_idxs = numpy.argsort(data_lengths)
         data_lengths = data_lengths[sorted_idxs]
         data = numpy.array(data)[sorted_idxs]
-        trees = numpy.array(trees)[sorted_idxs]
+        structs = numpy.array(structs)[sorted_idxs]
 
         batch_size = self.batch_size // self.beam_size
         s_idx = 0
@@ -477,7 +471,7 @@ class DataManager(object):
             for i in range(s_idx, e_idx):
                 src_inputs[i - s_idx] = list(data[i]) + (max_in_batch - data_lengths[i]) * [ac.PAD_ID]
             original_idxs = sorted_idxs[s_idx:e_idx]
-            batch_trees = trees[s_idx:e_idx]
+            batch_structs = structs[s_idx:e_idx]
             s_idx = e_idx
 
-            yield torch.from_numpy(src_inputs).type(torch.long), original_idxs, batch_trees
+            yield torch.from_numpy(src_inputs).type(torch.long), original_idxs, batch_structs

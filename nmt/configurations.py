@@ -3,6 +3,7 @@ from __future__ import division
 
 import os
 import nmt.all_constants as ac
+import nmt.structs as struct
 
 """You can add your own configuration function to this file and select
 it using `--proto function_name`."""
@@ -49,12 +50,16 @@ def base_config():
 
     # Penalize position embeddings that are too big
     config['pos_norm_penalty']      = 5e-3 # set to 0 if you want no penalty
-    config['pos_norm_scale']        = lambda embed_dim: (embed_dim / 2) ** 0.5
+    config['pos_norm_scale']        = lambda cnfg: (cnfg['embed_dim'] / 2) ** 0.5
+
+    # Module
+    config['struct'] = struct.sequence
 
     # Whether to learn position encodings
     config['learned_pos']       = False
     # Position encoding size
-    config['max_pos_length']    = 1024
+    #config['max_pos_length']    = 1024
+    # ^ We'll just use max_train_length instead
     
     # Layer sizes
     config['embed_dim']         = 512
@@ -326,7 +331,10 @@ def fun2com():
     # for test.fun (all ~90k lines), 984 words. All these have fewer than 1000 words.
     config['share_vocab'] = False
     config['max_epochs'] = 10
-    config['learned_pos'] = False
+
+    config['struct'] = struct.tree
+
+    #config['learned_pos'] = False
     #config['grad_clip'] = 5.0
 #    config['embed_dim'] = 64
 #    config['ff_dim']    = 64 * 4

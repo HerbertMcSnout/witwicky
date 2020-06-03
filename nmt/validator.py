@@ -94,13 +94,13 @@ class Validator(object):
 
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         with torch.no_grad():
-            for src_toks, src_trees, trg_toks, targets  in self.data_manager.get_batch(mode=ac.VALIDATING):
+            for src_toks, src_structs, trg_toks, targets  in self.data_manager.get_batch(mode=ac.VALIDATING):
                 src_toks_cuda = src_toks.to(device)
                 trg_toks_cuda = trg_toks.to(device)
                 targets_cuda = targets.to(device)
 
                 # get loss
-                ret = model(src_toks_cuda, src_trees, trg_toks_cuda, targets_cuda)
+                ret = model(src_toks_cuda, src_structs, trg_toks_cuda, targets_cuda)
                 total_loss += ret['nll_loss'].cpu().detach().numpy()
                 total_smoothed_loss += ret['loss'].cpu().detach().numpy()
                 total_weight += (targets != ac.PAD_ID).detach().numpy().sum()
@@ -146,9 +146,9 @@ class Validator(object):
         with torch.no_grad():
             start_time = time.time()
             count = 0
-            for (src_toks, original_idxs, src_trees) in self.data_manager.get_trans_input(src_file):
+            for (src_toks, original_idxs, src_structs) in self.data_manager.get_trans_input(src_file):
                 src_toks_cuda = src_toks.to(device)
-                rets = model.beam_decode(src_toks_cuda, src_trees)
+                rets = model.beam_decode(src_toks_cuda, src_structs)
 
                 for i, ret in enumerate(rets):
                     probs = ret['probs'].cpu().detach().numpy().reshape([-1])
@@ -314,9 +314,9 @@ class Validator(object):
             self.logger.info('Start translating {}'.format(input_file))
             start = time.time()
             count = 0
-            for (src_toks, original_idxs, src_trees) in self.data_manager.get_trans_input(input_file):
+            for (src_toks, original_idxs, src_structs) in self.data_manager.get_trans_input(input_file):
                 src_toks_cuda = src_toks.to(device)
-                rets = model.beam_decode(src_toks_cuda, src_trees)
+                rets = model.beam_decode(src_toks_cuda, src_structs)
 
                 for i, ret in enumerate(rets):
                     probs = ret['probs'].cpu().detach().numpy().reshape([-1])

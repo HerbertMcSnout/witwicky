@@ -5,23 +5,7 @@ import torch.nn.functional as F
 from layers import Encoder, Decoder
 import nmt.all_constants as ac
 import nmt.utils as ut
-import nmt.tree as tr
-
-#def check_tensor_h(x, name, f):
-#    with open(f, "a") as fh:
-#        if not torch.isfinite(x).all():
-#            fh.write("{} are nan/inf! size: {}; sum: {}; norm: {}; min: {}; max: {}; infs at: {}; nans at: {}\n" \
-#                     .format(name, x.size(), x.sum(), x.norm(), x.min(), x.max(), torch.isinf(x).nonzero(), torch.isnan(x).nonzero()))
-#        elif x.dtype in [torch.double, torch.float, torch.half]:
-#            fh.write("{} okay; size: {}; sum: {}; norm: {}; min: {}; max: {};\n".format(name, x.size(), x.sum(), x.norm(), x.min(), x.max()))
-#        else:
-#            fh.write("{} okay; size: {}; sum: {}; min: {}; max: {};\n".format(name, x.size(), x.sum(), x.min(), x.max()))
-#
-#def check_tensor(x, name, f, check_grad=False):
-#    if f is not None:
-#        check_tensor_h(x, name, f)
-#        if x.requires_grad and check_grad:
-#            x.register_hook(lambda x: check_tensor_h(x, name + " backward", f))
+#import nmt.tree as tr
 
 
 class Model(nn.Module):
@@ -37,28 +21,29 @@ class Model(nn.Module):
         embed_dim = self.config['embed_dim']
         tie_mode = self.config['tie_mode']
         fix_norm = self.config['fix_norm']
-        max_pos_length = self.config['max_pos_length']
+        max_len = self.config['max_train_length']
         learned_pos = self.config['learned_pos']
         
-        self.pos_embedding_mu_l = Parameter(torch.Tensor(embed_dim, embed_dim))
-        self.pos_embedding_mu_r = Parameter(torch.Tensor(embed_dim, embed_dim))
-        self.pos_embedding_lambda = Parameter(torch.Tensor(embed_dim))
-        nn.init.orthogonal_(self.pos_embedding_mu_l)
-        nn.init.orthogonal_(self.pos_embedding_mu_r)
-        nn.init.normal_(self.pos_embedding_lambda, mean=0, std=embed_dim ** -0.5)
+        self.struct = self.config['struct']
+        self.struct_params = [Parameter(x) for x in self.struct.get_params(self.config)]
+        #self.pos_embedding_mu_l = Parameter(torch.Tensor(embed_dim, embed_dim))
+        #self.pos_embedding_mu_r = Parameter(torch.Tensor(embed_dim, embed_dim))
+        #self.pos_embedding_lambda = Parameter(torch.Tensor(embed_dim))
+        #nn.init.orthogonal_(self.pos_embedding_mu_l)
+        #nn.init.orthogonal_(self.pos_embedding_mu_r)
+        #nn.init.normal_(self.pos_embedding_lambda, mean=0, std=embed_dim ** -0.5)
 
         # get positonal embedding
         if not learned_pos:
-            self.pos_embedding_linear = ut.get_positional_encoding(embed_dim, max_pos_length)
+            self.pos_embedding_trg = ut.get_positional_encoding(embed_dim, max_len)
         else:
-            self.pos_embedding_linear = Parameter(torch.Tensor(max_pos_length, embed_dim))
-            nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
+            self.pos_embedding_trg = Parameter(torch.Tensor(max_len, embed_dim))
+            nn.init.normal_(self.pos_embedding_trg, mean=0, std=embed_dim ** -0.5)
 
 
         # get word embeddings
         # TODO: src_vocab_mask is assigned but never used
         src_vocab_size, trg_vocab_size = ut.get_vocab_sizes(self.config)
-        ut.get_logger().info("src_vocab_size: {}, trg_vocab_size: {}".format(src_vocab_size, trg_vocab_size))
         self.src_vocab_mask, self.trg_vocab_mask = ut.get_vocab_masks(self.config, src_vocab_size, trg_vocab_size)
         if tie_mode == ac.ALL_TIED:
             src_vocab_size = trg_vocab_size = self.trg_vocab_mask.shape[0]
@@ -69,7 +54,8 @@ class Model(nn.Module):
         self.src_embedding = nn.Embedding(src_vocab_size, embed_dim)
         self.trg_embedding = nn.Embedding(trg_vocab_size, embed_dim)
         self.out_embedding = self.trg_embedding.weight
-        self.embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
+        self.src_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
+        self.trg_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
 
         if tie_mode == ac.ALL_TIED:
             self.src_embedding.weight = self.trg_embedding.weight
@@ -85,10 +71,13 @@ class Model(nn.Module):
         
         # dict where keys are data_ptrs to dicts of parameter options
         # see https://pytorch.org/docs/stable/optim.html#per-parameter-options
-        self.parameter_attrs = {self.embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']}}
+        self.parameter_attrs = {
+            self.src_embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']},
+            self.trg_embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']}
+        }
 
         # Debugging
-        self.debug_stats = {'embed_scales':[], 'word_embeds':[], 'pos_embeds':[]}
+        self.debug_stats = {'src_embed_scales':[], 'trg_embed_scales':[], 'word_embeds':[], 'pos_embeds':[]}
 
     def init_model(self):
         num_enc_layers = self.config['num_enc_layers']
@@ -114,53 +103,46 @@ class Model(nn.Module):
                 else:
                     nn.init.constant_(p, 0.)
 
-    def get_input(self, toks, trees=None, training=False):
-        # max_len = toks.size()[-1]
-        embeds = self.src_embedding if trees is not None else self.trg_embedding
+    def get_input(self, toks, structs=None, training=False):
+        max_len = toks.size()[-1]
+        embed_dim = self.config['embed_dim']
+        embeds = self.src_embedding if structs is not None else self.trg_embedding
         word_embeds = embeds(toks) # [bsz, max_len, embed_dim]
+        dtype = word_embeds.type()
+        embed_scale = self.trg_embed_scale if structs is None else self.src_embed_scale
 
         if self.config['fix_norm']:
             word_embeds = ut.normalize(word_embeds, scale=False)
         else:
-            word_embeds = word_embeds * self.embed_scale
+            word_embeds = word_embeds * embed_scale
 
-        if toks.size()[-1] > self.config['max_pos_length']:
-            ut.get_logger().error("Sentence length ({}) is longer than max_pos_length ({}); please increase max_pos_length".format(toks.size()[-1], self.config['max_pos_length']))
-
-        if trees is not None:
-            pos_embeds = torch.stack([tree.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1]) for tree in trees]) # [bsz, max_len, embed_dim]
+        if structs is not None:
+            pos_embeds = [x.get_pos_embedding(embed_dim, self.struct_params).flatten() for x in structs]
+            pos_embeds = [[x.type(dtype) for x in xs] for xs in pos_embeds]
+            pos_embeds = [x + [torch.zeros(embed_dim).type(dtype)] * (max_len - len(x)) for x in pos_embeds]
+            pos_embeds = [torch.stack(x) for x in pos_embeds]
+            pos_embeds = torch.stack(pos_embeds) # [bsz, max_len, embed_dim]
+#            pos_embeds = torch.stack([struct.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1]) for struct in structs]) # [bsz, max_len, embed_dim]
         else:
-            pos_embeds = self.pos_embedding_linear[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
-        #check_tensor(word_embeds, "word_embeds", f)
+            pos_embeds = self.pos_embedding_trg[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
         with torch.no_grad():
-            #pos_sat = (pos_embeds ==  tr.get_clamp_bound(pos_embeds)).sum()
-            #neg_sat = (pos_embeds == -tr.get_clamp_bound(pos_embeds)).sum()
-            #avg_sat = (pos_sat + neg_sat) / float(pos_embeds.size()[0] * pos_embeds.size()[1] * pos_embeds.size()[2])
-            #check_tensor(pos_embeds, "pos_embeds (avg sat: {:.2f}%)".format(avg_sat*100), f)
-            if trees is not None and training:
-                #self.debug_stats['sats'].append(avg_sat.item())
-                self.debug_stats['word_embeds'].append((word_embeds.norm(dim=2).sum() / float(self.embed_scale.item() * pos_embeds.size()[0] * pos_embeds.size()[1])).item())
+            if structs is not None and training:
+                self.debug_stats['word_embeds'].append((word_embeds.norm(dim=2).sum() / float(self.src_embed_scale.item() * pos_embeds.size()[0] * pos_embeds.size()[1])).item())
                 self.debug_stats['pos_embeds'].append((pos_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1])).item())
-        if trees is not None and training:
+        if structs is not None and training:
             return word_embeds, pos_embeds.type(word_embeds.type())
         return word_embeds + pos_embeds
 
-    def forward(self, src_toks, src_trees, trg_toks, targets, b=None, e=None):
-
-        #f = "batch-logs/epoch-{}-batch-{}.log".format(e, b) if e is not None and b is not None else None
-        #check_tensor(self.embed_scale, "embed_scale", f)
-        #check_tensor(self.pos_embedding_linear, "pos_embedding_linear", f)
-        #check_tensor(self.pos_embedding_lambda, "pos_embedding_lambda", f)
-        #check_tensor(self.pos_embedding_mu_l, "pos_embedding_mu_l", f)
-        #check_tensor(self.pos_embedding_mu_r, "pos_embedding_mu_r", f)
-        self.debug_stats['embed_scales'].append(self.embed_scale.item())
+    def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
+        self.debug_stats['src_embed_scales'].append(self.src_embed_scale.item())
+        self.debug_stats['trg_embed_scales'].append(self.trg_embed_scale.item())
         
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
         decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1])), diagonal=1).type(trg_toks.type()) == 1
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
-        word_embeds, pos_embeds = self.get_input(src_toks, src_trees, training=True)
-        encoder_inputs = word_embeds + pos_embeds * self.config['pos_norm_scale'](self.config['embed_dim'])
+        word_embeds, pos_embeds = self.get_input(src_toks, src_structs, training=True)
+        encoder_inputs = word_embeds + pos_embeds * self.config['pos_norm_scale'](self.config)
         
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
 
@@ -203,7 +185,7 @@ class Model(nn.Module):
         logits[:, ~self.trg_vocab_mask] = -1e9
         return logits
 
-    def beam_decode(self, src_toks, src_trees):
+    def beam_decode(self, src_toks, src_structs):
         """Translate a minibatch of sentences. 
 
         Arguments: src_toks[i,j] is the jth word of sentence i.
@@ -211,9 +193,8 @@ class Model(nn.Module):
         Return: See encoders.Decoder.beam_decode
         """
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
-        encoder_inputs = self.get_input(src_toks, src_trees)
+        encoder_inputs = self.get_input(src_toks, src_structs)
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
-        #assert False, "src_toks type: {}, dtype: {}".format(src_toks.type(), src_toks.dtype)
         max_lengths = torch.sum(src_toks != ac.PAD_ID, dim=-1).type(src_toks.type()) + 50
 
         def get_trg_inp(ids, time_step):
@@ -222,9 +203,9 @@ class Model(nn.Module):
             if self.config['fix_norm']:
                 word_embeds = ut.normalize(word_embeds, scale=False)
             else:
-                word_embeds = word_embeds * self.embed_scale
+                word_embeds = word_embeds * self.trg_embed_scale
 
-            pos_embeds = self.pos_embedding_linear[time_step, :].reshape(1, 1, -1)
+            pos_embeds = self.pos_embedding_trg[time_step, :].reshape(1, 1, -1)
             return word_embeds + pos_embeds
 
         def logprob(decoder_output):

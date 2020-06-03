@@ -122,7 +122,7 @@ class Trainer(object):
     def run_log(self, b, e, batch_data):
       #with torch.autograd.detect_anomaly():
         start = time.time()
-        src_toks, src_trees, trg_toks, targets = batch_data
+        src_toks, src_structs, trg_toks, targets = batch_data
         src_toks_cuda = src_toks.to(self.device)
         trg_toks_cuda = trg_toks.to(self.device)
         targets_cuda = targets.to(self.device)
@@ -131,7 +131,7 @@ class Trainer(object):
         self.optimizer.zero_grad()
 
         # get loss
-        ret = self.model(src_toks_cuda, src_trees, trg_toks_cuda, targets_cuda, b, e + 1)
+        ret = self.model(src_toks_cuda, src_structs, trg_toks_cuda, targets_cuda, b, e + 1)
         loss = ret['loss']
         nll_loss = ret['nll_loss']
 
