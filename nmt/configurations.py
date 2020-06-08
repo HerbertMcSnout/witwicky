@@ -9,6 +9,13 @@ import nmt.structs as struct
 it using `--proto function_name`."""
 
 
+def get_config(name, opts):
+    config = {k:(v.format(name=name) if isinstance(v, str) else v)
+              for k, v in base_config.items()}
+    config.update(opts)
+    return config
+
+
 base_config = {
     ### Locations of files
     'save_to': './nmt/saved_models/{name}',
@@ -16,7 +23,7 @@ base_config = {
     'log_file': './nmt/saved_models/{name}/DEBUG.log',
 
     # The name of the model
-    'model_name': model_name,
+    'model_name': '{name}',
 
     # Source and target languages
     # Input files should be named with these as extensions
@@ -88,7 +95,8 @@ base_config = {
     'lr_decay': 0.8, # if this is set to > 0, we'll do annealing
     'start_lr': 1e-8,
     'min_lr': 1e-5,
-    'patience': 3,
+    'lr_decay_patience': 3, # if no improvements for this many epochs, anneal learning rate
+    'early_stop_patience': 10, # if no improvements for this many epochs, stop early
 
     'embed_scale_lr': 0.03,
 
@@ -114,7 +122,7 @@ base_config = {
     # - gnmt: https://arxiv.org/abs/1609.08144 equation 14
     # - linear: constant reward per word
     # - none
-    'length_model': 'gnmt',
+    'length_model': ac.GNMT_LENGTH_MODEL,
     # For gnmt, this is the exponent; for linear, this is the strength of the reward
     'length_alpha': 0.6,
 
@@ -129,9 +137,11 @@ fun2com = {
     # Regarding above, for the sampled first 1/10 of train.ast written to train.fun,
     # the longest line has 969 words; for dev.fun (first 10k lines), 921 words;
     # for test.fun (all ~90k lines), 984 words.
-    'max_epochs': 20,
+    'max_epochs': 30,
     'struct': struct.tree,
     'batch_size': 2048,
+    'restore_segments': False,
+#    'warmup_style': ac.ORG_WARMUP,
     #'src_vocab_size': 72472 # approx. 23 lines / batch
     #'src_vocab_size': 1686 # (for 1000 lines...)
     #'src_vocab_size': 2000
@@ -141,7 +151,7 @@ fun2com2 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
     'max_train_length': 2000,
-    'max_epochs': 20,
+    'max_epochs': 30,
     'struct': struct.tree2,
     'batch_size': 2048,
 }
@@ -150,7 +160,7 @@ fun2coml = {
     'src_lang': 'fun',
     'trg_lang': 'com',
     'max_train_length': 2000,
-    'max_epochs': 20,
+    'max_epochs': 30,
     'struct': struct.sequence,
     'batch_size': 2048,
 }
@@ -159,7 +169,7 @@ fun2com3 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
     'max_train_length': 2000,
-    'max_epochs': 20,
+    'max_epochs': 30,
     'struct': struct.tree3,
     'pos_norm_penalty': 0,
     'batch_size': 2048,
@@ -169,7 +179,7 @@ fun2com4 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
     'max_train_length': 2000,
-    'max_epochs': 20,
+    'max_epochs': 30,
     'struct': struct.tree4,
     'pos_norm_penalty': 0,
     'batch_size': 2048,

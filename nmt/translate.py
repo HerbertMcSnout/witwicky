@@ -15,7 +15,7 @@ import nmt.configurations as configurations
 class Translator(object):
     def __init__(self, args):
         super(Translator, self).__init__()
-        self.config = getattr(configurations, args.proto)()
+        self.config = configurations.get_config(args.proto, getattr(configurations, args.proto))
         self.logger = ut.get_logger(self.config['log_file'])
 
         self.input_file = args.input_file
@@ -41,7 +41,7 @@ class Translator(object):
     def get_trans(self, probs, scores, symbols):
         sorted_rows = numpy.argsort(scores)[::-1]
         best_trans = None
-        best_tran_ids = None
+        #best_tran_ids = None
         beam_trans = []
         for i, r in enumerate(sorted_rows):
             trans_ids = symbols[r]
@@ -49,9 +49,10 @@ class Translator(object):
             beam_trans.append(u'{} {:.2f} {:.2f}'.format(trans_out, scores[r], probs[r]))
             if i == 0: # highest prob trans
                 best_trans = trans_out
-                best_tran_ids = trans_out_ids
+                #best_tran_ids = trans_out_ids
 
-        return best_trans, best_tran_ids, u'\n'.join(beam_trans)
+        #return best_trans, best_tran_ids, u'\n'.join(beam_trans)
+        return best_trans, u'\n'.join(beam_trans)
 
     def plot_head_map(self, mma, target_labels, target_ids, source_labels, source_ids, filename):
         """https://github.com/EdinburghNLP/nematus/blob/master/utils/plot_heatmap.py
@@ -100,46 +101,4 @@ class Translator(object):
         model = Model(self.config).to(device)
         self.logger.info('Restore model from {}'.format(self.model_file))
         model.load_state_dict(torch.load(self.model_file))
-        model.eval()
-
-        best_trans_file = self.input_file + '.best_trans'
-        beam_trans_file = self.input_file + '.beam_trans'
-        open(best_trans_file, 'w').close()
-        open(beam_trans_file, 'w').close()
-
-        num_sents = 0
-        with open(self.input_file, 'r') as f:
-            for line in f:
-                if line.strip():
-                    num_sents += 1
-        all_best_trans = [''] * num_sents
-        all_beam_trans = [''] * num_sents
-
-        with torch.no_grad():
-            self.logger.info('Start translating {}'.format(self.input_file))
-            start = time.time()
-            count = 0
-            for (src_toks, original_idxs, src_trees) in self.data_manager.get_trans_input(self.input_file):
-                src_toks_cuda = src_toks.to(device)
-                rets = model.beam_decode(src_toks_cuda, src_trees)
-
-                for i, ret in enumerate(rets):
-                    probs = ret['probs'].cpu().detach().numpy().reshape([-1])
-                    scores = ret['scores'].cpu().detach().numpy().reshape([-1])
-                    symbols = ret['symbols'].cpu().detach().numpy()
-
-                    best_trans, best_trans_ids, beam_trans = self.get_trans(probs, scores, symbols)
-                    all_best_trans[original_idxs[i]] = best_trans + '\n'
-                    all_beam_trans[original_idxs[i]] = beam_trans + '\n\n'
-
-                    count += 1
-                    if count % 100 == 0:
-                        self.logger.info('  Translating line {}, average {} seconds/sent'.format(count, (time.time() - start) / count))
-
-        model.train()
-
-        with open(best_trans_file, 'w') as ftrans, open(beam_trans_file, 'w') as btrans:
-            ftrans.write(''.join(all_best_trans))
-            btrans.write(''.join(all_beam_trans))
-
-        self.logger.info('Done translating {}, it takes {} minutes'.format(self.input_file, float(time.time() - start) / 60.0))
+        self.data_manager.translate(model, self.input_file, self.config['save_dir'], self.logger, self.get_trans, device)

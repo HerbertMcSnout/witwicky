@@ -100,3 +100,4 @@ def gnmt_length_model(alpha):
     def f(time_step, prob):
         return prob / ((5.0 + time_step + 1.0) ** alpha / 6.0 ** alpha)
     return f
+

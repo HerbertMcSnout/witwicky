@@ -1,6 +1,7 @@
 import time
-from os.path import join
-from os.path import exists
+import os
+from os.path import join, exists, basename
+#from os.path import exists
 from itertools import islice
 from collections import Counter
 import numpy
@@ -68,9 +69,10 @@ class DataManager(object):
             self.trg_lang: join(self.data_dir, 'vocab-{}.{}'.format(self.vocab_sizes[self.trg_lang], self.trg_lang))
         }
 
-        self.setup()
+        train_ids_file = join(config['save_to'], 'train.ids')
+        self.setup(train_ids_file)
 
-    def setup(self):
+    def setup(self, train_ids_file):
         self.create_all_vocabs()
         # it's important to check if we use one vocab before converting data to token ids
         self.parallel_data_to_token_ids(mode=ac.TRAINING)
@@ -78,6 +80,12 @@ class DataManager(object):
 
         if exists(self.data_files[ac.TESTING][self.src_lang]) and exists(self.data_files[ac.TESTING][self.trg_lang]):
             self.parallel_data_to_token_ids(mode=ac.TESTING)
+
+        # We don't want to modify anything in data_dir/ during
+        # training, so copy data_dir/train.ids to save_to/train.ids
+        # so we can shuffle it without modifying it in self.data_dir
+        os.popen('cp {} {}'.format(self.ids_files[ac.TRAINING], train_ids_file))
+        self.ids_files[ac.TRAINING] = train_ids_file
 
     def create_all_vocabs(self):
         self.create_vocabs()
@@ -117,25 +125,24 @@ class DataManager(object):
         self.logger.info('Create vocabulary of size {}/{}, {}/{}'.format(self.src_lang, max_src_vocab_size, self.trg_lang, max_trg_vocab_size))
         if exists(src_vocab_file) and exists(trg_vocab_file):
             self.logger.info('    Vocab files exist at {}/{}'.format(src_vocab_file, trg_vocab_file))
+        else:
+            src_vocab = Counter()
+            trg_vocab = Counter()
+            with open(src_file, 'r') as src_f, open(trg_file, 'r') as trg_f:
+                count = 0
+                for src_line, trg_line in zip(src_f, trg_f):
+                    count += 1
+                    if count % 10000 == 0:
+                        self.logger.info('    processing line {}'.format(count))
+                    src_line_parsed = self.parse_struct(src_line)
+                    src_line_words = src_line_parsed.flatten()
+                    trg_line_words = trg_line.strip().split()
+                    if 0 < len(src_line_words) <= self.max_train_length and 0 < len(trg_line_words) <= self.max_train_length:
+                        src_vocab.update(src_line_words)
+                        trg_vocab.update(trg_line_words)
 
-        src_vocab = Counter()
-        trg_vocab = Counter()
-        with open(src_file, 'r') as src_f, open(trg_file, 'r') as trg_f:
-            count = 0
-            for src_line, trg_line in zip(src_f, trg_f):
-                count += 1
-                if count % 10000 == 0:
-                    self.logger.info('    processing line {}'.format(count))
-                #src_line = src_line.strip().split()
-                src_line_parsed = self.parse_struct(src_line)
-                src_line_words = src_line_parsed.flatten()
-                trg_line_words = trg_line.strip().split()
-                if 0 < len(src_line_words) <= self.max_train_length and 0 < len(trg_line_words) <= self.max_train_length:
-                    src_vocab.update(src_line_words)
-                    trg_vocab.update(trg_line_words)
-
-        _write_vocab_file(src_vocab, max_src_vocab_size, src_vocab_file)
-        _write_vocab_file(trg_vocab, max_trg_vocab_size, trg_vocab_file)
+            _write_vocab_file(src_vocab, max_src_vocab_size, src_vocab_file)
+            _write_vocab_file(trg_vocab, max_trg_vocab_size, trg_vocab_file)
 
     def create_joint_vocab(self):
         if not self.one_embedding:
@@ -475,3 +482,52 @@ class DataManager(object):
             s_idx = e_idx
 
             yield torch.from_numpy(src_inputs).type(torch.long), original_idxs, batch_structs
+
+
+    def translate(self, model, input_file, output_dir, logger, get_trans, device):
+        model.eval()
+
+        output_file = join(output_dir, basename(input_file))
+        
+        best_trans_file = output_file + '.best_trans'
+        beam_trans_file = output_file + '.beam_trans'
+        open(best_trans_file, 'w').close()
+        open(beam_trans_file, 'w').close()
+        
+        num_sents = 0
+        with open(input_file, 'r') as f:
+            for line in f:
+                if line.strip():
+                    num_sents += 1
+        all_best_trans = [''] * num_sents
+        all_beam_trans = [''] * num_sents
+        
+        with torch.no_grad():
+            logger.info('Start translating {}'.format(input_file))
+            start = time.time()
+            count = 0
+            for (src_toks, original_idxs, src_structs) in self.get_trans_input(input_file):
+                src_toks_cuda = src_toks.to(device)
+                rets = model.beam_decode(src_toks_cuda, src_structs)
+                
+                for i, ret in enumerate(rets):
+                    probs = ret['probs'].cpu().detach().numpy().reshape([-1])
+                    scores = ret['scores'].cpu().detach().numpy().reshape([-1])
+                    symbols = ret['symbols'].cpu().detach().numpy()
+                    
+                    best_trans, beam_trans = get_trans(probs, scores, symbols)
+                    all_best_trans[original_idxs[i]] = best_trans
+                    all_beam_trans[original_idxs[i]] = beam_trans
+        
+                    count += 1
+                    if count % 1000 == 0:
+                        logger.info('  Line {}, avg {} sec/sentence'.format(count, (time.time() - start) / count))
+        
+        model.train()
+        
+        with open(best_trans_file, 'w') as ftrans, open(beam_trans_file, 'w') as btrans:
+            ftrans.write('\n'.join(all_best_trans))
+            btrans.write('\n\n'.join(all_beam_trans))
+            
+        logger.info('Finished translating {}, took {} minutes'.format(input_file, float(time.time() - start) / 60.0))
+

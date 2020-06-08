@@ -179,8 +179,9 @@ class Validator(object):
         multibleu_cmd = ['perl', self.bleu_script, ref_file, '<', val_trans_out]
         p = Popen(' '.join(multibleu_cmd), shell=True, stdout=PIPE)
         output, _ = p.communicate()
-        out_parse = re.match(r'BLEU = [-.0-9]+', output.decode('utf-8'))
-        self.logger.info(output[2:])
+        output = output.decode('utf-8').strip('\n')
+        out_parse = re.match(r'BLEU = [-.0-9]+', output)
+        self.logger.info(output)
         self.logger.info('Validation took: {} minutes'.format(float(time.time() - start_time) / 60.0))
 
         bleu = float('-inf')
@@ -208,79 +209,57 @@ class Validator(object):
             self.evaluate_bleu(model)
 
     def _is_valid_to_save(self):
-        if self.val_by_bleu:
-            if len(self.best_bleus) < self.n_best:
-                return None, True
-            else:
-                min_idx = numpy.argmin(self.best_bleus)
-                min_bleu = self.best_bleus[min_idx]
-                if min_bleu > self.bleu_curve[-1]:
-                    return None, False
-                else:
-                    return min_idx, True
+        best_scores = self.best_bleus if self.val_by_bleu else self.best_perps
+        curve = self.bleu_curve if self.val_by_bleu else self.perp_curve
+        if len(best_scores) < self.n_best:
+            return None, True
         else:
-            if len(self.best_perps) < self.n_best:
-                return None, True
+            m_idx = (numpy.argmin if self.val_by_bleu else numpy.argmax)(best_scores)
+            m_score = best_scores[m_idx]
+            if (m_score > curve[-1]) == self.val_by_bleu:
+                return None, False
             else:
-                max_idx = numpy.argmax(self.best_perps)
-                max_perp = self.best_perps[max_idx]
-                if max_perp < self.perp_curve[-1]:
-                    return None, False
-                else:
-                    return max_idx, True
+                return m_idx, True
 
     def maybe_save(self, model):
         remove_idx, save_please = self._is_valid_to_save()
 
         if self.val_by_bleu:
-            bleu_score = self.bleu_curve[-1]
-            if remove_idx is not None:
-                min_bleu = self.best_bleus[remove_idx]
-                self.logger.info('Current best bleus: {}'.format(', '.join(map(str, numpy.sort(self.best_bleus)))))
-                self.logger.info('Delete {}, use {} instead'.format(min_bleu, bleu_score))
-                self.best_bleus = numpy.delete(self.best_bleus, remove_idx)
-
-                # Delete the right checkpoint
-                cpkt_path = self.get_cpkt_path(min_bleu)
-
-                if exists(cpkt_path):
-                    self.logger.info('Delete {}'.format(cpkt_path))
-                    os.remove(cpkt_path)
-
-            if save_please:
-                self.logger.info('Save {} to list of best bleu scores'.format(bleu_score))
-                self.best_bleus = numpy.append(self.best_bleus, bleu_score)
-                cpkt_path = self.get_cpkt_path(bleu_score)
-                torch.save(model.state_dict(), cpkt_path)
-                self.logger.info('Save new best model to {}'.format(cpkt_path))
-                self.logger.info('Best bleu scores so far: {}'.format(', '.join(map(str, numpy.sort(self.best_bleus)))))
-
-            numpy.save(self.best_bleus_path, self.best_bleus)
+            name = 'bleu'
+            path = self.best_bleus_path
+            score = self.bleu_curve[-1]
+            scores = self.best_bleus
+            asc = False # descending
         else:
-            # super redundant but i'm lazy
-            perp_score = self.perp_curve[-1]
-            if remove_idx is not None:
-                max_perp = self.best_perps[remove_idx]
-                self.logger.info('Current best perps: {}'.format(', '.join(map(str, numpy.sort(self.best_perps)[::-1]))))
-                self.logger.info('Delete {} & use {} instead'.format(max_perp, perp_score))
-                self.best_perps = numpy.delete(self.best_perps, remove_idx)
+            name = 'perp'
+            path = self.best_perps_path
+            score = self.perp_curve[-1]
+            scores = self.best_perps
+            asc = True # ascending
 
-                # Delete the right checkpoint
-                cpkt_path = self.get_cpkt_path(max_perp)
+        if remove_idx is not None:
+            worst = scores[remove_idx]
+            scores_sorted = numpy.sort(scores)
+            if not asc: scores_sorted = scores_sorted[::-1]
+            self.logger.info('Current best {} scores: {}'.format(name, ', '.join(["{:.2f}".format(float(x)) for x in scores_sorted])))
+            self.logger.info('Delete {:.2f}, use {:.2f} instead'.format(float(worst), float(score)))
+            scores = numpy.delete(scores, remove_idx)
 
-                if exists(cpkt_path):
-                    self.logger.info('Delete {}'.format(cpkt_path))
-                    os.remove(cpkt_path)
+            # Delete the right checkpoint
+            cpkt_path = self.get_cpkt_path(worst)
 
-            if save_please:
-                self.logger.info('Save {} to list of best perp scores'.format(perp_score))
-                self.best_perps = numpy.append(self.best_perps, perp_score)
-                cpkt_path = self.get_cpkt_path(perp_score)
-                torch.save(model.state_dict(), cpkt_path)
-                self.logger.info('Save new best model to {}'.format(cpkt_path))
-                self.logger.info('Best perp scores so far: {}'.format(', '.join(map(str, numpy.sort(self.best_perps)))))
+            if exists(cpkt_path):
+                os.remove(cpkt_path)
 
-            numpy.save(self.best_perps_path, self.best_perps)
+        if save_please:
+            scores = numpy.append(scores, score)
+            cpkt_path = self.get_cpkt_path(score)
+            torch.save(model.state_dict(), cpkt_path)
+            self.logger.info('Best {} scores so far: {}'.format(name, ', '.join(["{:.2f}".format(float(x)) for x in numpy.sort(scores)])))
+
+        numpy.save(path, scores)
+        if self.val_by_bleu: self.best_bleus = scores
+        else: self.best_perps = scores
 
     def validate_and_save(self, model):
         self.logger.info('Start validation')
@@ -296,47 +275,5 @@ class Validator(object):
         return outfile
 
     def translate(self, model, input_file):
-        model.eval()
-
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        # Very redundant
-        best_trans_file = input_file + '.best_trans'
-        beam_trans_file = input_file + '.beam_trans'
-
-        num_sents = 0
-        with open(input_file, 'r') as f:
-            for line in f:
-                if line.strip():
-                    num_sents += 1
-        all_best_trans = [''] * num_sents
-        all_beam_trans = [''] * num_sents
-        with torch.no_grad():
-            self.logger.info('Start translating {}'.format(input_file))
-            start = time.time()
-            count = 0
-            for (src_toks, original_idxs, src_structs) in self.data_manager.get_trans_input(input_file):
-                src_toks_cuda = src_toks.to(device)
-                rets = model.beam_decode(src_toks_cuda, src_structs)
-
-                for i, ret in enumerate(rets):
-                    probs = ret['probs'].cpu().detach().numpy().reshape([-1])
-                    scores = ret['scores'].cpu().detach().numpy().reshape([-1])
-                    symbols = ret['symbols'].cpu().detach().numpy()
-
-                    best_trans, beam_trans = self.get_trans(probs, scores, symbols)
-                    all_best_trans[original_idxs[i]] = best_trans + '\n'
-                    all_beam_trans[original_idxs[i]] = beam_trans + '\n\n'
-
-                    count += 1
-                    if count % 1000 == 0:
-                        self.logger.info('  Line {}, avg {} sec/sentence'.format(count, (time.time() - start) / count))
-
-        model.train()
-
-        open(best_trans_file, 'w').close()
-        open(beam_trans_file, 'w').close()
-        with open(best_trans_file, 'w') as ftrans, open(beam_trans_file, 'w') as btrans:
-            ftrans.write(''.join(all_best_trans))
-            btrans.write(''.join(all_beam_trans))
-
-        self.logger.info('Finished translating {}, took {} minutes'.format(input_file, float(time.time() - start) / 60.0))
+        self.data_manager.translate(model, input_file, self.save_to, self.logger, self.get_trans, device)

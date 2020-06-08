@@ -145,7 +145,7 @@ class Model(nn.Module):
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
         word_embeds, pos_embeds = self.get_input(src_toks, src_structs, training=True)
-        encoder_inputs = word_embeds + pos_embeds * self.config['pos_norm_scale'](self.config)
+        encoder_inputs = word_embeds + pos_embeds * self.config['pos_norm_scale']
         
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
 
@@ -214,11 +214,11 @@ class Model(nn.Module):
         def logprob(decoder_output):
             return F.log_softmax(self.logit_fn(decoder_output), dim=-1)
 
-        if self.config['length_model'] == 'gnmt':
+        if self.config['length_model'] == ac.GNMT_LENGTH_MODEL:
             length_model = ut.gnmt_length_model(self.config['length_alpha'])
-        elif self.config['length_model'] == 'linear':
+        elif self.config['length_model'] == ac.LINEAR_LENGTH_MODEL:
             length_model = lambda t, p: p + self.config['length_alpha'] * t
-        elif self.config['length_model'] == 'none':
+        elif self.config['length_model'] == ac.NO_LENGTH_MODEL:
             length_model = lambda t, p: p
         else:
             raise ValueError("invalid length_model '{}'".format(self.config['length_model']))

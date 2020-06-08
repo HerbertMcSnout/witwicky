@@ -24,8 +24,7 @@ class Trainer(object):
     """Trainer"""
     def __init__(self, args):
         super(Trainer, self).__init__()
-        self.config = {k:v.format(name=args.proto) for k, v in configurations.base_config.items()}
-        self.config.update(getattr(configurations, args.proto))
+        self.config = configurations.get_config(args.proto, getattr(configurations, args.proto))
         self.num_preload = args.num_preload
 
         self.logger = ut.get_logger(self.config['log_file'])
@@ -101,14 +100,16 @@ class Trainer(object):
         train_true_perp = numpy.exp(train_true_perp) if train_true_perp < 300 else float('inf')
         self.train_true_perps.append(train_true_perp)
 
-        self.logger.info('    smoothed train perp: {}'.format(train_smooth_perp))
-        self.logger.info('    true train perp: {}'.format(train_true_perp))
+        self.logger.info('    smoothed perp: {}'.format(train_smooth_perp))
+        self.logger.info('    true perp: {}'.format(train_true_perp))
 
         # Save debug_stats
         debug_stats = torch.load(self.debug_path)
         debug_stats[e] = self.model.debug_stats
         torch.save(debug_stats, self.debug_path)
         self.model.debug_stats = deepcopy(self.initial_debug_stats)
+
+        return 
 
     def run_log(self, b, e, batch_data):
       #with torch.autograd.detect_anomaly():
@@ -171,9 +172,9 @@ class Trainer(object):
             self.log_train_weights = 0.
 
             self.logger.info('Batch {}, epoch {}/{}:'.format(b, e + 1, self.config['max_epochs']))
-            self.logger.info('   avg smooth, true perp:   {0:.2f}, {0:.2f}'.format(avg_smooth_perp, avg_true_perp))
-            self.logger.info('   acc trg words/sec, sec/batch: {}, {0:.2f}'.format(int(acc_speed_word), acc_speed_time))
-            self.logger.info('   global norm:     {0:.2f}'.format(global_norm))
+            self.logger.info('   avg smooth, true perp: {:.2f}, {:.2f}'.format(avg_smooth_perp, avg_true_perp))
+            self.logger.info('   {} trg words/sec, {:.2f} sec/batch'.format(int(acc_speed_word), acc_speed_time))
+            self.logger.info('   global norm: {:.2f}'.format(global_norm))
 
     def adjust_lr(self):
         if self.config['warmup_style'] == ac.ORG_WARMUP:
@@ -222,6 +223,10 @@ class Trainer(object):
             self.report_epoch(e + 1)
             if self.config['val_per_epoch'] and (e + 1) % self.validate_freq == 0:
                 self.maybe_validate(just_validate=True)
+            
+            if self.is_patience_exhausted(self.config['early_stop_patience']):
+                self.logger.info('No improvement for last {} epochs; stopping early!'.format(self.config['early_stop_patience']))
+                break
 
         # validate 1 last time
         if not self.config['val_by_bleu']:
@@ -229,9 +234,9 @@ class Trainer(object):
 
         self.logger.info('Training finished')
         self.logger.info('Train smoothed perps:')
-        self.logger.info(', '.join(map(str, self.train_smooth_perps)))
+        self.logger.info(', '.join(["{:.2f}".format(str(x)) for x in self.train_smooth_perps]))
         self.logger.info('Train true perps:')
-        self.logger.info(', '.join(map(str, self.train_true_perps)))
+        self.logger.info(', '.join(["{:.2f}".format(str(x)) for x in self.train_true_perps]))
         numpy.save(join(self.config['save_to'], 'train_smooth_perps.npy'), self.train_smooth_perps)
         numpy.save(join(self.config['save_to'], 'train_true_perps.npy'), self.train_true_perps)
 
@@ -262,6 +267,12 @@ class Trainer(object):
         self.logger.info('Restore best cpkt from {}'.format(best_cpkt_path))
         self.model.load_state_dict(torch.load(best_cpkt_path))
 
+    def is_patience_exhausted(self, patience):
+        val_bleu = self.config['val_by_bleu']
+        curve = self.validator.bleu_curve if val_bleu else self.validator.perp_curve
+        minmax = min if val_bleu else max
+        return patience and len(curve) > patience and (curve[-1] < minmax(curve[-1-patience:-1])) == val_bleu
+
     def maybe_validate(self, just_validate=False):
         if self.num_batches_done % self.validate_freq == 0 or just_validate:
             self.save_checkpoint()
@@ -270,25 +281,24 @@ class Trainer(object):
             # if doing annealing
             step = self.num_batches_done + 1.0
             warmup_steps = self.config['warmup_steps']
-            if self.config['warmup_style'] == ac.NO_WARMUP or (self.config['warmup_style'] == ac.UPFLAT_WARMUP and step >= warmup_steps) and self.config['lr_decay'] > 0:
-                if self.config['val_by_bleu']:
-                    cond = len(self.validator.bleu_curve) > self.config['patience'] and self.validator.bleu_curve[-1] < min(self.validator.bleu_curve[-1 - self.config['patience']:-1])
-                else:
-                    cond = len(self.validator.perp_curve) > self.config['patience'] and self.validator.perp_curve[-1] > max(self.validator.perp_curve[-1 - self.config['patience']:-1])
 
-                if cond:
+            if self.config['warmup_style'] == ac.NO_WARMUP \
+               or (self.config['warmup_style'] == ac.UPFLAT_WARMUP and step >= warmup_steps) \
+               and self.config['lr_decay'] > 0:
+
+                if self.is_patience_exhausted(self.config['lr_decay_patience']):
                     if self.config['val_by_bleu']:
                         metric = 'bleu'
-                        scores = self.validator.bleu_curve[-1 - self.config['patience']:]
+                        scores = self.validator.bleu_curve[-1 - self.config['lr_decay_patience']:]
                         scores = map(str, list(scores))
                         scores = ', '.join(scores)
                     else:
                         metric = 'perp'
-                        scores = self.validator.perp_curve[-1 - self.config['patience']:]
+                        scores = self.validator.perp_curve[-1 - self.config['lr_decay_patience']:]
                         scores = map(str, list(scores))
                         scores = ', '.join(scores)
 
-                    self.logger.info('Past {} are {}'.format(metric, scores))
+                    self.logger.info('Past {} scores are {}'.format(metric, scores))
                     # when don't use warmup, decay lr if dev not improve
                     if self.lr * self.config['lr_decay'] >= self.config['min_lr']:
                         self.logger.info('Anneal the learning rate from {} to {}'.format(self.lr, self.lr * self.config['lr_decay']))
