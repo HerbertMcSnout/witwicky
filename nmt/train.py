@@ -24,18 +24,15 @@ class Trainer(object):
     """Trainer"""
     def __init__(self, args):
         super(Trainer, self).__init__()
-        self.config = getattr(configurations, args.proto)()
+        self.config = {k:v.format(name=args.proto) for k, v in configurations.base_config.items()}
+        self.config.update(getattr(configurations, args.proto))
         self.num_preload = args.num_preload
+
         self.logger = ut.get_logger(self.config['log_file'])
 
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-        self.normalize_loss = self.config['normalize_loss']
-        self.patience = self.config['patience']
         self.lr = self.config['lr']
-        self.lr_decay = self.config['lr_decay']
-        self.max_epochs = self.config['max_epochs']
-        self.warmup_steps = self.config['warmup_steps']
 
         self.train_smooth_perps = []
         self.train_true_perps = []
@@ -43,9 +40,8 @@ class Trainer(object):
         self.data_manager = DataManager(self.config)
         self.validator = Validator(self.config, self.data_manager)
 
-        self.val_per_epoch = self.config['val_per_epoch']
         self.validate_freq = int(self.config['validate_freq'])
-        self.logger.info('Evaluate every {} {}'.format(self.validate_freq, 'epochs' if self.val_per_epoch else 'batches'))
+        self.logger.info('Evaluate every {} {}'.format(self.validate_freq, 'epochs' if self.config['val_per_epoch'] else 'batches'))
 
         # For logging
         self.log_freq = 100  # log train stat every this-many batches
@@ -65,11 +61,6 @@ class Trainer(object):
         param_count = sum([numpy.prod(p.size()) for p in self.model.parameters()])
         self.logger.info('Model has {:,} parameters'.format(param_count))
 
-        # get optimizer
-        beta1 = self.config['beta1']
-        beta2 = self.config['beta2']
-        epsilon = self.config['epsilon']
-
         # Set up parameter-specific options
         params = []
         for p in self.model.parameters():
@@ -81,7 +72,7 @@ class Trainer(object):
                     d[k] = attrs[k]
             params.append(d)
         
-        self.optimizer = torch.optim.Adam(params, lr=self.lr, betas=(beta1, beta2), eps=epsilon)
+        self.optimizer = torch.optim.Adam(params, lr=self.lr, betas=(self.config['beta1'], self.config['beta2']), eps=self.config['epsilon'])
 
         # Set up debug_stats
         self.debug_path = join(self.config['save_to'], 'debug_stats.pth')
@@ -91,10 +82,10 @@ class Trainer(object):
     def report_epoch(self, e):
 
         self.logger.info('{} batches'.format(self.epoch_batches_done))
-        self.logger.info('Finish epoch {}'.format(e))
-        self.logger.info('    It takes {}'.format(ut.format_seconds(self.epoch_time)))
-        self.logger.info('    Avergage # words/second    {}'.format(self.epoch_weights / self.epoch_time))
-        self.logger.info('    Average seconds/batch    {}'.format(self.epoch_time / self.epoch_batches_done))
+        self.logger.info('Finished epoch {}'.format(e))
+        self.logger.info('    Took {}'.format(ut.format_seconds(self.epoch_time)))
+        self.logger.info('    avg words/sec    {}'.format(self.epoch_weights / self.epoch_time))
+        self.logger.info('    avg sec/batch    {}'.format(self.epoch_time / self.epoch_batches_done))
 
         train_smooth_perp = self.epoch_loss / self.epoch_weights
         train_true_perp = self.epoch_nll_loss / self.epoch_weights
@@ -110,8 +101,8 @@ class Trainer(object):
         train_true_perp = numpy.exp(train_true_perp) if train_true_perp < 300 else float('inf')
         self.train_true_perps.append(train_true_perp)
 
-        self.logger.info('    smoothed train perplexity: {}'.format(train_smooth_perp))
-        self.logger.info('    true train perplexity: {}'.format(train_true_perp))
+        self.logger.info('    smoothed train perp: {}'.format(train_smooth_perp))
+        self.logger.info('    true train perp: {}'.format(train_true_perp))
 
         # Save debug_stats
         debug_stats = torch.load(self.debug_path)
@@ -135,9 +126,9 @@ class Trainer(object):
         loss = ret['loss']
         nll_loss = ret['nll_loss']
 
-        if self.normalize_loss == ac.LOSS_TOK:
+        if self.config['normalize_loss'] == ac.LOSS_TOK:
             opt_loss = loss / (targets_cuda != ac.PAD_ID).type(loss.type()).sum()
-        elif self.normalize_loss == ac.LOSS_BATCH:
+        elif self.config['normalize_loss'] == ac.LOSS_BATCH:
             opt_loss = loss / targets_cuda.size()[0].type(loss.type())
         else:
             opt_loss = loss
@@ -179,11 +170,9 @@ class Trainer(object):
             self.log_nll_loss = 0.
             self.log_train_weights = 0.
 
-            self.logger.info('Batch {}, epoch {}/{}:'.format(b, e + 1, self.max_epochs))
-            self.logger.info('   avg smooth perp:   {0:.2f}'.format(avg_smooth_perp))
-            self.logger.info('   avg true perp:   {0:.2f}'.format(avg_true_perp))
-            self.logger.info('   acc trg words/s: {}'.format(int(acc_speed_word)))
-            self.logger.info('   acc sec/batch:   {0:.2f}'.format(acc_speed_time))
+            self.logger.info('Batch {}, epoch {}/{}:'.format(b, e + 1, self.config['max_epochs']))
+            self.logger.info('   avg smooth, true perp:   {0:.2f}, {0:.2f}'.format(avg_smooth_perp, avg_true_perp))
+            self.logger.info('   acc trg words/sec, sec/batch: {}, {0:.2f}'.format(int(acc_speed_word), acc_speed_time))
             self.logger.info('   global norm:     {0:.2f}'.format(global_norm))
 
     def adjust_lr(self):
@@ -222,23 +211,23 @@ class Trainer(object):
 
     def train(self):
         self.model.train()
-        for e in range(self.max_epochs):
+        for e in range(self.config['max_epochs']):
             b = 0
             for batch_data in self.data_manager.get_batch(mode=ac.TRAINING, num_preload=self.num_preload):
                 b += 1
                 self.run_log(b, e, batch_data)
-                if not self.val_per_epoch:
+                if not self.config['val_per_epoch']:
                     self.maybe_validate()
 
             self.report_epoch(e + 1)
-            if self.val_per_epoch and (e + 1) % self.validate_freq == 0:
+            if self.config['val_per_epoch'] and (e + 1) % self.validate_freq == 0:
                 self.maybe_validate(just_validate=True)
 
         # validate 1 last time
         if not self.config['val_by_bleu']:
             self.maybe_validate(just_validate=True)
 
-        self.logger.info('It is finally done, mate!')
+        self.logger.info('Training finished')
         self.logger.info('Train smoothed perps:')
         self.logger.info(', '.join(map(str, self.train_smooth_perps)))
         self.logger.info('Train true perps:')
@@ -255,7 +244,7 @@ class Trainer(object):
             self.logger.info('Evaluate on test')
             self.restart_to_best_checkpoint()
             self.validator.translate(self.model, test_file)
-            self.logger.info('Also translate dev set')
+            self.logger.info('Translate dev set')
             self.validator.translate(self.model, self.data_manager.data_files[ac.VALIDATING][self.data_manager.src_lang])
 
     def save_checkpoint(self):
@@ -281,28 +270,28 @@ class Trainer(object):
             # if doing annealing
             step = self.num_batches_done + 1.0
             warmup_steps = self.config['warmup_steps']
-            if self.config['warmup_style'] == ac.NO_WARMUP or (self.config['warmup_style'] == ac.UPFLAT_WARMUP and step >= warmup_steps) and self.lr_decay > 0:
+            if self.config['warmup_style'] == ac.NO_WARMUP or (self.config['warmup_style'] == ac.UPFLAT_WARMUP and step >= warmup_steps) and self.config['lr_decay'] > 0:
                 if self.config['val_by_bleu']:
-                    cond = len(self.validator.bleu_curve) > self.patience and self.validator.bleu_curve[-1] < min(self.validator.bleu_curve[-1 - self.patience:-1])
+                    cond = len(self.validator.bleu_curve) > self.config['patience'] and self.validator.bleu_curve[-1] < min(self.validator.bleu_curve[-1 - self.config['patience']:-1])
                 else:
-                    cond = len(self.validator.perp_curve) > self.patience and self.validator.perp_curve[-1] > max(self.validator.perp_curve[-1 - self.patience:-1])
+                    cond = len(self.validator.perp_curve) > self.config['patience'] and self.validator.perp_curve[-1] > max(self.validator.perp_curve[-1 - self.config['patience']:-1])
 
                 if cond:
                     if self.config['val_by_bleu']:
                         metric = 'bleu'
-                        scores = self.validator.bleu_curve[-1 - self.patience:]
+                        scores = self.validator.bleu_curve[-1 - self.config['patience']:]
                         scores = map(str, list(scores))
                         scores = ', '.join(scores)
                     else:
                         metric = 'perp'
-                        scores = self.validator.perp_curve[-1 - self.patience:]
+                        scores = self.validator.perp_curve[-1 - self.config['patience']:]
                         scores = map(str, list(scores))
                         scores = ', '.join(scores)
 
                     self.logger.info('Past {} are {}'.format(metric, scores))
                     # when don't use warmup, decay lr if dev not improve
-                    if self.lr * self.lr_decay >= self.config['min_lr']:
-                        self.logger.info('Anneal the learning rate from {} to {}'.format(self.lr, self.lr * self.lr_decay))
-                        self.lr = self.lr * self.lr_decay
+                    if self.lr * self.config['lr_decay'] >= self.config['min_lr']:
+                        self.logger.info('Anneal the learning rate from {} to {}'.format(self.lr, self.lr * self.config['lr_decay']))
+                        self.lr = self.lr * self.config['lr_decay']
                         for p in self.optimizer.param_groups:
                             p['lr'] = self.lr

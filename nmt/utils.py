@@ -10,8 +10,8 @@ import nmt.all_constants as ac
 
 
 def get_logger(logfile=None):
-    _logfile = logfile if logfile else './DEBUG.log'
     """Global logger for every logging"""
+    _logfile = logfile if logfile else './DEBUG.log'
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(

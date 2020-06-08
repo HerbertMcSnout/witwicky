@@ -25,7 +25,10 @@ class Model(nn.Module):
         learned_pos = self.config['learned_pos']
         
         self.struct = self.config['struct']
-        self.struct_params = [Parameter(x) for x in self.struct.get_params(self.config)]
+        params = [(name, Parameter(x)) for name, x in self.struct.get_params(self.config).items()]
+        self.struct_params = [x for _, x in params]
+        for name, x in params:
+            self.register_parameter(name, x)
         #self.pos_embedding_mu_l = Parameter(torch.Tensor(embed_dim, embed_dim))
         #self.pos_embedding_mu_r = Parameter(torch.Tensor(embed_dim, embed_dim))
         #self.pos_embedding_lambda = Parameter(torch.Tensor(embed_dim))

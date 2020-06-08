@@ -32,6 +32,6 @@ def get_params(config):
     max_len = config['max_train_length']
     pos_seq = torch.Tensor(max_len, embed_dim)
     torch.nn.init.normal_(pos_seq, mean=0, std=embed_dim ** -0.5)
-    return [pos_seq]
+    return {"pos_seq":pos_seq}
   else:
-    return []
+    return {}

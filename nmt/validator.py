@@ -22,20 +22,20 @@ class Validator(object):
         self.data_manager = data_manager
         self.restore_segments = config['restore_segments']
         self.val_by_bleu = config['val_by_bleu']
+        self.save_to = config['save_to']
 
-        self.get_cpkt_path = lambda score: join(config['save_to'], '{}-{}.pth'.format(config['model_name'], score))
+        self.get_cpkt_path = lambda score: join(self.save_to, '{}-{}.pth'.format(config['model_name'], score))
         self.n_best = config['n_best']
 
         scriptdir = os.path.dirname(os.path.abspath(__file__))
         self.bleu_script = '{}/../scripts/multi-bleu.perl'.format(scriptdir)
         assert exists(self.bleu_script)
 
-        self.save_to = config['save_to']
         if not exists(self.save_to):
             os.makedirs(self.save_to)
 
-        self.val_trans_out = config['val_trans_out']
-        self.val_beam_out = config['val_beam_out']
+        self.val_trans_out = join(self.save_to, 'val_trans.txt')
+        self.val_beam_out = join(self.save_to, 'val_beam_trans.txt')
 
         # I'll leave test alone for now since this version of the code doesn't automatically
         # report BLEU on test anw. The reason is it's up to the dataset to use multi-bleu
@@ -117,8 +117,8 @@ class Validator(object):
         numpy.save(self.perp_curve_path, self.perp_curve)
 
         model.train()
-        self.logger.info('dev perplexity: {}'.format(perp))
-        self.logger.info('smoothed dev perplexity: {}'.format(smoothed_perp))
+        self.logger.info('dev perp: {}'.format(perp))
+        self.logger.info('smoothed dev perp: {}'.format(smoothed_perp))
         self.logger.info('Calculating dev perp took: {} minutes'.format(float(time.time() - start_time) / 60.0))
 
     def evaluate_bleu(self, model):
@@ -156,20 +156,20 @@ class Validator(object):
                     symbols = ret['symbols'].cpu().detach().numpy()
 
                     best_trans, beam_trans = self.get_trans(probs, scores, symbols)
-                    all_best_trans[original_idxs[i]] = best_trans + '\n'
-                    all_beam_trans[original_idxs[i]] = beam_trans + '\n\n'
+                    all_best_trans[original_idxs[i]] = best_trans
+                    all_beam_trans[original_idxs[i]] = beam_trans
 
                     count += 1
-                    if count % 100 == 0:
-                        self.logger.info('  Translating line {}, average {} seconds/sent'.format(count, (time.time() - start) / count))
+                    if count % 1000 == 0:
+                        self.logger.info('  Line {}, avg {} sec/line'.format(count, (time.time() - start) / count))
 
         model.train()
 
         open(val_trans_out, 'w').close()
         open(val_beam_out, 'w').close()
         with open(val_trans_out, 'w') as ftrans, open(val_beam_out, 'w') as btrans:
-            ftrans.write(''.join(all_best_trans))
-            btrans.write(''.join(all_beam_trans))
+            ftrans.write('\n'.join(all_best_trans))
+            btrans.write('\n\n'.join(all_beam_trans))
 
         # Remove BPE
         if self.restore_segments:
@@ -180,7 +180,7 @@ class Validator(object):
         p = Popen(' '.join(multibleu_cmd), shell=True, stdout=PIPE)
         output, _ = p.communicate()
         out_parse = re.match(r'BLEU = [-.0-9]+', output.decode('utf-8'))
-        self.logger.info(output)
+        self.logger.info(output[2:])
         self.logger.info('Validation took: {} minutes'.format(float(time.time() - start_time) / 60.0))
 
         bleu = float('-inf')
@@ -237,7 +237,7 @@ class Validator(object):
             if remove_idx is not None:
                 min_bleu = self.best_bleus[remove_idx]
                 self.logger.info('Current best bleus: {}'.format(', '.join(map(str, numpy.sort(self.best_bleus)))))
-                self.logger.info('Delete {} & use {} instead'.format(min_bleu, bleu_score))
+                self.logger.info('Delete {}, use {} instead'.format(min_bleu, bleu_score))
                 self.best_bleus = numpy.delete(self.best_bleus, remove_idx)
 
                 # Delete the right checkpoint
@@ -328,8 +328,8 @@ class Validator(object):
                     all_beam_trans[original_idxs[i]] = beam_trans + '\n\n'
 
                     count += 1
-                    if count % 100 == 0:
-                        self.logger.info('  Translating line {}, average {} seconds/sent'.format(count, (time.time() - start) / count))
+                    if count % 1000 == 0:
+                        self.logger.info('  Line {}, avg {} sec/sentence'.format(count, (time.time() - start) / count))
 
         model.train()
 
@@ -339,4 +339,4 @@ class Validator(object):
             ftrans.write(''.join(all_best_trans))
             btrans.write(''.join(all_beam_trans))
 
-        self.logger.info('Done translating {}, it takes {} minutes'.format(input_file, float(time.time() - start) / 60.0))
+        self.logger.info('Finished translating {}, took {} minutes'.format(input_file, float(time.time() - start) / 60.0))
