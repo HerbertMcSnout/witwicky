@@ -184,3 +184,14 @@ fun2com4 = {
     'pos_norm_penalty': 0,
     'batch_size': 2048,
 }
+
+fun2com5 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2com',
+    'max_train_length': 2000,
+    'max_epochs': 30,
+    'struct': struct.tree5,
+    'pos_norm_penalty': 0,
+    'batch_size': 2048,
+}

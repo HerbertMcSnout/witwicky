@@ -3,8 +3,7 @@ from .struct import Struct
 
 def normalize(t, embed_dim):
   norm = 1 if len(t.size()) == 1 else embed_dim ** 0.5
-  t2 = torch.tanh(t * (embed_dim ** 0.5))
-  return t2 * norm / t2.norm()
+  return t * norm / t.norm()
 
 class Tree(Struct):
   
@@ -13,15 +12,21 @@ class Tree(Struct):
     self.r = r
     self.v = v
 
+  def has_left(self):
+    return self.l is not None
+
+  def has_right(self):
+    return self.r is not None
+
   def __str__h(self, strs):
-    if self.l:
+    if self.has_left():
       strs.append("(")
       strs.append(str(self.v))
       self.l.__str__h(strs)
       strs.append(")")
     else:
       strs.append(str(self.v))
-    if self.r:
+    if self.has_right():
       self.r.__str__h(strs)
       
   def __str__(self):
@@ -34,14 +39,14 @@ class Tree(Struct):
 
   def map_(self, f):
     self.v = f(self.v)
-    if self.l: self.l = self.l.map_(f)
-    if self.r: self.r = self.r.map_(f)
+    if self.has_left(): self.l = self.l.map_(f)
+    if self.has_right(): self.r = self.r.map_(f)
     return self
 
   def map(self, f):
     v = f(self.v)
-    l = self.l.map(f) if self.l else None
-    r = self.r.map(f) if self.r else None
+    l = self.l.map(f) if self.has_left() else None
+    r = self.r.map(f) if self.has_right() else None
     return Tree(v, l, r)
 
   def flatten(self, acc=None, lefts=[]):
@@ -51,46 +56,44 @@ class Tree(Struct):
       return acc
     else:
       acc.append(self.v)
-      if self.l: lefts.append(self.l)
-      if self.r: self.r.flatten(acc, lefts)
+      if self.has_left(): lefts.append(self.l)
+      if self.has_right(): self.r.flatten(acc, lefts)
       elif len(lefts) > 0: lefts.pop().flatten(acc, lefts)
 
   def fold_up(self, f, leaf=None):
-    return f(self.v, self.l.fold_up(f, leaf) if self.l else leaf, self.r.fold_up(f, leaf) if self.r else leaf)
+    return f(self.v, self.l.fold_up(f, leaf) if self.has_left() else leaf, self.r.fold_up(f, leaf) if self.has_right() else leaf)
 
   def fold_up_tree(self, f, leaf=None):
-    l = self.l.fold_up_tree(f, leaf) if self.l else None
-    r = self.r.fold_up_tree(f, leaf) if self.r else None
-    lv = l.v if self.l else leaf
-    rv = r.v if self.r else leaf
+    l = self.l.fold_up_tree(f, leaf) if self.has_left() else None
+    r = self.r.fold_up_tree(f, leaf) if self.has_right() else None
+    lv = l.v if self.has_left() else leaf
+    rv = r.v if self.has_right() else leaf
     v = f(self.v, lv, rv)
     return Tree(v, l, r)
 
   def fold_down_tree(self, f, root=None):
-    l = self.l.fold_down_tree(f, f(self.v, root, True)) if self.l else None
-    r = self.r.fold_down_tree(f, f(self.v, root, False)) if self.r else None
+    l = self.l.fold_down_tree(f, f(self.v, root, True)) if self.has_left() else None
+    r = self.r.fold_down_tree(f, f(self.v, root, False)) if self.has_right() else None
     return Tree(root, l, r)
 
   def zip(self, other):
     "Zips the node values of this tree with other's"
-    assert (self.l is None == other.l is None) \
-       and (self.r is None == other.r is None), \
+    assert (self.has_left() == other.has_left) \
+       and (self.has_right() == other.has_right()), \
        "Trying to zip two trees of different shape"
     v = self.v, other.v
-    l = self.l.zip(other.l) if self.l else None
-    r = self.r.zip(other.r) if self.r else None
+    l = self.l.zip(other.l) if self.has_left() else None
+    r = self.r.zip(other.r) if self.has_right() else None
     return Tree(v, l, r)
 
   def get_pos_embedding(self, embed_dim, params):
     dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
-    norms = [embed_dim ** (0.5*(len(x.size()) - 1)) for x in params] # vectors -> 1, matrices -> sqrt(d)
     params = [x.type(dtype) for x in params]
-    mu_l, mu_r, lam = params
-    f = lambda _, p, is_left: normalize((mu_l if is_left else mu_r) @ p, embed_dim)
-    #pe = self.fold_down_tree(f, lam).flatten()
-    #pe += [torch.zeros(embed_dim).type(dtype)] * (pad_len - len(pe))
-    #return torch.stack(pe).type(dtype)
-    return self.fold_down_tree(f, lam)
+    params = [normalize(x, embed_dim) for x in params]
+    mu_l, mu_r, lam, kappa = params
+    f = lambda _, p, is_left: (mu_l if is_left else mu_r) @ p
+    return self.fold_down_tree(f, lam).map(lambda x: x * kappa)
+
 
 def parse_clean(fun_str, remove_parens=True):
   # fun_str\n -> fun_str
@@ -140,9 +143,10 @@ def get_params(config):
   mu_l = torch.Tensor(embed_dim, embed_dim)
   mu_r = torch.Tensor(embed_dim, embed_dim)
   lam  = torch.Tensor(embed_dim)
+  kappa = torch.tensor([1.]) # pos scale
   torch.nn.init.orthogonal_(mu_l)
   torch.nn.init.orthogonal_(mu_r)
   torch.nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
   #self.pos_embedding_linear = Parameter(torch.Tensor(max_pos_length, embed_dim))
   #torch.nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
-  return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam}
+  return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam, "kappa": kappa}

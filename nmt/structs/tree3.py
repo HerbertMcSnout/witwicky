@@ -1,7 +1,7 @@
 import torch
 from .struct import Struct
 
-def regularize(t, embed_dim):
+def normalize(t, embed_dim):
   norm = 1 if len(t.size()) == 1 else embed_dim ** 0.5
   t2 = torch.tanh(t * (embed_dim ** 0.5))
   return t2 * norm / t2.norm()
@@ -88,7 +88,7 @@ class Tree(Struct):
     mu_l, mu_r, lam_root, lam_leaf_l, lam_leaf_r = params
     step_scale = embed_dim ** 0.5
 
-    reg = lambda x: regularize(x, embed_dim)
+    reg = lambda x: normalize(x, embed_dim)
 
     def f_in(_, l, r):
       l = l if l is not None else lam_leaf_l

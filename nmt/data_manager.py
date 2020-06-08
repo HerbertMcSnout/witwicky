@@ -265,9 +265,8 @@ class DataManager(object):
         joint_file = self.ids_files[mode]
         joint_tok_count = self.tok_count_files[mode]
 
-        msg = 'Parallel convert tokens from {} & {} to ids and save to {}'.format(src_file, trg_file, joint_file)
-        msg += '\nAlso save the approx tok count to {}'.format(joint_tok_count)
-        self.logger.info(msg)
+        self.logger.info('Parallel convert tokens from {} & {} to ids and save to {}'.format(src_file, trg_file, joint_file))
+        self.logger.info('Also save the approx tok count to {}'.format(joint_tok_count))
 
         if exists(joint_file) and exists(joint_tok_count):
             self.logger.info('    Token-id-ed data exists at {}'.format(joint_file))

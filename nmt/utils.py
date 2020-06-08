@@ -15,7 +15,7 @@ def get_logger(logfile=None):
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
-        '%(asctime)s:%(filename)s:%(lineno)s - %(funcName)20s(): %(message)s')
+        '%(asctime)s:%(filename)15s:%(lineno)4s: %(message)s')
 
     if not logger.handlers:
         debug_handler = logging.FileHandler(_logfile)

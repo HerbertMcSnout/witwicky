@@ -100,8 +100,7 @@ class Trainer(object):
         train_true_perp = numpy.exp(train_true_perp) if train_true_perp < 300 else float('inf')
         self.train_true_perps.append(train_true_perp)
 
-        self.logger.info('    smoothed perp: {}'.format(train_smooth_perp))
-        self.logger.info('    true perp: {}'.format(train_true_perp))
+        self.logger.info('    smoothed, true perp: {:.2f}, {:.2f}'.format(float(train_smooth_perp), float(train_true_perp)))
 
         # Save debug_stats
         debug_stats = torch.load(self.debug_path)
@@ -234,9 +233,9 @@ class Trainer(object):
 
         self.logger.info('Training finished')
         self.logger.info('Train smoothed perps:')
-        self.logger.info(', '.join(["{:.2f}".format(str(x)) for x in self.train_smooth_perps]))
+        self.logger.info(', '.join(["{:.2f}".format(x) for x in self.train_smooth_perps]))
         self.logger.info('Train true perps:')
-        self.logger.info(', '.join(["{:.2f}".format(str(x)) for x in self.train_true_perps]))
+        self.logger.info(', '.join(["{:.2f}".format(x) for x in self.train_true_perps]))
         numpy.save(join(self.config['save_to'], 'train_smooth_perps.npy'), self.train_smooth_perps)
         numpy.save(join(self.config['save_to'], 'train_true_perps.npy'), self.train_true_perps)
 
