@@ -132,17 +132,17 @@ class Model(nn.Module):
                                       for x in structs])
         else:
             pos_embeds = self.pos_embedding_trg[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
-        with torch.no_grad():
-            if structs is not None and training:
-                self.debug_stats['word_embeds'].append((word_embeds.norm(dim=2).sum() / float(self.src_embed_scale.item() * pos_embeds.size()[0] * pos_embeds.size()[1])).item())
-                self.debug_stats['pos_embeds'].append((pos_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1])).item())
+        #with torch.no_grad():
+        #    if structs is not None and training:
+        #        self.debug_stats['word_embeds'].append((word_embeds.norm(dim=2).sum() / float(self.src_embed_scale.item() * pos_embeds.size()[0] * pos_embeds.size()[1])).item())
+        #        self.debug_stats['pos_embeds'].append((pos_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1])).item())
         if structs is not None and training:
             return word_embeds, pos_embeds.type(word_embeds.type())
         return word_embeds + pos_embeds
 
     def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
-        self.debug_stats['src_embed_scales'].append(self.src_embed_scale.item())
-        self.debug_stats['trg_embed_scales'].append(self.trg_embed_scale.item())
+        #self.debug_stats['src_embed_scales'].append(self.src_embed_scale.item())
+        #self.debug_stats['trg_embed_scales'].append(self.trg_embed_scale.item())
         
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
         decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1])), diagonal=1).type(trg_toks.type()) == 1
