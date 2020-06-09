@@ -119,7 +119,7 @@ class Validator(object):
         model.train()
         self.logger.info('dev perp: {}'.format(perp))
         self.logger.info('smoothed dev perp: {}'.format(smoothed_perp))
-        self.logger.info('Calculating dev perp took: {} minutes'.format(float(time.time() - start_time) / 60.0))
+        self.logger.info('Calculating dev perp took: {:.2f} minutes'.format(float(time.time() - start_time) / 60.0))
 
     def evaluate_bleu(self, model):
         model.eval()
@@ -161,7 +161,7 @@ class Validator(object):
 
                     count += 1
                     if count % 1000 == 0:
-                        self.logger.info('  Line {}, avg {} sec/line'.format(count, (time.time() - start) / count))
+                        self.logger.info('  Line {}, avg {:.4f} sec/line'.format(count, (time.time() - start) / count))
 
         model.train()
 
