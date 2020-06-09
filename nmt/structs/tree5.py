@@ -90,9 +90,12 @@ class Tree(Struct):
     dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     params = [x.type(dtype) for x in params]
     params = [normalize(x, embed_dim) for x in params]
-    mu_l, mu_r, lam, kappa = params
-    f = lambda _, p, is_left: (mu_l if is_left else mu_r) @ p
-    return self.fold_down_tree(f, lam).map(lambda x: x * kappa)
+    mu_l, mu_r, lam, mu_l_scale, mu_r_scale, lam_scale = params
+    mu_l *= mu_l_scale
+    mu_r *= mu_r_scale
+    lam  *=  lam_scale
+    f = lambda _, p, is_left: normalize((mu_l if is_left else mu_r) @ p, embed_dim)
+    return self.fold_down_tree(f, lam)
 
 
 def parse_clean(fun_str, remove_parens=True):
@@ -143,10 +146,12 @@ def get_params(config):
   mu_l = torch.Tensor(embed_dim, embed_dim)
   mu_r = torch.Tensor(embed_dim, embed_dim)
   lam  = torch.Tensor(embed_dim)
-  kappa = torch.tensor([1.]) # pos scale
+  mu_l_scale = torch.tensor([1.])
+  mu_r_scale = torch.tensor([1.])
+  lam_scale = torch.tensor([1.])
   torch.nn.init.orthogonal_(mu_l)
   torch.nn.init.orthogonal_(mu_r)
   torch.nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
   #self.pos_embedding_linear = Parameter(torch.Tensor(max_pos_length, embed_dim))
   #torch.nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
-  return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam, "kappa": kappa}
+  return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam, "mu_l_scale":mu_l_scale, "mu_r_scale":mu_r_scale, "lam_scale":lam_scale}
