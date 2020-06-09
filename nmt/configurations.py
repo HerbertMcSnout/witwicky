@@ -160,6 +160,7 @@ fun2coml = {
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.sequence,
+    'pos_norm_penalty': 0,
     'batch_size': 2048,
     'restore_segments': False,
 }
