@@ -415,7 +415,7 @@ class DataManager(object):
             # First we shuffle training data
             start = time.time()
             ut.shuffle_file(ids_file)
-            self.logger.info('Shuffling {} takes {} seconds'.format(ids_file, time.time() - start))
+            self.logger.info('Shuffling {} takes {:.2f} seconds'.format(ids_file, time.time() - start))
 
         with open(ids_file, 'r') as f:
             while True:
