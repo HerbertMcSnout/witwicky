@@ -95,7 +95,7 @@ class Tree(Struct):
     mu_r *= mu_r_scale
     lam  *=  lam_scale
     f = lambda _, p, is_left: normalize((mu_l if is_left else mu_r) @ p, embed_dim)
-    return self.fold_down_tree(f, lam)
+    return self.fold_down_tree(f, normalize(lam))
 
 
 def parse_clean(fun_str, remove_parens=True):
