@@ -165,8 +165,8 @@ class Validator(object):
 
         model.train()
 
-        open(val_trans_out, 'w').close()
-        open(val_beam_out, 'w').close()
+        #open(val_trans_out, 'w').close()
+        #open(val_beam_out, 'w').close()
         with open(val_trans_out, 'w') as ftrans, open(val_beam_out, 'w') as btrans:
             ftrans.write('\n'.join(all_best_trans))
             btrans.write('\n\n'.join(all_beam_trans))
@@ -225,13 +225,13 @@ class Validator(object):
         remove_idx, save_please = self._is_valid_to_save()
 
         if self.val_by_bleu:
-            name = 'bleu'
+            metric = 'bleu'
             path = self.best_bleus_path
             score = self.bleu_curve[-1]
             scores = self.best_bleus
             asc = False # descending
         else:
-            name = 'perp'
+            metric = 'perp'
             path = self.best_perps_path
             score = self.perp_curve[-1]
             scores = self.best_perps
@@ -241,7 +241,7 @@ class Validator(object):
             worst = scores[remove_idx]
             scores_sorted = numpy.sort(scores)
             if not asc: scores_sorted = scores_sorted[::-1]
-            self.logger.info('Current best {} scores: {}'.format(name, ', '.join(["{:.2f}".format(float(x)) for x in scores_sorted])))
+            self.logger.info('Current best {} scores: {}'.format(metric, ', '.join(["{:.2f}".format(float(x)) for x in scores_sorted])))
             self.logger.info('Delete {:.2f}, use {:.2f} instead'.format(float(worst), float(score)))
             scores = numpy.delete(scores, remove_idx)
 
@@ -255,7 +255,7 @@ class Validator(object):
             scores = numpy.append(scores, score)
             cpkt_path = self.get_cpkt_path(score)
             torch.save(model.state_dict(), cpkt_path)
-            self.logger.info('Best {} scores so far: {}'.format(name, ', '.join(["{:.2f}".format(float(x)) for x in numpy.sort(scores)])))
+            self.logger.info('Best {} scores so far: {}'.format(metric, ', '.join(["{:.2f}".format(float(x)) for x in numpy.sort(scores)])))
 
         numpy.save(path, scores)
         if self.val_by_bleu: self.best_bleus = scores
