@@ -133,56 +133,59 @@ base_config = {
 fun2com = {
     'src_lang': 'fun',
     'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2com',
     'max_train_length': 2000,
-    # Regarding above, for the sampled first 1/10 of train.ast written to train.fun,
-    # the longest line has 969 words; for dev.fun (first 10k lines), 921 words;
-    # for test.fun (all ~90k lines), 984 words.
     'max_epochs': 30,
     'struct': struct.tree,
     'batch_size': 2048,
     'restore_segments': False,
 #    'warmup_style': ac.ORG_WARMUP,
-    #'src_vocab_size': 72472 # approx. 23 lines / batch
-    #'src_vocab_size': 1686 # (for 1000 lines...)
-    #'src_vocab_size': 2000
 }
 
 fun2com2 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2com',
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.tree2,
     'batch_size': 2048,
+    'restore_segments': False,
 }
 
 fun2coml = {
     'src_lang': 'fun',
     'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2com',
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.sequence,
     'batch_size': 2048,
+    'restore_segments': False,
 }
 
 fun2com3 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2com',
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.tree3,
     'pos_norm_penalty': 0,
     'batch_size': 2048,
+    'restore_segments': False,
 }
 
 fun2com4 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2com',
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.tree4,
     'pos_norm_penalty': 0,
     'batch_size': 2048,
+    'restore_segments': False,
 }
 
 fun2com5 = {
@@ -194,4 +197,5 @@ fun2com5 = {
     'struct': struct.tree5,
     'pos_norm_penalty': 0,
     'batch_size': 2048,
+    'restore_segments': False,
 }
