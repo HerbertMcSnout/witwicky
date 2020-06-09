@@ -104,7 +104,7 @@ class Model(nn.Module):
                 if p.dim() > 1:
                     init_func(p)
                 else:
-                    nn.init.constant_(p, 0.)
+                    nn.init.constant_(p, 0.)            
 
     def get_input(self, toks, structs=None, training=False):
         max_len = toks.size()[-1]
@@ -120,12 +120,16 @@ class Model(nn.Module):
             word_embeds = word_embeds * embed_scale
 
         if structs is not None:
-            pos_embeds = [x.get_pos_embedding(embed_dim, self.struct_params).flatten() for x in structs]
-            pos_embeds = [[x.type(dtype) for x in xs] for xs in pos_embeds]
-            pos_embeds = [x + [torch.zeros(embed_dim).type(dtype)] * (max_len - len(x)) for x in pos_embeds]
-            pos_embeds = [torch.stack(x) for x in pos_embeds]
-            pos_embeds = torch.stack(pos_embeds) # [bsz, max_len, embed_dim]
-#            pos_embeds = torch.stack([struct.get_pos_embedding(self.pos_embedding_mu_l, self.pos_embedding_mu_r, self.pos_embedding_lambda, toks.size()[-1]) for struct in structs]) # [bsz, max_len, embed_dim]
+            #pos_embeds = [x.get_pos_embedding(embed_dim, self.struct_params).flatten() for x in structs]
+            #pos_embeds = [[x.type(dtype) for x in xs] for xs in pos_embeds]
+            #pos_embeds = [x + [torch.zeros(embed_dim).type(dtype)] * (max_len - len(x)) for x in pos_embeds]
+            #pos_embeds = [torch.stack(x) for x in pos_embeds]
+            #pos_embeds = torch.stack(pos_embeds) # [bsz, max_len, embed_dim]
+            
+            # [bsz, max_len, embed_dim]
+            pos_embeds = torch.stack([F.pad(torch.stack(x.get_pos_embedding(embed_dim, self.struct_params).flatten()),
+                                            (0, 0, 0, max_len - x.size()))
+                                      for x in structs])
         else:
             pos_embeds = self.pos_embedding_trg[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
         with torch.no_grad():
