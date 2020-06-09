@@ -12,21 +12,15 @@ class Tree(Struct):
     self.r = r
     self.v = v
 
-  def has_left(self):
-    return self.l is not None
-
-  def has_right(self):
-    return self.r is not None
-
   def __str__h(self, strs):
-    if self.has_left():
+    if self.l:
       strs.append("(")
       strs.append(str(self.v))
       self.l.__str__h(strs)
       strs.append(")")
     else:
       strs.append(str(self.v))
-    if self.has_right():
+    if self.r:
       self.r.__str__h(strs)
       
   def __str__(self):
@@ -39,14 +33,14 @@ class Tree(Struct):
 
   def map_(self, f):
     self.v = f(self.v)
-    if self.has_left(): self.l = self.l.map_(f)
-    if self.has_right(): self.r = self.r.map_(f)
+    if self.l: self.l = self.l.map_(f)
+    if self.r: self.r = self.r.map_(f)
     return self
 
   def map(self, f):
     v = f(self.v)
-    l = self.l.map(f) if self.has_left() else None
-    r = self.r.map(f) if self.has_right() else None
+    l = self.l.map(f) if self.l else None
+    r = self.r.map(f) if self.r else None
     return Tree(v, l, r)
 
   def flatten(self, acc=None, lefts=[]):
@@ -56,34 +50,34 @@ class Tree(Struct):
       return acc
     else:
       acc.append(self.v)
-      if self.has_left(): lefts.append(self.l)
-      if self.has_right(): self.r.flatten(acc, lefts)
+      if self.l: lefts.append(self.l)
+      if self.r: self.r.flatten(acc, lefts)
       elif len(lefts) > 0: lefts.pop().flatten(acc, lefts)
 
   def fold_up(self, f, leaf=None):
-    return f(self.v, self.l.fold_up(f, leaf) if self.has_left() else leaf, self.r.fold_up(f, leaf) if self.has_right() else leaf)
+    return f(self.v, self.l.fold_up(f, leaf) if self.l else leaf, self.r.fold_up(f, leaf) if self.r else leaf)
 
   def fold_up_tree(self, f, leaf=None):
-    l = self.l.fold_up_tree(f, leaf) if self.has_left() else None
-    r = self.r.fold_up_tree(f, leaf) if self.has_right() else None
-    lv = l.v if self.has_left() else leaf
-    rv = r.v if self.has_right() else leaf
+    l = self.l.fold_up_tree(f, leaf) if self.l else None
+    r = self.r.fold_up_tree(f, leaf) if self.r else None
+    lv = l.v if self.l else leaf
+    rv = r.v if self.r else leaf
     v = f(self.v, lv, rv)
     return Tree(v, l, r)
 
   def fold_down_tree(self, f, root=None):
-    l = self.l.fold_down_tree(f, f(self.v, root, True)) if self.has_left() else None
-    r = self.r.fold_down_tree(f, f(self.v, root, False)) if self.has_right() else None
+    l = self.l.fold_down_tree(f, f(self.v, root, True)) if self.l else None
+    r = self.r.fold_down_tree(f, f(self.v, root, False)) if self.r else None
     return Tree(root, l, r)
 
   def zip(self, other):
     "Zips the node values of this tree with other's"
-    assert (self.has_left() == other.has_left) \
-       and (self.has_right() == other.has_right()), \
+    assert (self.l is None == other.l is None) \
+       and (self.r is None == other.r is None), \
        "Trying to zip two trees of different shape"
     v = self.v, other.v
-    l = self.l.zip(other.l) if self.has_left() else None
-    r = self.r.zip(other.r) if self.has_right() else None
+    l = self.l.zip(other.l) if self.l else None
+    r = self.r.zip(other.r) if self.r else None
     return Tree(v, l, r)
 
   def get_pos_embedding(self, embed_dim, params):
