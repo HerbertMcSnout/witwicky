@@ -8,10 +8,19 @@ import torch
 
 import nmt.all_constants as ac
 
+def ensure_dirs_exists(filepath):
+    "Creates the directories containing filepath, if it does not yet exist. Returns if the path already existed."
+    parent = os.path.dirname(filepath)
+    if not os.path.exists(parent):
+        os.makedirs(parent)
+        return False
+    return True
+
 
 def get_logger(logfile=None):
     """Global logger for every logging"""
     _logfile = logfile if logfile else './DEBUG.log'
+    ensure_dirs_exists(_logfile)
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
