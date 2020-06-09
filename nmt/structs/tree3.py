@@ -88,7 +88,7 @@ class Tree(Struct):
     mu_l, mu_r, lam_root, lam_leaf_l, lam_leaf_r = params
     step_scale = embed_dim ** 0.5
 
-    reg = lambda x: normalize(x, embed_dim)
+    def reg(x): return normalize(x, embed_dim)
 
     def f_in(_, l, r):
       l = l if l is not None else lam_leaf_l
@@ -105,8 +105,8 @@ class Tree(Struct):
         in_l = in_l if in_l is not None else lam_leaf_l
         return in_r, reg(torch.einsum("i,i,ij->j", out_p, mu_l @ in_l, mu_r) * step_scale)
 
-    f_in_aux = lambda v, l, r: (v, l[0], r[0])
-    f_mult = lambda io: io[0] * io[1] * step_scale
+    def f_in_aux(v, l, r): return v, l[0], r[0]
+    def f_mult(io): return io[0] * io[1] * step_scale
 
     pe = self
     pe = pe.fold_up_tree(f_in, None)

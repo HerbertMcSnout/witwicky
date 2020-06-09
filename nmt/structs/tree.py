@@ -86,7 +86,7 @@ class Tree(Struct):
     dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     params = [x.type(dtype) for x in params]
     mu_l, mu_r, lam = params
-    f = lambda _, p, is_left: (mu_l if is_left else mu_r) @ p # regularize(mu_... @ p)
+    def f(_, p, is_left): return (mu_l if is_left else mu_r) @ p # regularize(mu_... @ p)
     #pe = self.fold_down_tree(f, lam).flatten()
     #pe += [torch.zeros(embed_dim).type(dtype)] * (pad_len - len(pe))
     #return torch.stack(pe).type(dtype)

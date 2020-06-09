@@ -86,7 +86,8 @@ class Tree(Struct):
     norms = [embed_dim ** (0.5*(len(x.size()) - 1)) for x in params] # vectors -> 1, matrices -> sqrt(d)
     params = [x.type(dtype) for x in params]
     mu_l, mu_r, lam = params
-    f = lambda _, p, is_left: normalize((mu_l if is_left else mu_r) @ p, embed_dim)
+    def f(_, p, is_left):
+      return normalize((mu_l if is_left else mu_r) @ p, embed_dim)
     #pe = self.fold_down_tree(f, lam).flatten()
     #pe += [torch.zeros(embed_dim).type(dtype)] * (pad_len - len(pe))
     #return torch.stack(pe).type(dtype)
