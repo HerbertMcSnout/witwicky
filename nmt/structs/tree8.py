@@ -168,3 +168,5 @@ def get_params(config):
   #torch.nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
   return {"mu_l":mu_l, "mu_r":mu_r, "lam_leaf":lam_leaf, "lam_root":lam_root, "lam_leaf_l":lam_leaf_l, "lam_leaf_r":lam_leaf_r}
 
+def get_reg_penalty(batch_pe_norms):
+  return torch.exp(torch.abs(torch.log(batch_pe_norms))) - 1

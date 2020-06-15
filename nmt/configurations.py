@@ -98,6 +98,7 @@ base_config = {
     'lr_decay_patience': 3, # if no improvements for this many epochs, anneal learning rate
     'early_stop_patience': 10, # if no improvements for this many epochs, stop early
 
+    # TODO: Phase out? After first lr annealing, will get set to same lr as everything else
     'embed_scale_lr': 0.03,
 
     # Gradient clipping
@@ -156,19 +157,6 @@ fun2com2 = {
     'warmup_style': ac.ORG_WARMUP,
 }
 
-fun2coml = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2coml',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.sequence,
-    'pos_norm_penalty': 0,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'warmup_style': ac.ORG_WARMUP,
-}
-
 fun2com3 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
@@ -176,7 +164,6 @@ fun2com3 = {
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.tree3,
-    'pos_norm_penalty': 0,
     'batch_size': 3072,
     'restore_segments': False,
     'warmup_style': ac.ORG_WARMUP,
@@ -189,7 +176,6 @@ fun2com4 = {
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.tree4,
-    'pos_norm_penalty': 0,
     'batch_size': 3072,
     'restore_segments': False,
     'warmup_style': ac.ORG_WARMUP,
@@ -202,7 +188,6 @@ fun2com5 = {
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.tree5,
-    'pos_norm_penalty': 0,
     'batch_size': 3072,
     'restore_segments': False,
     'warmup_style': ac.ORG_WARMUP,
@@ -215,7 +200,6 @@ fun2com6 = {
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.tree6,
-    'pos_norm_penalty': 0,
     'batch_size': 3072,
     'restore_segments': False,
     'warmup_style': ac.ORG_WARMUP,
@@ -264,7 +248,44 @@ fun2com10 = {
     'data_dir': './nmt/data/fun2com',
     'max_train_length': 2000,
     'max_epochs': 30,
-    'struct': struct.tree2,
+    'struct': struct.tree10,
+    'batch_size': 3072,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+fun2com11 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2com',
+    'max_train_length': 2000,
+    'max_epochs': 30,
+    'struct': struct.tree11,
+    'batch_size': 3072,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+
+fun2coml = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2coml',
+    'max_train_length': 2000,
+    'max_epochs': 30,
+    'struct': struct.sequence,
+    'batch_size': 3072,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+fun2coml2 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2coml2',
+    'max_train_length': 2000,
+    'max_epochs': 30,
+    'struct': struct.sequence,
     'batch_size': 3072,
     'restore_segments': False,
     'warmup_style': ac.ORG_WARMUP,

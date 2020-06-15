@@ -59,6 +59,8 @@ class Model(nn.Module):
         self.out_embedding = self.trg_embedding.weight
         self.src_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
         self.trg_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
+        self.src_pos_embed_scale = Parameter(torch.tensor([1.]))
+        self.trg_pos_embed_scale = Parameter(torch.tensor([1.]))
 
         if tie_mode == ac.ALL_TIED:
             self.src_embedding.weight = self.trg_embedding.weight
@@ -125,9 +127,12 @@ class Model(nn.Module):
             #pos_embeds = [x + [torch.zeros(embed_dim).type(dtype)] * (max_len - len(x)) for x in pos_embeds]
             #pos_embeds = [torch.stack(x) for x in pos_embeds]
             #pos_embeds = torch.stack(pos_embeds) # [bsz, max_len, embed_dim]
+
+            def maybe_stack(x):
+                return x if torch.is_tensor(x) else torch.stack(x)
             
             # [bsz, max_len, embed_dim]
-            pos_embeds = torch.stack([F.pad(torch.stack(x.get_pos_embedding(embed_dim, self.struct_params).flatten()),
+            pos_embeds = torch.stack([F.pad(maybe_stack(x.get_pos_embedding(embed_dim, self.struct_params).flatten()),
                                             (0, 0, 0, max_len - x.size()))
                                       for x in structs])
         else:
@@ -138,7 +143,9 @@ class Model(nn.Module):
         #        self.debug_stats['pos_embeds'].append((pos_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1])).item())
         if structs is not None and training:
             return word_embeds, pos_embeds.type(dtype)
-        return word_embeds + pos_embeds.type(dtype)
+        else:
+            pe_scale = self.src_pos_embed_scale if structs is not None else self.trg_pos_embed_scale
+            return word_embeds + pos_embeds.type(dtype) * pe_scale
 
     def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
         #self.debug_stats['src_embed_scales'].append(self.src_embed_scale.item())
@@ -149,7 +156,7 @@ class Model(nn.Module):
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
         word_embeds, pos_embeds = self.get_input(src_toks, src_structs, training=True)
-        encoder_inputs = word_embeds + pos_embeds * self.config['pos_norm_scale']
+        encoder_inputs = word_embeds + pos_embeds * self.config['pos_norm_scale'] * self.src_pos_embed_scale
         
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
 
@@ -175,10 +182,13 @@ class Model(nn.Module):
             loss = nll_loss
 
         pos_embeds = pos_embeds.type(loss.type())
-        # Penalize position embeddings that have (pre-scaled) norms greater than 1
-        pe_norms = pos_embeds.norm(dim=2)
-        pe_errs = torch.clamp(pe_norms - 1, min=0)
-        loss += pe_errs.sum(dim=[0,1]) * self.config['pos_norm_penalty'] #.type(loss.type())
+        # Penalize position embeddings that have (pre-scaled) norms other than 1
+        #pe_norms = pos_embeds.norm(dim=2)
+        #pe_errs = torch.abs(pe_norms - 1)
+        #loss += pe_errs.sum(dim=[0,1]) * self.config['pos_norm_penalty'] #.type(loss.type())
+        
+        if hasattr(self.struct, "get_reg_penalty"):
+            loss += self.struct.get_reg_penalty(pos_embeds.norm(dim=2)).sum(dim=[0,1]) * self.config['pos_norm_penalty']
 
         return {
             'loss': loss,

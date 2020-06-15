@@ -135,3 +135,6 @@ def get_params(config):
   torch.nn.init.normal_(mu_r, mean=0, std=embed_dim ** -0.5)
   torch.nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
   return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam}
+
+def get_reg_penalty(batch_pe_norms):
+  return torch.exp(torch.abs(torch.log(batch_pe_norms))) - 1
