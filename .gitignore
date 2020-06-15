@@ -107,7 +107,4 @@ nmt/data/*/vocab-*
 nmt/data/*/*.length*
 nmt/data/*/*.count
 nmt/data/*/*vocab*
-nmt/data/fun2com
-nmt/data/fun2com_backup
-fun2com.o*
 .vscode
