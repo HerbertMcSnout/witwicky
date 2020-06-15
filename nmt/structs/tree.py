@@ -131,7 +131,6 @@ def parse(fun_str):
 
 def get_params(config):
   embed_dim = config['embed_dim']
-  max_len = config['max_train_length']
   mu_l = torch.Tensor(embed_dim, embed_dim)
   mu_r = torch.Tensor(embed_dim, embed_dim)
   lam  = torch.Tensor(embed_dim)

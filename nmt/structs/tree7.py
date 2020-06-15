@@ -1,11 +1,6 @@
 import torch
 from .struct import Struct
 
-def normalize(t, embed_dim):
-  norm = 1 if len(t.size()) == 1 else embed_dim ** 0.5
-  t2 = torch.tanh(t * (embed_dim ** 0.5))
-  return t2 * norm / t2.norm()
-
 class Tree(Struct):
   
   def __init__(self, v, l=None, r=None):
@@ -83,14 +78,11 @@ class Tree(Struct):
 
   def get_pos_embedding(self, embed_dim, params):
     dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
-    params = [normalize(x, embed_dim) for x in params] # vectors -> 1, matrices -> sqrt(d)
+    params = [x.type(dtype) for x in params]
     mu_l, mu_r, lam = params
-    def f(_, p, is_left):
-      return normalize((mu_l if is_left else mu_r) @ p, embed_dim)
-    #pe = self.fold_down_tree(f, lam).flatten()
-    #pe += [torch.zeros(embed_dim).type(dtype)] * (pad_len - len(pe))
-    #return torch.stack(pe).type(dtype)
+    def f(_, p, is_left): return (mu_l if is_left else mu_r) @ p
     return self.fold_down_tree(f, lam)
+
 
 def parse_clean(fun_str, remove_parens=True):
   # fun_str\n -> fun_str
@@ -139,9 +131,7 @@ def get_params(config):
   mu_l = torch.Tensor(embed_dim, embed_dim)
   mu_r = torch.Tensor(embed_dim, embed_dim)
   lam  = torch.Tensor(embed_dim)
-  torch.nn.init.orthogonal_(mu_l)
-  torch.nn.init.orthogonal_(mu_r)
+  torch.nn.init.normal_(mu_l, mean=0, std=embed_dim ** -0.5)
+  torch.nn.init.normal_(mu_r, mean=0, std=embed_dim ** -0.5)
   torch.nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
-  #self.pos_embedding_linear = Parameter(torch.Tensor(max_pos_length, embed_dim))
-  #torch.nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
   return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam}

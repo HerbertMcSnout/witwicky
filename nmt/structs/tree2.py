@@ -151,7 +151,6 @@ def parse(fun_str):
 
 def get_params(config):
   embed_dim = config['embed_dim']
-  max_len = config['max_train_length']
   mu_l = torch.Tensor(embed_dim, embed_dim)
   mu_r = torch.Tensor(embed_dim, embed_dim)
   lam_leaf   = torch.Tensor(embed_dim) # inside
@@ -168,3 +167,4 @@ def get_params(config):
   #self.pos_embedding_linear = Parameter(torch.Tensor(max_pos_length, embed_dim))
   #torch.nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
   return {"mu_l":mu_l, "mu_r":mu_r, "lam_leaf":lam_leaf, "lam_root":lam_root, "lam_leaf_l":lam_leaf_l, "lam_leaf_r":lam_leaf_r}
+
