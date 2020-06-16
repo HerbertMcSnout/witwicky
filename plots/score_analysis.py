@@ -14,7 +14,7 @@ lw = 0.8
 adjust_right = 0.63 # make room for legend
 
 saved_models_dir = "../nmt/saved_models"
-save_to = "scores.png"
+save_to = "dev_scores.png"
 
 scores = {}
 
