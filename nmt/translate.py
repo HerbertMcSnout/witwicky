@@ -101,4 +101,4 @@ class Translator(object):
         model = Model(self.config).to(device)
         self.logger.info('Restore model from {}'.format(self.model_file))
         model.load_state_dict(torch.load(self.model_file))
-        self.data_manager.translate(model, self.input_file, self.config['save_dir'], self.logger, self.get_trans, device)
+        self.data_manager.translate(model, self.input_file, self.config['save_to'], self.logger, self.get_trans, device)
