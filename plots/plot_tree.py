@@ -81,37 +81,7 @@ plot_x_max =  1 if (range_theta[0] <= 4*math.pi/2 <= range_theta[1]) else max(pl
 
 
 def get_radius(depth, max_depth):
-    return (1 - 1/2 ** depth) * radius_exp_weight + depth / max_depth * (1 - radius_exp_weight)
-
-#def get_color(v, cvr):
-#    color_value_range, colors = cvr
-#    color_v_fm, color_v_to = color_value_range
-#    color_v_r = color_v_to - color_v_fm
-#    v_r = v - color_v_fm # relative to color_value_range
-#    color_drange = color_v_r / (len(colors) - 1)
-#    color_index = round(v_r // color_drange)
-#    color_mod = (v_r % color_drange) / color_drange
-#    if color_index < 0:
-#      color_index = 0
-#      color_mod = 0
-#    elif color_index >= len(colors) - 1:
-#      color_index = len(colors) - 2
-#      color_mod = 1
-#    c0, c1 = colors[color_index:color_index + 2]
-#    cm0, cm1 = 1 - color_mod, color_mod
-
-#    crs = color_ratios[color_index:color_index + 2]
-#    cr0, cr1 = map(lambda x: x / sum(crs), crs)
-#    cm0 *= cr0
-#    cm1 *= cr1
-#    ct = cm0 + cm1
-#    cm0 /= ct
-#    cm1 /= ct
-
-#    interpolate = lambda c: c[1] * cm1 + c[0] * cm0
-#    
-#    return tuple(list(map(interpolate, zip(c0, c1))) + [1.0])
-    
+    return (1 - 1/2 ** depth) * radius_exp_weight + depth / max_depth * (1 - radius_exp_weight)    
 
 def draw_slice(depth, theta1, theta2, v, max_depth, has_left, has_right):
     acc = []
@@ -132,7 +102,6 @@ def draw_slice(depth, theta1, theta2, v, max_depth, has_left, has_right):
                     r0, # inner r
                     min(theta1, theta2) + abs(theta2 - theta1) * (x + 0.0) / w, # right(?) edge
                     abs(theta1 - theta2) / w, # width
-#                    get_color(vx, cvr), # color
                     depth,
         ])
     return acc
@@ -144,57 +113,44 @@ def draw_tree(acc, tree, depth, theta1, theta2, max_depth, has_left, has_right):
         draw_tree(acc, tree.l, depth + 1, theta1, theta3, max_depth, has_left, tree.r)
         draw_tree(acc, tree.r, depth + 1, theta3, theta2, max_depth, tree.l, has_right)
 
-#def scheme_to_cmap(cscheme):
-#  def icolor(i):
-#    return i / cax_res, get_color(i / cax_res, ((0.0,  1.0), cscheme))
-#  cs = [icolor(i) for i in range(cax_res + 1)]
-#  return matplotlib.colors.LinearSegmentedColormap.from_list("", cs)
+def plot_tree(ax, tree, cm="cividis", mean=None):
 
-def plot_treeh(tree, ax, cm):
+    def maybe_expand(x):
+        a = np.asanyarray(x)
+        return a if len(a.shape) else a[np.newaxis]
+#        if len(a.shape) == 0: return a[np.newaxis]
+#        else: return a
 
-  min_v, max_v, depth = tree.min(), tree.max(), tree.depth()
+    tree = tree.map(maybe_expand)
 
-  # Normalize tree values to [0, 1]
-  tree = tree.map(lambda xs: [(x - min_v) / (max_v - min_v) for x in xs])
+    min_v, max_v, depth = tree.min(), tree.max(), tree.depth()
+    if mean is not None:
+      mag = max(abs(min_v - mean), abs(max_v - mean))
+      min_v, max_v = mean - mag, mean + mag
+    #if min_v < 0 and max_v > 0:
+    #    mag = max(-min_v, max_v)
+    #    min_v, max_v = -mag, mag
+
+    # Normalize tree values to [0, 1]
+    tree = tree.map(lambda xs: [(x - min_v) / (max_v - min_v) for x in xs])
   
-  acc = []
-  # (1.,1.,1.,1.)
-  acc.append([0.5, 0, 1, 0, 2*math.pi, 0]) # makes sure 2pi = one revolution
-  draw_tree(acc, tree, 1, range_theta[0], range_theta[1], depth, False, False)
-  acc = sorted(acc, key=lambda x: x[-1]) # sort by depth
+    acc = []
+    acc.append([0.5, 0, 1, 0, 2*math.pi, 0]) # makes sure 2pi = one revolution
+    draw_tree(acc, tree, 1, range_theta[0], range_theta[1], depth, False, False)
+    acc = sorted(acc, key=lambda x: x[-1]) # sort by depth
 
-  df = pd.DataFrame(acc, columns=["v", "r", "r0", "theta", "dtheta", "depth"])
+    df = pd.DataFrame(acc, columns=["v", "r", "r0", "theta", "dtheta", "depth"])
 
-  #cm = scheme_to_cmap(cscheme)
-  cm = plt.cm.get_cmap(cm)
-  # vvv color=df["color"]
-  plot = ax.bar(df["theta"], df["r"], width=df["dtheta"], bottom=df["r0"], color=cm(df["v"]), align="edge")
-  sm = plt.cm.ScalarMappable(cmap=cm, norm=plt.Normalize(min_v, max_v))
-  sm.set_array([])
-  cbar = plt.colorbar(sm, ax=ax, shrink=0.8, orientation="horizontal", pad=0.0)
-  #cbar.ax.tick_params(labelsize="small")
-  cbar.ax.ticklabel_format(style="sci", axis="x", scilimits=(-3,3))
-  ax.set_thetamin(range_theta[0]/2/math.pi*360)
-  ax.set_thetamax(range_theta[1]/2/math.pi*360)
-  ax.set_thetagrids([])
-  ax.set_rgrids([])
-  ax.grid(False)
-  ax.set_axis_off()
-
-
-def plot_tree(ax, tree, cm="cividis"):
-
-  def maybe_expand(a):
-    if len(a.shape) == 0: return a[np.newaxis]
-    else: return a
-
-  tree = tree.map(lambda x: maybe_expand(np.asanyarray(x)))
-  #tree_norms = tree.map(lambda x: x.norm().unsqueeze(0))
-    
-  #fig = plt.figure()
-  #gs = fig.add_gridspec(1, 2)
-  plot_treeh(tree, ax, cm)#cscheme1)
-  #ax.set_title(title)
-  #ax = fig.add_subplot(gs[n], polar=True)
-  #plot_treeh(tree_norms, fig, gs[1], "cividis", title="Frobenius Norm")#cscheme2)
-  
+    cm = plt.cm.get_cmap(cm)
+    plot = ax.bar(df["theta"], df["r"], width=df["dtheta"], bottom=df["r0"], color=cm(df["v"]), align="edge")
+    sm = plt.cm.ScalarMappable(cmap=cm, norm=plt.Normalize(min_v, max_v))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, shrink=0.8, orientation="horizontal", pad=0.0)
+    #cbar.ax.tick_params(labelsize="small")
+    cbar.ax.ticklabel_format(style="sci", axis="x", scilimits=(-3,3))
+    ax.set_thetamin(range_theta[0]/2/math.pi*360)
+    ax.set_thetamax(range_theta[1]/2/math.pi*360)
+    ax.set_thetagrids([])
+    ax.set_rgrids([])
+    ax.grid(False)
+    ax.set_axis_off()

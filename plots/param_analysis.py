@@ -24,26 +24,27 @@ for model in listdir(saved_models_dir):
   if exists(fp):
     cnfg = config.get_config(model, getattr(config, model))
     struct = cnfg["struct"]
-    tree = struct.parse(sample)
-    ks = struct.get_params(cnfg).keys()
-    m = torch.load(fp, map_location=torch.device("cpu"))
-    params = [m[k] for k in ks] # get param names
-
-    pe = cast_tree(struct.parse(sample).get_pos_embedding(cnfg["embed_dim"], params))
-
-    fig = plt.figure()
-    ax1 = fig.add_subplot(1,2,1, projection="polar")
-    ax2 = fig.add_subplot(1,2,2, projection="polar")
-    
-    plot_tree.plot_tree(ax1, pe, cm="PiYG")
-    plot_tree.plot_tree(ax2, pe.map(torch.norm), cm="cividis")
-
-    ax1.set_title("Position Embedding")
-    ax2.set_title("Frobenius Norm")
-
-    plt.tight_layout()
-    plt.savefig("pe-{}.png".format(model), dpi=dpi)
-    plt.close("all")
+    if hasattr(struct, "Tree"):
+      tree = struct.parse(sample)
+      ks = struct.get_params(cnfg).keys()
+      m = torch.load(fp, map_location=torch.device("cpu"))
+      params = [m[k] for k in ks] # get param names
+      
+      pe = cast_tree(struct.parse(sample).get_pos_embedding(cnfg["embed_dim"], params))
+      
+      fig = plt.figure()
+      ax1 = fig.add_subplot(1,2,1, projection="polar")
+      ax2 = fig.add_subplot(1,2,2, projection="polar")
+      
+      plot_tree.plot_tree(ax1, pe, cm="PiYG", mean=0)
+      plot_tree.plot_tree(ax2, pe.map(torch.norm), cm="cividis", mean=1)
+      
+      ax1.set_title("Position Embedding")
+      ax2.set_title("Frobenius Norm")
+      
+      plt.tight_layout()
+      plt.savefig("pe-{}.png".format(model), dpi=dpi)
+      plt.close("all")
 
   else:
     print("{} doesn't exist".format(model))
