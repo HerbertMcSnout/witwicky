@@ -48,7 +48,7 @@ base_config = {
     'tie_mode': ac.ALL_TIED,
 
     # Penalize position embeddings that are too big
-    'pos_norm_penalty': 5e-3, # set to 0 if you want no penalty
+    'pos_norm_penalty': 5e-2, # set to 0 if you want no penalty
     'pos_norm_scale': 16., # sqrt(embed_dim / 2)
 
     # Module
@@ -283,6 +283,18 @@ fun2coml2 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
     'data_dir': './nmt/data/fun2coml2',
+    'max_train_length': 2000,
+    'max_epochs': 30,
+    'struct': struct.sequence,
+    'batch_size': 3072,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+fun2coml3 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2coml3',
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.sequence,
