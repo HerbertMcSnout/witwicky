@@ -1,4 +1,5 @@
 from .struct import Struct
+from .tree_utils import parse
 from .sequence import SequenceStruct
 from .tree import Tree
 from .tree2 import Tree as Tree2
