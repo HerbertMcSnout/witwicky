@@ -188,7 +188,9 @@ class Model(nn.Module):
         #loss += pe_errs.sum(dim=[0,1]) * self.config['pos_norm_penalty'] #.type(loss.type())
         
         if hasattr(self.struct, "get_reg_penalty"):
-            loss += self.struct.get_reg_penalty(pos_embeds.norm(dim=2)).sum(dim=[0,1]) * self.config['pos_norm_penalty']
+            pe_penalty = (pos_embeds.norm(dim=2) - 1) * self.config['pos_norm_penalty'] + 1
+            pos_penalty = (self.struct.get_reg_penalty(pe_penalty)).sum(dim=[0,1])
+            loss += pos_penalty
 
         return {
             'loss': loss,
