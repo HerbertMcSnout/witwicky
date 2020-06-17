@@ -25,6 +25,8 @@ for model in listdir(saved_models_dir):
   if exists(bleu_fp): scores[model]["bleu"] = list(np.load(bleu_fp))
   if exists(perp_fp): scores[model]["perp"] = list(np.load(perp_fp))
 
+#scores["fun2com11"]["perp"][1] = 400
+
 max_epoch = max(max(len(scores[model]["bleu"]), len(scores[model]["perp"])) for model in scores)
 
 fig = plt.figure()
@@ -37,6 +39,7 @@ for model, score in scores.items():
   ax1.plot(epochs, perps, label=model, lw=lw, marker=marker)
 ax1.set(ylabel="Perplexity")
 plt.xlim(left=0, right=max_epoch)
+plt.ylim(top=250, bottom=0)
 
 ax2 = fig.add_subplot(212)
 for model, score in scores.items():

@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../')
-
 import nmt.structs as structs
+import nmt
 import nmt.configurations as config
 import plot_tree
 import torch
@@ -21,11 +21,11 @@ def cast_tree(t):
 for model in listdir(saved_models_dir):
   fp = "{0}/{1}/{1}.pth".format(saved_models_dir, model)
 
-  if exists(fp):
+  if exists(fp) and hasattr(config, model):
     cnfg = config.get_config(model, getattr(config, model))
     struct = cnfg["struct"]
-    if hasattr(struct, "Tree"):
-      tree = struct.parse(sample)
+    tree = struct.parse(sample)
+    if isinstance(tree, structs.tree_utils.Tree):
       ks = struct.get_params(cnfg).keys()
       m = torch.load(fp, map_location=torch.device("cpu"))
       params = [m[k] for k in ks] # get param names
@@ -36,8 +36,8 @@ for model in listdir(saved_models_dir):
       ax1 = fig.add_subplot(1,2,1, projection="polar")
       ax2 = fig.add_subplot(1,2,2, projection="polar")
       
-      plot_tree.plot_tree(ax1, pe, cm="PiYG", mean=0)
-      plot_tree.plot_tree(ax2, pe.map(torch.norm), cm="cividis", mean=1)
+      plot_tree.plot_tree(ax1, pe, cm="PiYG", median=0)
+      plot_tree.plot_tree(ax2, pe.map(torch.norm), cm="cividis", median=1)
       
       ax1.set_title("Position Embedding")
       ax2.set_title("Frobenius Norm")

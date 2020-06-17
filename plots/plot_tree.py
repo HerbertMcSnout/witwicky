@@ -5,6 +5,39 @@ import math
 import numpy as np
 import random
 
+### Global Constants ###
+
+line_width = 0.15
+
+range_theta = (4*math.pi/4, 8*math.pi/4)
+
+# 0 => all layers have equal thickness
+# 1 => each layer is 1/2 the thickness of the last
+# float in range (0., 1.) => weighted average of methods (0) and (1)
+radius_exp_weight = 0.75
+
+# See in_ballpark(x, xm, xM)
+ballpark = 2
+
+
+# Ensure range_theta[0] and [1] are in range [0, 2pi]
+range_theta = (range_theta[0] + (2*math.pi if range_theta[0] < 0 else 0),
+               range_theta[1] + (2*math.pi if range_theta[1] < 0 else 0))
+
+# Calculate plot dimensions (deprecated)
+#plot_x1 = math.cos(range_theta[0])
+#plot_x2 = math.cos(range_theta[1])
+#plot_y1 = math.sin(range_theta[0])
+#plot_y2 = math.sin(range_theta[1])
+#plot_y_min = -1 if (range_theta[0] <= 3*math.pi/2 <= range_theta[1]) else min(plot_y1, plot_y2)
+#plot_y_max =  1 if (range_theta[0] <= 1*math.pi/2 <= range_theta[1]) else max(plot_y1, plot_y2)
+#plot_x_min = -1 if (range_theta[0] <= 2*math.pi/2 <= range_theta[1]) else min(plot_x1, plot_x2)
+#plot_x_max =  1 if (range_theta[0] <= 4*math.pi/2 <= range_theta[1]) else max(plot_x1, plot_x2)
+
+
+def in_ballpark(x, xm, xM):
+  "Is x in the ballpark of xm and xM?"
+  return xM - (xM - xm)*ballpark <= x <= xm + (xM - xm)*ballpark
 
 class Tree:
 
@@ -49,37 +82,6 @@ def mktree_randomized(child_prob, decay=1.0, max_depth=15):
     return Tree(l, r, random.random())
 
 
-# Viridis
-#rs = [  68,  72,  62,  49,  38,  31,  53, 109, 180, 253 ]
-#gs = [   1,  40,  74, 104, 130, 158, 183, 205, 222, 231 ]
-#bs = [  84, 120, 137, 142, 142, 137, 121,  89,  44,  37 ]
-#cscheme1 = [tuple([x / 255 for x in rgb]) for rgb in zip(rs, gs, bs)]
-
-# Blue-Red
-#cscheme2 = [(0.0, 0.0, 1.0), (1.0, 0.0, 0.0)]
-
-#cax_res = 160
-#cax_width = 20
-#cax_ticks = 5
-
-line_width = 0.15
-
-range_theta = (4*math.pi/4, 8*math.pi/4)
-radius_exp_weight = 0.75
-
-range_theta = (range_theta[0] + (2*math.pi if range_theta[0] < 0 else 0),
-               range_theta[1] + (2*math.pi if range_theta[1] < 0 else 0))
-
-plot_x1 = math.cos(range_theta[0])
-plot_x2 = math.cos(range_theta[1])
-plot_y1 = math.sin(range_theta[0])
-plot_y2 = math.sin(range_theta[1])
-plot_y_min = -1 if (range_theta[0] <= 3*math.pi/2 <= range_theta[1]) else min(plot_y1, plot_y2)
-plot_y_max =  1 if (range_theta[0] <= 1*math.pi/2 <= range_theta[1]) else max(plot_y1, plot_y2)
-plot_x_min = -1 if (range_theta[0] <= 2*math.pi/2 <= range_theta[1]) else min(plot_x1, plot_x2)
-plot_x_max =  1 if (range_theta[0] <= 4*math.pi/2 <= range_theta[1]) else max(plot_x1, plot_x2)
-
-
 def get_radius(depth, max_depth):
     return (1 - 1/2 ** depth) * radius_exp_weight + depth / max_depth * (1 - radius_exp_weight)    
 
@@ -113,23 +115,25 @@ def draw_tree(acc, tree, depth, theta1, theta2, max_depth, has_left, has_right):
         draw_tree(acc, tree.l, depth + 1, theta1, theta3, max_depth, has_left, tree.r)
         draw_tree(acc, tree.r, depth + 1, theta3, theta2, max_depth, tree.l, has_right)
 
-def plot_tree(ax, tree, cm="cividis", mean=None):
+
+def plot_tree(ax, tree, cm="cividis", median=None):
 
     def maybe_expand(x):
         a = np.asanyarray(x)
         return a if len(a.shape) else a[np.newaxis]
-#        if len(a.shape) == 0: return a[np.newaxis]
-#        else: return a
 
     tree = tree.map(maybe_expand)
 
     min_v, max_v, depth = tree.min(), tree.max(), tree.depth()
-    if mean is not None:
-      mag = max(abs(min_v - mean), abs(max_v - mean))
-      min_v, max_v = mean - mag, mean + mag
-    #if min_v < 0 and max_v > 0:
-    #    mag = max(-min_v, max_v)
-    #    min_v, max_v = -mag, mag
+    extra_ticks = [min_v, max_v]
+    if median is not None and in_ballpark(median, min_v, max_v):
+      if min_v > median:
+        min_v = median
+      elif max_v < median:
+        max_v = median
+      else:
+        mag = max(abs(min_v - median), abs(max_v - median))
+        min_v, max_v = median - mag, median + mag
 
     # Normalize tree values to [0, 1]
     tree = tree.map(lambda xs: [(x - min_v) / (max_v - min_v) for x in xs])
@@ -144,9 +148,9 @@ def plot_tree(ax, tree, cm="cividis", mean=None):
     cm = plt.cm.get_cmap(cm)
     plot = ax.bar(df["theta"], df["r"], width=df["dtheta"], bottom=df["r0"], color=cm(df["v"]), align="edge")
     sm = plt.cm.ScalarMappable(cmap=cm, norm=plt.Normalize(min_v, max_v))
-    sm.set_array([])
+    sm.set_array(df["v"])
     cbar = plt.colorbar(sm, ax=ax, shrink=0.8, orientation="horizontal", pad=0.0)
-    #cbar.ax.tick_params(labelsize="small")
+    cbar.ax.tick_params(labelsize="small")
     cbar.ax.ticklabel_format(style="sci", axis="x", scilimits=(-3,3))
     ax.set_thetamin(range_theta[0]/2/math.pi*360)
     ax.set_thetamax(range_theta[1]/2/math.pi*360)
@@ -154,3 +158,5 @@ def plot_tree(ax, tree, cm="cividis", mean=None):
     ax.set_rgrids([])
     ax.grid(False)
     ax.set_axis_off()
+
+    return plot, cbar
