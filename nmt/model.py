@@ -23,29 +23,23 @@ class Model(nn.Module):
         fix_norm = self.config['fix_norm']
         max_len = self.config['max_train_length']
         learned_pos = self.config['learned_pos']
-        
+        learn_pos_scale = self.config['learn_pos_scale']
+
+        # get trg positonal embedding
+        if not learned_pos:
+            self.pos_embedding_trg = ut.set_positional_encoding(embed_dim, max_len)
+        else:
+            self.pos_embedding_trg = Parameter(torch.Tensor(max_len, embed_dim))
+            nn.init.normal_(self.pos_embedding_trg, mean=0, std=embed_dim ** -0.5)
+
         self.struct = self.config['struct']
         params = [(name, Parameter(x)) for name, x in self.struct.get_params(self.config).items()]
         self.struct_params = [x for _, x in params]
         for name, x in params:
             self.register_parameter(name, x)
-        #self.pos_embedding_mu_l = Parameter(torch.Tensor(embed_dim, embed_dim))
-        #self.pos_embedding_mu_r = Parameter(torch.Tensor(embed_dim, embed_dim))
-        #self.pos_embedding_lambda = Parameter(torch.Tensor(embed_dim))
-        #nn.init.orthogonal_(self.pos_embedding_mu_l)
-        #nn.init.orthogonal_(self.pos_embedding_mu_r)
-        #nn.init.normal_(self.pos_embedding_lambda, mean=0, std=embed_dim ** -0.5)
-
-        # get positonal embedding
-        if not learned_pos:
-            self.pos_embedding_trg = ut.get_positional_encoding(embed_dim, max_len)
-        else:
-            self.pos_embedding_trg = Parameter(torch.Tensor(max_len, embed_dim))
-            nn.init.normal_(self.pos_embedding_trg, mean=0, std=embed_dim ** -0.5)
-
 
         # get word embeddings
-        # TODO: src_vocab_mask is assigned but never used
+        # TODO: src_vocab_mask is assigned but never used (?)
         src_vocab_size, trg_vocab_size = ut.get_vocab_sizes(self.config)
         self.src_vocab_mask, self.trg_vocab_mask = ut.get_vocab_masks(self.config, src_vocab_size, trg_vocab_size)
         if tie_mode == ac.ALL_TIED:
@@ -57,10 +51,17 @@ class Model(nn.Module):
         self.src_embedding = nn.Embedding(src_vocab_size, embed_dim)
         self.trg_embedding = nn.Embedding(trg_vocab_size, embed_dim)
         self.out_embedding = self.trg_embedding.weight
-        self.src_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
-        self.trg_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
-        self.src_pos_embed_scale = Parameter(torch.tensor([1.]))
-        self.trg_pos_embed_scale = Parameter(torch.tensor([1.]))
+        if self.config['separate_embed_scales']:
+            self.src_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
+            self.trg_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
+        else:
+            self.src_embed_scale = self.trg_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
+
+        self.src_pos_embed_scale = torch.tensor([(embed_dim / 2) ** 0.5])
+        self.trg_pos_embed_scale = torch.tensor([1.]) # trg pos embedding already returns vector of norm sqrt(embed_dim/2)
+        if learn_pos_scale:
+            self.src_pos_embed_scale = Parameter(self.src_pos_embed_scale)
+            self.trg_pos_embed_scale = Parameter(self.trg_pos_embed_scale)
 
         if tie_mode == ac.ALL_TIED:
             self.src_embedding.weight = self.trg_embedding.weight
@@ -145,7 +146,7 @@ class Model(nn.Module):
             return word_embeds, pos_embeds.type(dtype)
         else:
             pe_scale = self.src_pos_embed_scale if structs is not None else self.trg_pos_embed_scale
-            return word_embeds + pos_embeds.type(dtype) * pe_scale
+            return word_embeds + pos_embeds.type(dtype) * pe_scale.type(dtype)
 
     def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
         #self.debug_stats['src_embed_scales'].append(self.src_embed_scale.item())
@@ -156,7 +157,7 @@ class Model(nn.Module):
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
         word_embeds, pos_embeds = self.get_input(src_toks, src_structs, training=True)
-        encoder_inputs = word_embeds + pos_embeds * self.config['pos_norm_scale'] * self.src_pos_embed_scale
+        encoder_inputs = word_embeds + pos_embeds * self.src_pos_embed_scale.type(word_embeds.type())
         
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
 

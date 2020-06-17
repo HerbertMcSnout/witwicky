@@ -49,13 +49,15 @@ base_config = {
 
     # Penalize position embeddings that are too big
     'pos_norm_penalty': 5e-2, # set to 0 if you want no penalty
-    'pos_norm_scale': 16., # sqrt(embed_dim / 2)
 
     # Module
     'struct': struct.sequence,
 
     # Whether to learn position encodings
     'learned_pos': False,
+
+    'learn_pos_scale': False,
+    'separate_embed_scales': False,
     
     # Layer sizes
     'embed_dim': 512,
@@ -142,6 +144,8 @@ fun2com = {
     'struct': struct.tree,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -154,6 +158,8 @@ fun2com2 = {
     'struct': struct.tree2,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -166,6 +172,8 @@ fun2com3 = {
     'struct': struct.tree3,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -178,6 +186,8 @@ fun2com4 = {
     'struct': struct.tree4,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -190,6 +200,8 @@ fun2com5 = {
     'struct': struct.tree5,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -202,6 +214,8 @@ fun2com6 = {
     'struct': struct.tree6,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -214,6 +228,8 @@ fun2com7 = {
     'struct': struct.tree7,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -226,6 +242,8 @@ fun2com8 = {
     'struct': struct.tree8,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -239,6 +257,8 @@ fun2com9 = {
     'struct': struct.tree,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -251,6 +271,8 @@ fun2com10 = {
     'struct': struct.tree10,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -263,6 +285,8 @@ fun2com11 = {
     'struct': struct.tree11,
     'batch_size': 3072,
     'restore_segments': False,
+    'learn_pos_scale': True,
+    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
@@ -295,6 +319,18 @@ fun2coml3 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
     'data_dir': './nmt/data/fun2coml3',
+    'max_train_length': 2000,
+    'max_epochs': 30,
+    'struct': struct.sequence,
+    'batch_size': 3072,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+fun2coml4 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2coml4',
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.sequence,
