@@ -27,33 +27,6 @@ class Translator(object):
         self.data_manager = DataManager(self.config)
         self.translate()
 
-    def ids_to_trans(self, trans_ids):
-        words = []
-        word_ids = []
-        for idx, word_idx in enumerate(trans_ids):
-            if word_idx == ac.EOS_ID:
-                break
-            words.append(self.data_manager.trg_ivocab[word_idx])
-            word_ids.append(word_idx)
-
-        return u' '.join(words), word_ids
-
-    def get_trans(self, probs, scores, symbols):
-        sorted_rows = numpy.argsort(scores)[::-1]
-        best_trans = None
-        #best_tran_ids = None
-        beam_trans = []
-        for i, r in enumerate(sorted_rows):
-            trans_ids = symbols[r]
-            trans_out, trans_out_ids = self.ids_to_trans(trans_ids)
-            beam_trans.append(u'{} {:.2f} {:.2f}'.format(trans_out, scores[r], probs[r]))
-            if i == 0: # highest prob trans
-                best_trans = trans_out
-                #best_tran_ids = trans_out_ids
-
-        #return best_trans, best_tran_ids, u'\n'.join(beam_trans)
-        return best_trans, u'\n'.join(beam_trans)
-
     def plot_head_map(self, mma, target_labels, target_ids, source_labels, source_ids, filename):
         """https://github.com/EdinburghNLP/nematus/blob/master/utils/plot_heatmap.py
         Change the font in family param below. If the system font is not used, delete matplotlib
@@ -97,8 +70,7 @@ class Translator(object):
         plt.close('all')
 
     def translate(self):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        model = Model(self.config).to(device)
+        model = Model(self.config).to(ut.get_device())
         self.logger.info('Restore model from {}'.format(self.model_file))
         model.load_state_dict(torch.load(self.model_file))
-        self.data_manager.translate(model, self.input_file, self.config['save_to'], self.logger, self.get_trans, device)
+        self.data_manager.translate(model, self.input_file, self.config['save_to'], self.logger)

@@ -10,12 +10,6 @@ import torch
 import nmt.utils as ut
 import nmt.all_constants as ac
 
-numpy.random.seed(ac.SEED)
-
-# TODO: This wasn't here originally; remove it?
-torch.random.manual_seed(ac.SEED)
-
-
 class DataManager(object):
 
     def __init__(self, config):
@@ -417,6 +411,7 @@ class DataManager(object):
             ut.shuffle_file(ids_file)
             self.logger.info('Shuffling {} takes {:.2f} seconds'.format(ids_file, time.time() - start))
 
+        
         with open(ids_file, 'r') as f:
             while True:
                 next_n_lines = list(islice(f, num_preload))
@@ -424,12 +419,14 @@ class DataManager(object):
                     break
 
                 src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths = self.process_n_batches(next_n_lines)
-                batches = self.prepare_batches(src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths, self.batch_size if alternate_batch_size is None else alternate_batch_size, mode=mode)
+                batch_size = self.batch_size if alternate_batch_size is None else alternate_batch_size
+                device = ut.get_device()
+                batches = self.prepare_batches(src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths, batch_size, mode=mode)
                 for src_inputs, src_structs, trg_inputs, trg_target in zip(*batches):
-                    yield (torch.from_numpy(src_inputs).type(torch.long),
+                    yield (torch.from_numpy(src_inputs).type(torch.long).to(device),
                            src_structs,
-                           torch.from_numpy(trg_inputs).type(torch.long),
-                           torch.from_numpy(trg_target).type(torch.long))
+                           torch.from_numpy(trg_inputs).type(torch.long).to(device),
+                           torch.from_numpy(trg_target).type(torch.long).to(device))
 
     def get_trans_input(self, input_file):
         """Read lines from input_file and convert them to minibatches.
@@ -483,13 +480,38 @@ class DataManager(object):
             yield torch.from_numpy(src_inputs).type(torch.long), original_idxs, batch_structs
 
 
-    def translate(self, model, input_file, output_dir, logger, get_trans, device):
+    def _ids_to_trans(self, trans_ids):
+        words = []
+        for idx in trans_ids:
+            if idx == ac.EOS_ID:
+                break
+            words.append(self.trg_ivocab[idx])
+
+        return u' '.join(words)
+
+    def get_trans(self, probs, scores, symbols):
+        sorted_rows = numpy.argsort(scores)[::-1]
+        best_trans = None
+        beam_trans = []
+        for i, r in enumerate(sorted_rows):
+            trans_ids = symbols[r]
+            trans_out = self._ids_to_trans(trans_ids)
+            beam_trans.append(u'{} {:.2f} {:.2f}'.format(trans_out, scores[r], probs[r]))
+            if i == 0: # highest prob trans
+                best_trans = trans_out
+
+        return best_trans, u'\n'.join(beam_trans)
+
+    def translate(self, model, input_file, output_dir, logger):
         model.eval()
 
-        output_file = join(output_dir, basename(input_file))
+        if isinstance(output_dir, str):
+            output_file = join(output_dir, basename(input_file))
+            best_trans_file = output_file + '.best_trans'
+            beam_trans_file = output_file + '.beam_trans'
+        else:
+            best_trans_file, beam_trans_file = output_file
         
-        best_trans_file = output_file + '.best_trans'
-        beam_trans_file = output_file + '.beam_trans'
         open(best_trans_file, 'w').close()
         open(beam_trans_file, 'w').close()
         
@@ -506,7 +528,7 @@ class DataManager(object):
             start = time.time()
             count = 0
             for (src_toks, original_idxs, src_structs) in self.get_trans_input(input_file):
-                src_toks_cuda = src_toks.to(device)
+                src_toks_cuda = src_toks.to(ut.get_device())
                 rets = model.beam_decode(src_toks_cuda, src_structs)
                 
                 for i, ret in enumerate(rets):
@@ -520,11 +542,11 @@ class DataManager(object):
         
                     count += 1
                     if count % 1000 == 0:
-                        logger.info('  Line {}, avg {} sec/sentence'.format(count, (time.time() - start) / count))
+                        logger.info('  Line {}, avg {:.4f} sec/line'.format(count, (time.time() - start) / count))
         
         model.train()
         
-        with open(best_trans_file, 'w') as ftrans, open(beam_trans_file, 'w') as btrans:
+        with open(best_out, 'w') as ftrans, open(beam_out, 'w') as btrans:
             ftrans.write('\n'.join(all_best_trans))
             btrans.write('\n\n'.join(all_beam_trans))
             

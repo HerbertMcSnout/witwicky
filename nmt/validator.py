@@ -63,28 +63,6 @@ class Validator(object):
             if exists(self.best_bleus_path):
                 self.best_bleus = numpy.load(self.best_bleus_path)
 
-    def _ids_to_trans(self, trans_ids):
-        words = []
-        for idx in trans_ids:
-            if idx == ac.EOS_ID:
-                break
-            words.append(self.data_manager.trg_ivocab[idx])
-
-        return u' '.join(words)
-
-    def get_trans(self, probs, scores, symbols):
-        sorted_rows = numpy.argsort(scores)[::-1]
-        best_trans = None
-        beam_trans = []
-        for i, r in enumerate(sorted_rows):
-            trans_ids = symbols[r]
-            trans_out = self._ids_to_trans(trans_ids)
-            beam_trans.append(u'{} {:.2f} {:.2f}'.format(trans_out, scores[r], probs[r]))
-            if i == 0: # highest prob trans
-                best_trans = trans_out
-
-        return best_trans, u'\n'.join(beam_trans)
-
     def evaluate_perp(self, model):
         model.eval()
         start_time = time.time()
@@ -92,18 +70,13 @@ class Validator(object):
         total_smoothed_loss = 0.
         total_weight = 0.
 
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         with torch.no_grad():
-            for src_toks, src_structs, trg_toks, targets  in self.data_manager.get_batch(mode=ac.VALIDATING):
-                src_toks_cuda = src_toks.to(device)
-                trg_toks_cuda = trg_toks.to(device)
-                targets_cuda = targets.to(device)
-
+            for src_toks, src_structs, trg_toks, targets in self.data_manager.get_batch(mode=ac.VALIDATING):
                 # get loss
-                ret = model(src_toks_cuda, src_structs, trg_toks_cuda, targets_cuda)
+                ret = model(src_toks, src_structs, trg_toks, targets)
                 total_loss += ret['nll_loss'].cpu().detach().numpy()
                 total_smoothed_loss += ret['loss'].cpu().detach().numpy()
-                total_weight += (targets != ac.PAD_ID).detach().numpy().sum()
+                total_weight += (targets.cpu() != ac.PAD_ID).detach().numpy().sum()
 
         perp = total_loss / total_weight
         perp = numpy.exp(perp) if perp < 300 else float('inf')
@@ -123,7 +96,6 @@ class Validator(object):
 
     def evaluate_bleu(self, model):
         model.eval()
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         val_trans_out = self.val_trans_out
         val_beam_out = self.val_beam_out
@@ -134,42 +106,7 @@ class Validator(object):
             val_beam_out = val_beam_out + '.bpe'
 
         src_file = self.data_manager.data_files[ac.VALIDATING][self.data_manager.src_lang]
-        num_sents = 0
-        with open(src_file, 'r') as f:
-            for line in f:
-                if line.strip():
-                    num_sents += 1
-        all_best_trans = [''] * num_sents
-        all_beam_trans = [''] * num_sents
-
-        start = time.time()
-        with torch.no_grad():
-            start_time = time.time()
-            count = 0
-            for (src_toks, original_idxs, src_structs) in self.data_manager.get_trans_input(src_file):
-                src_toks_cuda = src_toks.to(device)
-                rets = model.beam_decode(src_toks_cuda, src_structs)
-
-                for i, ret in enumerate(rets):
-                    probs = ret['probs'].cpu().detach().numpy().reshape([-1])
-                    scores = ret['scores'].cpu().detach().numpy().reshape([-1])
-                    symbols = ret['symbols'].cpu().detach().numpy()
-
-                    best_trans, beam_trans = self.get_trans(probs, scores, symbols)
-                    all_best_trans[original_idxs[i]] = best_trans
-                    all_beam_trans[original_idxs[i]] = beam_trans
-
-                    count += 1
-                    if count % 1000 == 0:
-                        self.logger.info('  Line {}, avg {:.4f} sec/line'.format(count, (time.time() - start) / count))
-
-        model.train()
-
-        #open(val_trans_out, 'w').close()
-        #open(val_beam_out, 'w').close()
-        with open(val_trans_out, 'w') as ftrans, open(val_beam_out, 'w') as btrans:
-            ftrans.write('\n'.join(all_best_trans))
-            btrans.write('\n\n'.join(all_beam_trans))
+        self.data_manager.translate(model, src_file, (val_trans_out, val_beam_out), self.logger, self.get_trans)
 
         # Remove BPE
         if self.restore_segments:
@@ -182,7 +119,7 @@ class Validator(object):
         output = output.decode('utf-8').strip('\n')
         out_parse = re.match(r'BLEU = [-.0-9]+', output)
         self.logger.info(output)
-        self.logger.info('Validation took: {} minutes'.format(float(time.time() - start_time) / 60.0))
+        self.logger.info('Validation took: {} minutes'.format(float(time.time() - start) / 60.0))
 
         bleu = float('-inf')
         if out_parse is None:
@@ -275,5 +212,52 @@ class Validator(object):
         return outfile
 
     def translate(self, model, input_file):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        self.data_manager.translate(model, input_file, self.save_to, self.logger, self.get_trans, device)
+        self.data_manager.translate(model, input_file, self.save_to, self.logger, self.get_trans)
+
+
+
+# from evaluate_bleu(), replaced by self.data_manager.translate():
+#
+#        get_trans_input = self.data_manager.get_trans_input
+#        best_out = val_trans_out
+#        beam_out = val_beam_out
+#        src_file = src_file
+#        get_trans = self.get_trans
+#        logger = self.logger
+#
+#        num_sents = 0
+#        with open(src_file, 'r') as f:
+#            for line in f:
+#                if line.strip():
+#                    num_sents += 1
+#        all_best_trans = [''] * num_sents
+#        all_beam_trans = [''] * num_sents
+#
+#        with torch.no_grad():
+#            logger.info('Start translating {}'.format(src_file))
+#            start = time.time()
+#            count = 0
+#            for (src_toks, original_idxs, src_structs) in get_trans_input(src_file):
+#                src_toks_cuda = src_toks.to(device)
+#                rets = model.beam_decode(src_toks_cuda, src_structs)
+#
+#                for i, ret in enumerate(rets):
+#                    probs = ret['probs'].cpu().detach().numpy().reshape([-1])
+#                    scores = ret['scores'].cpu().detach().numpy().reshape([-1])
+#                    symbols = ret['symbols'].cpu().detach().numpy()
+#
+#                    best_trans, beam_trans = get_trans(probs, scores, symbols)
+#                    all_best_trans[original_idxs[i]] = best_trans
+#                    all_beam_trans[original_idxs[i]] = beam_trans
+#
+#                    count += 1
+#                    if count % 1000 == 0:
+#                        logger.info('  Line {}, avg {:.4f} sec/line'.format(count, (time.time() - start) / count))
+#
+#        model.train()
+#
+#        with open(best_out, 'w') as ftrans, open(beam_out, 'w') as btrans:
+#            ftrans.write('\n'.join(all_best_trans))
+#            btrans.write('\n\n'.join(all_beam_trans))
+#
+#        logger.info('Finished translating {}, took {} minutes'.format(src_file, float(time.time() - start) / 60.0))
