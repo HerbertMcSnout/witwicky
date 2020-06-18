@@ -223,10 +223,10 @@ class Model(nn.Module):
             if self.config['fix_norm']:
                 word_embeds = ut.normalize(word_embeds, scale=False)
             else:
-                word_embeds = word_embeds * self.trg_embed_scale
+                word_embeds = word_embeds * self.trg_embed_scale.type(word_embeds.type)
 
             pos_embeds = self.pos_embedding_trg[time_step, :].reshape(1, 1, -1)
-            return word_embeds + pos_embeds * self.trg_pos_embed_scale.type(word_embeds.type())
+            return word_embeds + pos_embeds.type(word_embeds.type()) * self.trg_pos_embed_scale.type(word_embeds.type())
 
         def logprob(decoder_output):
             return F.log_softmax(self.logit_fn(decoder_output), dim=-1)
