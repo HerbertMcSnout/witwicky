@@ -14,7 +14,8 @@ from os import listdir
 dpi = 400
 
 sample2 = "(a (b (b3 (b4))) (c (d e f)) (g g1 g2) h (i (j k)))"
-sample = "(u (f (s p) (t (n i)) (n g d p h) p (b (d (d (t (n s)) (n p n) (i (e (c (n (n t) o (n g p p)) a) o (c (n g s) (a (a (e (n (n p c) o (n d s p n)))))))))) (r r (e (c (n (n r p) o (n g w)) a) o (c (n g r) a) o (c (n g p) (a (a (e (n p n))))))))))" # size: 82
+sample = "(unit (function (specifier public) (type (name expression)) (name get case expression) parameter_list (block (return return (expr (name case expression))))))"
+sample3 = "(u (f (s p) (t (n i)) (n g d p h) p (b (d (d (t (n s)) (n p n) (i (e (c (n (n t) o (n g p p)) a) o (c (n g s) (a (a (e (n (n p c) o (n d s p n)))))))))) (r r (e (c (n (n r p) o (n g w)) a) o (c (n g r) a) o (c (n g p) (a (a (e (n p n))))))))))" # size: 82
 
 saved_models_dir = "../nmt/saved_models"
 
