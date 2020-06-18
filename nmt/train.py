@@ -19,6 +19,8 @@ if torch.cuda.is_available():
 else:
     torch.manual_seed(ac.SEED)
 
+numpy.random.seed(ac.SEED)
+
 
 class Trainer(object):
     """Trainer"""
@@ -28,8 +30,6 @@ class Trainer(object):
         self.num_preload = args.num_preload
 
         self.logger = ut.get_logger(self.config['log_file'])
-
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         self.lr = self.config['lr']
 
@@ -55,7 +55,7 @@ class Trainer(object):
         self.epoch_time = 0. # total exec time for whole epoch, sounds like that tabloid
 
         # get model
-        self.model = Model(self.config).to(self.device)
+        self.model = Model(self.config).to(ut.get_device())
 
         param_count = sum([numpy.prod(p.size()) for p in self.model.parameters()])
         self.logger.info('Model has {:,} parameters'.format(param_count))
@@ -111,25 +111,22 @@ class Trainer(object):
         return 
 
     def run_log(self, b, e, batch_data):
-      #with torch.autograd.detect_anomaly():
+      #with torch.autograd.detect_anomaly(): # throws exception when any forward computation produces nan
         start = time.time()
         src_toks, src_structs, trg_toks, targets = batch_data
-        src_toks_cuda = src_toks.to(self.device)
-        trg_toks_cuda = trg_toks.to(self.device)
-        targets_cuda = targets.to(self.device)
 
         # zero grad
         self.optimizer.zero_grad()
 
         # get loss
-        ret = self.model(src_toks_cuda, src_structs, trg_toks_cuda, targets_cuda, b, e + 1)
+        ret = self.model(src_toks, src_structs, trg_toks, targets, b, e + 1)
         loss = ret['loss']
         nll_loss = ret['nll_loss']
 
         if self.config['normalize_loss'] == ac.LOSS_TOK:
-            opt_loss = loss / (targets_cuda != ac.PAD_ID).type(loss.type()).sum()
+            opt_loss = loss / (targets != ac.PAD_ID).type(loss.type()).sum()
         elif self.config['normalize_loss'] == ac.LOSS_BATCH:
-            opt_loss = loss / targets_cuda.size()[0].type(loss.type())
+            opt_loss = loss / targets.size()[0].type(loss.type())
         else:
             opt_loss = loss
 
@@ -142,7 +139,7 @@ class Trainer(object):
         self.optimizer.step()
 
         # update training stats
-        num_words = (targets != ac.PAD_ID).detach().numpy().sum()
+        num_words = (targets.cpu() != ac.PAD_ID).detach().numpy().sum()
 
         loss = loss.cpu().detach().numpy()
         nll_loss = nll_loss.cpu().detach().numpy()
