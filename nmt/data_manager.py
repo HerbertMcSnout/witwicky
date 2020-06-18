@@ -522,6 +522,8 @@ class DataManager(object):
                     num_sents += 1
         all_best_trans = [''] * num_sents
         all_beam_trans = [''] * num_sents
+        #all_best_trans = numpy.empty(num_sents, dtype=object)
+        #all_beam_trans = numpy.empty(num_sents, dtype=object)
         
         with torch.no_grad():
             logger.info('Start translating {}'.format(input_file))
@@ -536,7 +538,7 @@ class DataManager(object):
                     scores = ret['scores'].cpu().detach().numpy().reshape([-1])
                     symbols = ret['symbols'].cpu().detach().numpy()
                     
-                    best_trans, beam_trans = get_trans(probs, scores, symbols)
+                    best_trans, beam_trans = self.get_trans(probs, scores, symbols)
                     all_best_trans[original_idxs[i]] = best_trans
                     all_beam_trans[original_idxs[i]] = beam_trans
         
