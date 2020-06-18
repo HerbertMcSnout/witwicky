@@ -55,7 +55,7 @@ class Model(nn.Module):
             self.src_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
             self.trg_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
         else:
-            self.src_embed_scale = self.trg_embed_scale = Parameter(torch.tensor([embed_dim ** 0.5]))
+            self.src_embed_scale = self.trg_embed_scale = torch.tensor([embed_dim ** 0.5])
 
         self.src_pos_embed_scale = torch.tensor([(embed_dim / 2) ** 0.5])
         self.trg_pos_embed_scale = torch.tensor([1.]) # trg pos embedding already returns vector of norm sqrt(embed_dim/2)
@@ -120,7 +120,7 @@ class Model(nn.Module):
         if self.config['fix_norm']:
             word_embeds = ut.normalize(word_embeds, scale=False)
         else:
-            word_embeds = word_embeds * embed_scale
+            word_embeds = word_embeds * embed_scale.type(dtype)
 
         if structs is not None:
             #pos_embeds = [x.get_pos_embedding(embed_dim, self.struct_params).flatten() for x in structs]
@@ -226,7 +226,7 @@ class Model(nn.Module):
                 word_embeds = word_embeds * self.trg_embed_scale
 
             pos_embeds = self.pos_embedding_trg[time_step, :].reshape(1, 1, -1)
-            return word_embeds + pos_embeds
+            return word_embeds + pos_embeds * self.trg_pos_embed_scale.type(word_embeds.type())
 
         def logprob(decoder_output):
             return F.log_softmax(self.logit_fn(decoder_output), dim=-1)
