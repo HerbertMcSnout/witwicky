@@ -8,6 +8,9 @@ class Tree(Struct):
     self.r = r
     self.v = v
 
+  def new(self, *args, **kwargs):
+    return self.__class__(*args, **kwargs)
+
   def __str__h(self, strs):
     if self.l:
       strs.append("(")
@@ -37,7 +40,7 @@ class Tree(Struct):
     v = f(self.v)
     l = self.l.map(f) if self.l else None
     r = self.r.map(f) if self.r else None
-    return Tree(v, l, r)
+    return self.new(v, l, r)
 
   def flatten(self, acc=None, lefts=[]):
     if acc is None:
@@ -59,12 +62,12 @@ class Tree(Struct):
     lv = l.v if self.l else leaf
     rv = r.v if self.r else leaf
     v = f(self.v, lv, rv)
-    return Tree(v, l, r)
+    return self.new(v, l, r)
 
   def fold_down_tree(self, f, root=None):
     l = self.l.fold_down_tree(f, f(self.v, root, True)) if self.l else None
     r = self.r.fold_down_tree(f, f(self.v, root, False)) if self.r else None
-    return Tree(root, l, r)
+    return self.new(root, l, r)
 
   def zip(self, other):
     "Zips the node values of this tree with other's"
@@ -74,7 +77,7 @@ class Tree(Struct):
     v = self.v, other.v
     l = self.l.zip(other.l) if self.l else None
     r = self.r.zip(other.r) if self.r else None
-    return Tree(v, l, r)
+    return self.new(v, l, r)
 
 def parse_clean(fun_str, remove_parens=True):
   # fun_str\n -> fun_str
@@ -120,3 +123,7 @@ def parse(fun_str, cls=Tree):
 
 def parse_no_binarization(fun_str):
   return parse_lc_rs_h(parse_clean(fun_str))[0]
+
+def reg_smooth(x, eps):
+  "sqrt(x^2 + eps) - sqrt(eps)"
+  return (x**2 + eps)**0.5 - eps**0.5
