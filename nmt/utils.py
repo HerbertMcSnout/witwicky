@@ -120,3 +120,5 @@ def gnmt_length_model(alpha):
         return prob / ((5.0 + time_step + 1.0) ** alpha / 6.0 ** alpha)
     return f
 
+def get_device():
+    return torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
