@@ -9,7 +9,7 @@ from os.path import exists
 from os import listdir
 import numpy as np
 
-dpi = 1000
+dpi = 500
 lw = 0.8
 adjust_right = 0.63 # make room for legend
 

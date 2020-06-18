@@ -9,7 +9,7 @@ import random
 
 line_width = 0.15
 
-range_theta = (4*math.pi/4, 8*math.pi/4)
+range_theta = (math.pi, 2*math.pi)
 
 # 0 => all layers have equal thickness
 # 1 => each layer is 1/2 the thickness of the last
@@ -32,12 +32,24 @@ range_theta = (range_theta[0] + (2*math.pi if range_theta[0] < 0 else 0),
 #plot_y_min = -1 if (range_theta[0] <= 3*math.pi/2 <= range_theta[1]) else min(plot_y1, plot_y2)
 #plot_y_max =  1 if (range_theta[0] <= 1*math.pi/2 <= range_theta[1]) else max(plot_y1, plot_y2)
 #plot_x_min = -1 if (range_theta[0] <= 2*math.pi/2 <= range_theta[1]) else min(plot_x1, plot_x2)
-#plot_x_max =  1 if (range_theta[0] <= 4*math.pi/2 <= range_theta[1]) else max(plot_x1, plot_x2)
-
+#plot_x_max =  1 if (range_theta[0] <= 4*math.pi/2 <= range_theta[1]) else max(plot_x1, plot_x2)  
 
 def in_ballpark(x, xm, xM):
   "Is x in the ballpark of xm and xM?"
   return xM - (xM - xm)*ballpark <= x <= xm + (xM - xm)*ballpark
+
+def set_globals(**kwargs):
+  "Sets global params. Defaults: line_width=0.15, range_theta=(math.pi, 2*math.pi), radius_exp_weight=0.75, ballpark=2"
+  global line_width, range_theta, radius_exp_weight, ballpark
+  if "line_width" in kwargs: line_width = kwargs["line_width"]
+  if "range_theta" in kwargs: range_theta = kwargs["range_theta"]
+  if "radius_exp_weight" in kwargs: radius_exp_weight = kwargs["radius_exp_weight"]
+  if "ballpark" in kwargs: ballpark = kwargs["ballpark"]
+  return {"line_width":line_width,
+          "range_theta":range_theta,
+          "radius_exp_weight":radius_exp_weight,
+          "ballpark":ballpark,
+  }
 
 class Tree:
 
