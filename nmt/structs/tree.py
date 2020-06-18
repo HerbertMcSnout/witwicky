@@ -26,4 +26,4 @@ def get_params(config):
   return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam}
 
 def get_reg_penalty(batch_pe_norms):
-  return torch.exp(torch.abs(torch.log(batch_pe_norms))) - 1
+  return tree_utils.reg_smooth(torch.exp(torch.abs(torch.log(batch_pe_norms))) - 1, 0.01)

@@ -55,4 +55,5 @@ def get_params(config):
   return {"mu_l":mu_l, "mu_r":mu_r, "lam_leaf":lam_leaf, "lam_root":lam_root, "lam_leaf_l":lam_leaf_l, "lam_leaf_r":lam_leaf_r}
 
 def get_reg_penalty(batch_pe_norms):
-  return torch.abs(torch.log(batch_pe_norms))
+  "For each x in batch_pe_norms, returns sqrt(|ln x|^2  + eps) - sqrt(eps)"
+  return tree_utils.reg_smooth(torch.abs(torch.log(batch_pe_norms)), 0.01)
