@@ -47,13 +47,14 @@ base_config = {
     # Tie word embeddings
     'tie_mode': ac.ALL_TIED,
 
-    # Penalize position embeddings that are too big
-    'pos_norm_penalty': 5e-2, # set to 0 if you want no penalty
+    # Penalize position embeddings that are too big,
+    # if their struct has a get_reg_penalty function
+    'pos_norm_penalty': 5e-2,
 
     # Module
     'struct': struct.sequence,
 
-    # Whether to learn position encodings
+    # Whether to learn target position encodings
     'learned_pos': False,
 
     'learn_pos_scale': False,
@@ -290,6 +291,30 @@ fun2com11 = {
     'warmup_style': ac.ORG_WARMUP,
 }
 
+
+fun2com12 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2com',
+    'max_train_length': 2000,
+    'max_epochs': 30,
+    'struct': struct.tree10,
+    'batch_size': 3072,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+fun2com13 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2com',
+    'max_train_length': 2000,
+    'max_epochs': 30,
+    'struct': struct.tree11,
+    'batch_size': 3072,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
 
 fun2coml = {
     'src_lang': 'fun',
