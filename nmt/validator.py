@@ -106,7 +106,7 @@ class Validator(object):
             val_beam_out = val_beam_out + '.bpe'
 
         src_file = self.data_manager.data_files[ac.VALIDATING][self.data_manager.src_lang]
-        self.data_manager.translate(model, src_file, (val_trans_out, val_beam_out), self.logger, self.get_trans)
+        self.data_manager.translate(model, src_file, (val_trans_out, val_beam_out), self.logger)
 
         # Remove BPE
         if self.restore_segments:
