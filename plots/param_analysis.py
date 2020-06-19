@@ -19,6 +19,10 @@ sample3 = "(u (f (s p) (t (n i)) (n g d p h) p (b (d (d (t (n s)) (n p n) (i (e 
 
 saved_models_dir = "../nmt/saved_models"
 
+cmap_pe = "PiYG"
+cmap_norm = "cividis"
+cmap_param = "RdBu"
+
 def cast_tree(t):
   return t.fold_up(plot_tree.Tree)
 
@@ -62,15 +66,15 @@ for model in listdir(saved_models_dir):
       ax_pe = fig.add_subplot(gs[:, 0], projection="polar")
       ax_pe_norm = fig.add_subplot(gs[:, 1], projection="polar")
       
-      plot_tree.plot_tree(ax_pe, pe, cm="PiYG", median=0)
-      plot_tree.plot_tree(ax_pe_norm, pe.map(torch.norm), cm="cividis", median=1)
+      plot_tree.plot_tree(ax_pe, pe, cm=cmap_pe, median=0)
+      plot_tree.plot_tree(ax_pe_norm, pe.map(torch.norm), cm=cmap_norm, median=1)
       
       ax_pe.set_title("Position Embedding", pad=-60)
       ax_pe_norm.set_title("Frobenius Norm", pad=-60)
 
       cmin = min(p.min() for p in ks_mtx)
       cmax = max(p.max() for p in ks_mtx)
-      cmin, cmax = min(cmin, -0.3), max(cmax, 0.3)
+      cmin, cmax = plot_tree.get_value_range(0, min(cmin, -0.3), max(cmax, 0.3))
       norm = matplotlib.colors.Normalize(vmin=cmin, vmax=cmax)
       ims = []
       gi = 0
@@ -97,9 +101,9 @@ for model in listdir(saved_models_dir):
           ax_params.set_title(k, fontdict=fontdict)
           ax_params.axis("off")
           if p.dim() == 2:
-            ims.append(ax_params.imshow(p.numpy()))
+            ims.append(ax_params.imshow(p.numpy(), norm=norm, cmap=cmap_param))
           elif p.dim() == 1:
-            ims.append(ax_params.imshow(p.unsqueeze(0).expand(len(p)//4, len(p)).numpy()))
+            ims.append(ax_params.imshow(p.unsqueeze(0).expand(len(p)//4, len(p)).numpy(), norm=norm, cmap=cmap_param))
           else:
             print("Can't display parameters of >= 3 dims, in model {}".format(model))
           ax_params.set_xticks([])
@@ -109,7 +113,7 @@ for model in listdir(saved_models_dir):
       
       ax_cb = fig.add_subplot(gs[:, 2])
       ax_cb.axis("off")
-      cbar = fig.colorbar(ims[-1], ax=ax_cb, orientation="horizontal", aspect=12.5)
+      cbar = fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap_param), ax=ax_cb, orientation="horizontal", aspect=12.5)
       cbar.ax.tick_params(labelsize="small")
       cbar.ax.ticklabel_format(style="sci", axis="x", scilimits=(-3,3))
       

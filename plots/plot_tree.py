@@ -38,6 +38,21 @@ def in_ballpark(x, xm, xM):
   "Is x in the ballpark of xm and xM?"
   return xM - (xM - xm)*ballpark <= x <= xm + (xM - xm)*ballpark
 
+def get_value_range(x_median, xm, xM):
+  "Returns a value range where x_median is at the center if it is in the ballpark of xm and xM"
+  if x_median is not None and in_ballpark(x_median, xm, xM):
+    if xm > x_median:
+      return x_median, xM # at least show x_median
+    elif xM < x_median:
+      xM = x_median # at least show x_median
+    else:
+      mag = max(abs(xm - x_median), abs(xM - x_median))
+      if (xm > 0 and xM > 0 and x_median - mag < 0) or (xm < 0 and xM < 0 and x_median + mag > 0):
+        return min(x_median, xm, 0), max(x_median, xM, 0)
+      return x_median - mag, x_median + mag
+  return xm, xM
+  
+
 def set_globals(**kwargs):
   "Sets global params. Defaults: line_width=0.15, range_theta=(math.pi, 2*math.pi), radius_exp_weight=0.75, ballpark=2"
   global line_width, range_theta, radius_exp_weight, ballpark
@@ -138,14 +153,7 @@ def plot_tree(ax, tree, cm="cividis", median=None):
 
     min_v, max_v, depth = tree.min(), tree.max(), tree.depth()
     extra_ticks = [min_v, max_v]
-    if median is not None and in_ballpark(median, min_v, max_v):
-      if min_v > median:
-        min_v = median
-      elif max_v < median:
-        max_v = median
-      else:
-        mag = max(abs(min_v - median), abs(max_v - median))
-        min_v, max_v = median - mag, median + mag
+    min_v, max_v = get_value_range(median, min_v, max_v)
 
     # Normalize tree values to [0, 1]
     tree = tree.map(lambda xs: [(x - min_v) / (max_v - min_v) for x in xs])
