@@ -78,12 +78,12 @@ class Model(nn.Module):
         # dict where keys are data_ptrs to dicts of parameter options
         # see https://pytorch.org/docs/stable/optim.html#per-parameter-options
         self.parameter_attrs = {
-            self.src_embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']},
-            self.trg_embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']}
+            #self.src_embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']},
+            #self.trg_embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']}
         }
 
         # Debugging
-        self.debug_stats = {'src_embed_scales':[], 'trg_embed_scales':[], 'word_embeds':[], 'pos_embeds':[]}
+        self.debug_stats = {}#{'src_embed_scales':[], 'trg_embed_scales':[], 'word_embeds':[], 'pos_embeds':[]}
 
     def init_model(self):
         num_enc_layers = self.config['num_enc_layers']
@@ -138,10 +138,6 @@ class Model(nn.Module):
                                       for x in structs])
         else:
             pos_embeds = self.pos_embedding_trg[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
-        #with torch.no_grad():
-        #    if structs is not None and training:
-        #        self.debug_stats['word_embeds'].append((word_embeds.norm(dim=2).sum() / float(self.src_embed_scale.item() * pos_embeds.size()[0] * pos_embeds.size()[1])).item())
-        #        self.debug_stats['pos_embeds'].append((pos_embeds.norm(dim=2).sum() / float(pos_embeds.size()[0] * pos_embeds.size()[1])).item())
         if structs is not None and training:
             return word_embeds, pos_embeds.type(dtype)
         else:
@@ -149,10 +145,9 @@ class Model(nn.Module):
             return word_embeds + pos_embeds.type(dtype) * pe_scale.type(dtype)
 
     def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
-        #self.debug_stats['src_embed_scales'].append(self.src_embed_scale.item())
-        #self.debug_stats['trg_embed_scales'].append(self.trg_embed_scale.item())
         
-        encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
+        src_toks_mask = src_toks == ac.PAD_ID
+        encoder_mask = src_toks_mask.unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
         decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1])), diagonal=1).type(trg_toks.type()) == 1
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
@@ -189,8 +184,15 @@ class Model(nn.Module):
         #loss += pe_errs.sum(dim=[0,1]) * self.config['pos_norm_penalty'] #.type(loss.type())
         
         if hasattr(self.struct, "get_reg_penalty"):
-            pe_penalty = (pos_embeds.norm(dim=2) - 1) * self.config['pos_norm_penalty'] + 1
-            pos_penalty = (self.struct.get_reg_penalty(pe_penalty)).sum(dim=[0,1])
+            #pe_penalty = (pos_embeds.norm(dim=2) - 1) * self.config['pos_norm_penalty'] + 1
+            #pos_penalty = (self.struct.get_reg_penalty(pe_penalty)).sum(dim=[0,1])
+            #loss += pos_penalty
+#            ns = 1 - (1 - pos_embeds.norm(dim=2)) * (src_toks != ac.PAD_ID) # set all padding values to 1
+            ns = pos_embeds.norm(dim=2) + src_toks_mask # set all padding values to 1
+            pos_penalty = self.struct.get_reg_penalty(ns).sum(dim=[0,1]) * self.config['pos_norm_penalty']
+            d = (targets != ac.PAD_ID).type(loss.type()).sum()
+#            with open("pos_embed_log2", "a") as f:
+#                f.write("{:10.3f} + {:10.3f}\n".format(loss/d, pos_penalty/d))
             loss += pos_penalty
 
         return {
@@ -223,7 +225,7 @@ class Model(nn.Module):
             if self.config['fix_norm']:
                 word_embeds = ut.normalize(word_embeds, scale=False)
             else:
-                word_embeds = word_embeds * self.trg_embed_scale.type(word_embeds.type)
+                word_embeds = word_embeds * self.trg_embed_scale.type(word_embeds.type())
 
             pos_embeds = self.pos_embedding_trg[time_step, :].reshape(1, 1, -1)
             return word_embeds + pos_embeds.type(word_embeds.type()) * self.trg_pos_embed_scale.type(word_embeds.type())
