@@ -510,7 +510,7 @@ class DataManager(object):
             best_trans_file = output_file + '.best_trans'
             beam_trans_file = output_file + '.beam_trans'
         else:
-            best_trans_file, beam_trans_file = output_file
+            best_trans_file, beam_trans_file = output_dir
         
         open(best_trans_file, 'w').close()
         open(beam_trans_file, 'w').close()
@@ -548,7 +548,7 @@ class DataManager(object):
         
         model.train()
         
-        with open(best_out, 'w') as ftrans, open(beam_out, 'w') as btrans:
+        with open(best_trans_file, 'w') as ftrans, open(beam_trans_file, 'w') as btrans:
             ftrans.write('\n'.join(all_best_trans))
             btrans.write('\n\n'.join(all_beam_trans))
             
