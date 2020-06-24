@@ -105,6 +105,7 @@ class Validator(object):
             val_trans_out = val_trans_out + '.bpe'
             val_beam_out = val_beam_out + '.bpe'
 
+        start = time.time()
         src_file = self.data_manager.data_files[ac.VALIDATING][self.data_manager.src_lang]
         self.data_manager.translate(model, src_file, (val_trans_out, val_beam_out), self.logger)
 
@@ -212,7 +213,7 @@ class Validator(object):
         return outfile
 
     def translate(self, model, input_file):
-        self.data_manager.translate(model, input_file, self.save_to, self.logger, self.get_trans)
+        self.data_manager.translate(model, input_file, self.save_to, self.logger)
 
 
 
