@@ -21,7 +21,7 @@ saved_models_dir = "../nmt/saved_models"
 
 cmap_pe = "PiYG"
 cmap_norm = "cividis"
-cmap_param = "RdBu"
+cmap_param = "PiYG" # "RdBu"
 
 def cast_tree(t):
   return t.fold_up(plot_tree.Tree)
