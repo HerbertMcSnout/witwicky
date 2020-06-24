@@ -102,7 +102,7 @@ base_config = {
     'early_stop_patience': 10, # if no improvements for this many epochs, stop early
 
     # TODO: Phase out? After first lr annealing, will get set to same lr as everything else
-    'embed_scale_lr': 0.03,
+    #'embed_scale_lr': 0.03,
 
     # Gradient clipping
     'grad_clip': 1.0, # if no clip, just set it to some big value like 1e9
@@ -134,192 +134,100 @@ base_config = {
     'beam_size': 4,   
 }
 
-# median node has depth 17
-
-fun2com = {
+fun2com18 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
     'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
     'max_epochs': 30,
-    'struct': struct.tree,
+    'struct': struct.tree18,
     'batch_size': 3072,
+    'pos_norm_penalty': 5e-2,
     'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
-fun2com2 = {
+fun2com17 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
     'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
+    'max_epochs': 30,
+    'struct': struct.tree,
+    'batch_size': 3072,
+    'pos_norm_penalty': 5e-2,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+
+fun2com16 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': './nmt/data/fun2com',
     'max_epochs': 30,
     'struct': struct.tree2,
     'batch_size': 3072,
+    'pos_norm_penalty': 5e-2,
     'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
-fun2com3 = {
+fun2com14 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
     'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
     'max_epochs': 30,
-    'struct': struct.tree3,
+    'struct': struct.tree14,
     'batch_size': 3072,
+    'pos_norm_penalty': 5e-2,
     'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
-fun2com4 = {
+fun2com15 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
     'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
     'max_epochs': 30,
-    'struct': struct.tree4,
+    'struct': struct.tree15,
     'batch_size': 3072,
+    'pos_norm_penalty': 5e-2,
     'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
     'warmup_style': ac.ORG_WARMUP,
 }
 
-fun2com5 = {
+fun2com_seq = {
     'src_lang': 'fun',
     'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
     'max_epochs': 30,
-    'struct': struct.tree5,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
-    'warmup_style': ac.ORG_WARMUP,
-}
-
-fun2com6 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.tree6,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
-    'warmup_style': ac.ORG_WARMUP,
-}
-
-fun2com7 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.tree7,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
-    'warmup_style': ac.ORG_WARMUP,
-}
-
-fun2com8 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.tree8,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
-    'warmup_style': ac.ORG_WARMUP,
-}
-
-
-fun2com9 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.tree,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
-    'warmup_style': ac.ORG_WARMUP,
-}
-
-fun2com10 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.tree10,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
-    'warmup_style': ac.ORG_WARMUP,
-}
-
-fun2com11 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.tree11,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'learn_pos_scale': True,
-    'separate_embed_scales': True,
-    'warmup_style': ac.ORG_WARMUP,
-}
-
-
-fun2com12 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.tree10,
+    'struct': struct.sequence,
     'batch_size': 3072,
     'restore_segments': False,
     'warmup_style': ac.ORG_WARMUP,
 }
 
-fun2com13 = {
+fun2com_rdr = {
     'src_lang': 'fun',
     'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
-    'max_train_length': 2000,
     'max_epochs': 30,
-    'struct': struct.tree11,
+    'struct': struct.sequence,
     'batch_size': 3072,
     'restore_segments': False,
     'warmup_style': ac.ORG_WARMUP,
 }
 
-fun2coml = {
+fun2com_src = {
     'src_lang': 'fun',
     'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2coml',
+    'max_epochs': 30,
+    'struct': struct.sequence,
+    'batch_size': 3072,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+fun2com_sbt = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
     'max_train_length': 2000,
     'max_epochs': 30,
     'struct': struct.sequence,
@@ -328,38 +236,179 @@ fun2coml = {
     'warmup_style': ac.ORG_WARMUP,
 }
 
-fun2coml2 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2coml2',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.sequence,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'warmup_style': ac.ORG_WARMUP,
-}
 
-fun2coml3 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2coml3',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.sequence,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'warmup_style': ac.ORG_WARMUP,
-}
 
-fun2coml4 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2coml4',
-    'max_train_length': 2000,
-    'max_epochs': 30,
-    'struct': struct.sequence,
-    'batch_size': 3072,
-    'restore_segments': False,
-    'warmup_style': ac.ORG_WARMUP,
-}
+
+
+
+
+
+
+
+
+#fun2com = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com2 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree2,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com3 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree3,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com4 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree4,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com5 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree5,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com6 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree6,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com7 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree7,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com8 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree8,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com9 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com10 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree10,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com11 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree11,
+#    'batch_size': 3072,
+#    'restore_segments': False,
+#    'learn_pos_scale': True,
+#    'separate_embed_scales': True,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com12 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree10,
+#    'batch_size': 3072,
+#    'pos_norm_penalty': 1.0, #5e-3,
+#    'restore_segments': False,
+#    'warmup_style': ac.ORG_WARMUP,
+#}
+#
+#fun2com13 = {
+#    'src_lang': 'fun',
+#    'trg_lang': 'com',
+#    'data_dir': './nmt/data/fun2com',
+#    'max_epochs': 30,
+#    'struct': struct.tree11,
+#    'batch_size': 3072,
+#    'pos_norm_penalty': 1.0, #5e-3,
+#    'restore_segments': False,
+#    'warmup_style': ac.ORG_WARMUP,
+#}

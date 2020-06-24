@@ -1,6 +1,11 @@
 import torch
 from .struct import Struct
 
+class Record(object):
+  def __init__(self, **kwargs):
+    for k, v in kwargs.items():
+      setattr(self, k, v)
+
 class Tree(Struct):
   
   def __init__(self, v, l=None, r=None):
@@ -71,8 +76,8 @@ class Tree(Struct):
 
   def zip(self, other):
     "Zips the node values of this tree with other's"
-    assert (self.l is None == other.l is None) \
-       and (self.r is None == other.r is None), \
+    assert ((self.l is None) == (other.l is None)) \
+       and ((self.r is None) == (other.r is None)), \
        "Trying to zip two trees of different shape"
     v = self.v, other.v
     l = self.l.zip(other.l) if self.l else None
@@ -127,3 +132,25 @@ def parse_no_binarization(fun_str):
 def reg_smooth(x, eps):
   "sqrt(x^2 + eps) - sqrt(eps)"
   return (x**2 + eps)**0.5 - eps**0.5
+
+def reg_smooth2(x, eps):
+  "x*tanh(eps*x)"
+  return x * torch.tanh(eps * x)
+
+
+#  def fold_up_iterative(self, f, leaf=None):
+#    stack = [(self, True)]
+#    resolved = []
+#    while stack:
+#      last, is_node = stack.pop()
+#      if last is None:
+#        resolved.append(leaf)
+#      elif is_node:
+#        stack.append((last.v, False))
+#        stack.append((last.l, True))
+#        stack.append((last.r, True))
+#      else:
+#        l = resolved.pop()
+#        r = resolved.pop()
+#        resolved.append(f(last, l, r))
+#    return resolved[0]

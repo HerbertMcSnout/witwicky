@@ -25,5 +25,5 @@ def get_params(config):
   torch.nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
   return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam}
 
-def get_reg_penalty(batch_pe_norms):
-  return tree_utils.reg_smooth(torch.exp(torch.abs(torch.log(batch_pe_norms))) - 1, 0.01)
+def get_reg_penalty(x):
+  return torch.max(x, 1/x) - 1

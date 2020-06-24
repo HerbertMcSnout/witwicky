@@ -11,6 +11,11 @@ from .tree7 import Tree as Tree7
 from .tree8 import Tree as Tree8
 from .tree10 import Tree as Tree10
 from .tree11 import Tree as Tree11
+from .tree14 import Tree as Tree14
+from .tree15 import Tree as Tree15
+from .tree18 import Tree as Tree18
+# There's probably some easier way to include relative files in a module...
+
 """
 Each struct is a module with
 - a subclass of Struct

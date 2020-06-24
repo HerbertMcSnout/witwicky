@@ -54,7 +54,8 @@ def get_params(config):
   #torch.nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
   return {"mu_l":mu_l, "mu_r":mu_r, "lam_leaf":lam_leaf, "lam_root":lam_root, "lam_leaf_l":lam_leaf_l, "lam_leaf_r":lam_leaf_r}
 
-def get_reg_penalty(batch_pe_norms):
-  return tree_utils.reg_smooth(torch.clamp(batch_pe_norms - 1, min=0), 0.01)
-#  return tree_utils.reg_smooth(torch.abs(batch_pe_norms - 1), 0.01)
-#  return torch.exp(torch.abs(torch.log(batch_pe_norms))) - 1
+def get_reg_penalty(x):
+  return torch.max(x, 1/x) - 1
+  #return tree_utils.reg_smooth(torch.clamp(x - 1, min=0), 0.01)
+  #return tree_utils.reg_smooth(torch.abs(x - 1), 0.01)
+  #return torch.exp(torch.abs(torch.log(x))) - 1
