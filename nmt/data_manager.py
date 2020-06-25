@@ -476,8 +476,10 @@ class DataManager(object):
             original_idxs = sorted_idxs[s_idx:e_idx]
             batch_structs = structs[s_idx:e_idx]
             s_idx = e_idx
-
-            yield torch.from_numpy(src_inputs).type(torch.long), original_idxs, batch_structs
+            device = ut.get_device()
+            yield (torch.from_numpy(src_inputs).type(torch.long).to(device),
+                   original_idxs,
+                   batch_structs)
 
 
     def _ids_to_trans(self, trans_ids):
@@ -522,21 +524,19 @@ class DataManager(object):
                     num_sents += 1
         all_best_trans = [''] * num_sents
         all_beam_trans = [''] * num_sents
-        #all_best_trans = numpy.empty(num_sents, dtype=object)
-        #all_beam_trans = numpy.empty(num_sents, dtype=object)
         
         with torch.no_grad():
             logger.info('Start translating {}'.format(input_file))
             start = time.time()
             count = 0
-            for (src_toks, original_idxs, src_structs) in self.get_trans_input(input_file):
-                src_toks_cuda = src_toks.to(ut.get_device())
-                rets = model.beam_decode(src_toks_cuda, src_structs)
-                
+            for src_toks, original_idxs, src_structs in self.get_trans_input(input_file):
+                rets = model.beam_decode(src_toks, src_structs)
+            
+                cache = []
                 for i, ret in enumerate(rets):
-                    probs = ret['probs'].cpu().detach().numpy().reshape([-1])
-                    scores = ret['scores'].cpu().detach().numpy().reshape([-1])
-                    symbols = ret['symbols'].cpu().detach().numpy()
+                    probs = ret['probs'].detach().cpu().numpy().reshape([-1])
+                    scores = ret['scores'].detach().cpu().numpy().reshape([-1])
+                    symbols = ret['symbols'].detach().cpu().numpy()
                     
                     best_trans, beam_trans = self.get_trans(probs, scores, symbols)
                     all_best_trans[original_idxs[i]] = best_trans
