@@ -1,4 +1,5 @@
 import torch
+import nmt.utils as ut
 from .struct import Struct
 
 class Record(object):
@@ -128,6 +129,20 @@ def parse(fun_str, cls=Tree):
 
 def parse_no_binarization(fun_str):
   return parse_lc_rs_h(parse_clean(fun_str))[0]
+
+def init_tensor(*size):
+  device = ut.get_device()
+  if len(size) == 0:
+    t = torch.tensor([1.], device=device)
+  if len(size) == 1:
+    t = torch.empty(*size, device=device)
+    torch.nn.init.normal_(t, mean=0, std=size[0]**-0.5)
+  elif len(size) == 2:
+    t = torch.empty(*size, device=device)
+    torch.nn.init.orthogonal_(t)
+  else:
+    assert False, f"nmt.structs.tree_utils.init_tensor(*size) only implemented for len(size) == 0, 1, and 2"
+  return t
 
 def reg_smooth(x, eps):
   "sqrt(x^2 + eps) - sqrt(eps)"

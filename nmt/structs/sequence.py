@@ -1,5 +1,5 @@
 import torch
-from nmt.utils import get_positional_encoding
+from nmt.utils import get_positional_encoding, get_float_type
 from .struct import Struct
 
 class SequenceStruct(Struct):
@@ -30,7 +30,7 @@ def get_params(config):
   if config['learned_pos']:
     embed_dim = config['embed_dim']
     max_len = config['max_train_length']
-    pos_seq = torch.Tensor(max_len, embed_dim)
+    pos_seq = torch.empty(max_len, embed_dim, dtype=get_float_type())
     torch.nn.init.normal_(pos_seq, mean=0, std=embed_dim ** -0.5)
     return {"pos_seq":pos_seq}
   else:

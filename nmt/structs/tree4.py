@@ -10,7 +10,6 @@ def normalize(t, embed_dim):
 class Tree(tree_utils.Tree):
   
   def get_pos_embedding(self, embed_dim, params):
-    dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     params = [normalize(x, embed_dim) for x in params] # vectors -> 1, matrices -> sqrt(d)
     mu_l, mu_r, lam = params
     def f(_, p, is_left):
@@ -22,12 +21,10 @@ def parse(fun_str):
 
 def get_params(config):
   embed_dim = config['embed_dim']
-  mu_l = torch.Tensor(embed_dim, embed_dim)
-  mu_r = torch.Tensor(embed_dim, embed_dim)
-  lam  = torch.Tensor(embed_dim)
-  torch.nn.init.orthogonal_(mu_l)
-  torch.nn.init.orthogonal_(mu_r)
-  torch.nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
-  #self.pos_embedding_linear = Parameter(torch.Tensor(max_pos_length, embed_dim))
-  #torch.nn.init.normal_(self.pos_embedding_linear, mean=0, std=embed_dim ** -0.5)
+  mu_l = tree_utils.init_tensor(embed_dim, embed_dim)
+  mu_r = tree_utils.init_tensor(embed_dim, embed_dim)
+  lam  = tree_utils.init_tensor(embed_dim)
+  #torch.nn.init.orthogonal_(mu_l)
+  #torch.nn.init.orthogonal_(mu_r)
+  #torch.nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
   return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam}

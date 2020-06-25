@@ -6,15 +6,16 @@ class Tree(tree_utils.Tree):
 
   def get_pos_embedding(self, embed_dim, params):
     mu_l, mu_r, lam, lam_l, lam_r = params
+    step_scale = embed_dim ** 0.5
     def f_down(_, p, is_left):
       return (mu_l if is_left else mu_r) @ p
     def f_up(_, l, r):
       lv = (mu_l @ l) if l is not None else lam_l
       rv = (mu_r @ r) if r is not None else lam_r
-      return lv * rv * (embed_dim ** 0.5)
+      return lv * rv * step_scale
     d = self.fold_down_tree(f_down, lam)
     u = self.fold_up_tree(f_up)
-    return d.zip(u).map(lambda x: sum(x) * (2**-0.5))
+    return d.zip(u).map(lambda x: x[0] * x[1] * step_scale)
 
 def parse(fun_str):
   return tree_utils.parse(fun_str, cls=Tree)
