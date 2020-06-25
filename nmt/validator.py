@@ -66,17 +66,21 @@ class Validator(object):
     def evaluate_perp(self, model):
         model.eval()
         start_time = time.time()
-        total_loss = 0.
-        total_smoothed_loss = 0.
-        total_weight = 0.
+        total_loss = []
+        total_smoothed_loss = []
+        total_weight = []
 
         with torch.no_grad():
             for src_toks, src_structs, trg_toks, targets in self.data_manager.get_batch(mode=ac.VALIDATING):
                 # get loss
                 ret = model(src_toks, src_structs, trg_toks, targets)
-                total_loss += ret['nll_loss'].cpu().detach().numpy()
-                total_smoothed_loss += ret['loss'].cpu().detach().numpy()
-                total_weight += (targets.cpu() != ac.PAD_ID).detach().numpy().sum()
+                total_loss.append(ret['nll_loss'].detach())
+                total_smoothed_loss.append(ret['loss'].detach())
+                total_weight.append((targets != ac.PAD_ID).detach().sum())
+
+        total_loss = sum(x.item() for x in total_loss)
+        total_smoothed_loss = sum(x.item() for x in total_smoothed_loss)
+        total_weight = sum(x.item() for x in total_weight())
 
         perp = total_loss / total_weight
         perp = numpy.exp(perp) if perp < 300 else float('inf')

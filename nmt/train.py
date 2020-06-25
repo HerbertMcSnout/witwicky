@@ -44,15 +44,19 @@ class Trainer(object):
 
         # For logging
         self.log_freq = 100  # log train stat every this-many batches
-        self.log_train_loss = 0. # total train loss every log_freq batches
-        self.log_nll_loss = 0.
-        self.log_train_weights = 0.
+        #self.log_train_loss = 0. # total train loss every log_freq batches
+        #self.log_nll_loss = 0.
+        #self.log_train_weights = 0.
         self.num_batches_done = 0 # number of batches done for the whole training
         self.epoch_batches_done = 0 # number of batches done for this epoch
         self.epoch_loss = 0. # total train loss for whole epoch
         self.epoch_nll_loss = 0. # total train loss for whole epoch
         self.epoch_weights = 0. # total train weights (# target words) for whole epoch
         self.epoch_time = 0. # total exec time for whole epoch, sounds like that tabloid
+
+        self.log_train_loss = []
+        self.log_nll_loss = []
+        self.log_train_weights = []
 
         # get model
         self.model = Model(self.config).to(ut.get_device())
@@ -94,6 +98,9 @@ class Trainer(object):
         self.epoch_nll_loss = 0.
         self.epoch_loss = 0.
         self.epoch_weights = 0.
+        self.log_train_loss = []
+        self.log_nll_loss = []
+        self.log_train_weights = []
 
         train_smooth_perp = numpy.exp(train_smooth_perp) if train_smooth_perp < 300 else float('inf')
         self.train_smooth_perps.append(train_smooth_perp)
@@ -124,9 +131,9 @@ class Trainer(object):
         nll_loss = ret['nll_loss']
 
         if self.config['normalize_loss'] == ac.LOSS_TOK:
-            opt_loss = loss / (targets != ac.PAD_ID).type(loss.type()).sum()
+            opt_loss = loss / (targets != ac.PAD_ID).sum()
         elif self.config['normalize_loss'] == ac.LOSS_BATCH:
-            opt_loss = loss / targets.size()[0].type(loss.type())
+            opt_loss = loss / targets.size()[0]
         else:
             opt_loss = loss
 
@@ -139,33 +146,48 @@ class Trainer(object):
         self.optimizer.step()
 
         # update training stats
-        num_words = (targets.cpu() != ac.PAD_ID).detach().numpy().sum()
+        #num_words = (targets.cpu() != ac.PAD_ID).detach().numpy().sum()
+        #num_words = (targets != ac.PAD_ID).detach().sum().numpy()
+        num_words = (targets != ac.PAD_ID).detach().sum()
 
-        loss = loss.cpu().detach().numpy()
-        nll_loss = nll_loss.cpu().detach().numpy()
+        #loss = loss.detach().cpu().numpy()
+        #nll_loss = nll_loss.detach().cpu().numpy()
+        loss = loss.detach()
+        nll_loss = nll_loss.detach()
         self.num_batches_done += 1
-        self.log_train_loss += loss
-        self.log_nll_loss += nll_loss
-        self.log_train_weights += num_words
+        #self.log_train_loss += loss # TODO
+        #self.log_nll_loss += nll_loss # TODO
+        #self.log_train_weights += num_words # TODO
+        self.log_train_loss.append(loss)
+        self.log_nll_loss.append(nll_loss)
+        self.log_train_weights.append(num_words)
 
         self.epoch_batches_done += 1
-        self.epoch_loss += loss
-        self.epoch_nll_loss += nll_loss
-        self.epoch_weights += num_words
+        #self.epoch_loss += loss
+        #self.epoch_nll_loss += nll_loss
+        #self.epoch_weights += num_words
         self.epoch_time += time.time() - start
 
         if self.num_batches_done % self.log_freq == 0:
+            log_train_loss = sum(x.item() for x in self.log_train_loss)
+            log_nll_loss = sum(x.item() for x in self.log_nll_loss)
+            log_train_weights = sum(x.item() for x in self.log_train_weights)
+
+            self.epoch_loss += log_train_loss
+            self.epoch_nll_loss += log_nll_loss
+            self.epoch_weights += log_train_weights
+            
             acc_speed_word = self.epoch_weights / self.epoch_time
             acc_speed_time = self.epoch_time / self.epoch_batches_done
 
-            avg_smooth_perp = self.log_train_loss / self.log_train_weights
+            avg_smooth_perp = log_train_loss / log_train_weights
             avg_smooth_perp = numpy.exp(avg_smooth_perp) if avg_smooth_perp < 300 else float('inf')
-            avg_true_perp = self.log_nll_loss / self.log_train_weights
+            avg_true_perp = log_nll_loss / log_train_weights
             avg_true_perp = numpy.exp(avg_true_perp) if avg_true_perp < 300 else float('inf')
 
-            self.log_train_loss = 0.
-            self.log_nll_loss = 0.
-            self.log_train_weights = 0.
+            self.log_train_loss = []
+            self.log_nll_loss = []
+            self.log_train_weights = []
 
             self.logger.info('Batch {}, epoch {}/{}:'.format(b, e + 1, self.config['max_epochs']))
             self.logger.info('   avg smooth, true perp: {:.2f}, {:.2f}'.format(avg_smooth_perp, avg_true_perp))
