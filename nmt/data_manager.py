@@ -153,11 +153,7 @@ class DataManager(object):
             # Make sure to replace the vocab_files with the subjoint_vocab_files
             self.vocab_files[self.src_lang] = subjoint_src_vocab_file
             self.vocab_files[self.trg_lang] = subjoint_trg_vocab_file
-            msg = """Joint vocab files exists at
-                        {}
-                        {}
-                        {}""".format(joint_vocab_file, subjoint_src_vocab_file, subjoint_trg_vocab_file)
-            self.logger.info(msg)
+            self.logger.info("Joint vocab files already exist")
             return
 
         # Else, first combine the two word2freq from src + trg
@@ -259,12 +255,12 @@ class DataManager(object):
         joint_file = self.ids_files[mode]
         joint_tok_count = self.tok_count_files[mode]
 
-        self.logger.info('Parallel convert tokens from {} & {} to ids and save to {}'.format(src_file, trg_file, joint_file))
-        self.logger.info('Also save the approx tok count to {}'.format(joint_tok_count))
-
         if exists(joint_file) and exists(joint_tok_count):
             self.logger.info('    Token-id-ed data exists at {}'.format(joint_file))
             return
+
+        self.logger.info('Parallel convert tokens from {} & {} to ids and save to {}'.format(src_file, trg_file, joint_file))
+        self.logger.info('Also save the approx tok count to {}'.format(joint_tok_count))
 
         open(joint_file, 'w').close()
         open(joint_tok_count, 'w').close()
@@ -552,5 +548,5 @@ class DataManager(object):
             ftrans.write('\n'.join(all_best_trans))
             btrans.write('\n\n'.join(all_beam_trans))
             
-        logger.info('Finished translating {}, took {} minutes'.format(input_file, float(time.time() - start) / 60.0))
+        logger.info('Finished translating {}, took {:.2f} minutes'.format(input_file, float(time.time() - start) / 60.0))
 

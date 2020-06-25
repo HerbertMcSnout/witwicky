@@ -124,7 +124,7 @@ class Validator(object):
         output = output.decode('utf-8').strip('\n')
         out_parse = re.match(r'BLEU = [-.0-9]+', output)
         self.logger.info(output)
-        self.logger.info('Validation took: {} minutes'.format(float(time.time() - start) / 60.0))
+        self.logger.info('Validation took: {:.2f} minutes'.format(float(time.time() - start) / 60.0))
 
         bleu = float('-inf')
         if out_parse is None:
