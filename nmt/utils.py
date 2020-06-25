@@ -57,6 +57,7 @@ def format_seconds(seconds):
 
 def get_vocab_masks(config, src_vocab_size, trg_vocab_size):
     masks = []
+    device = get_device()
     for vocab_size, lang in [(src_vocab_size, config['src_lang']), (trg_vocab_size, config['trg_lang'])]:
         if config['tie_mode'] == ac.ALL_TIED:
             mask = numpy.load(os.path.join(config['data_dir'], 'joint_vocab_mask.{}.npy'.format(lang)))
@@ -65,7 +66,7 @@ def get_vocab_masks(config, src_vocab_size, trg_vocab_size):
 
         mask[ac.PAD_ID] = 0.
         mask[ac.BOS_ID] = 0.
-        masks.append(torch.from_numpy(mask).type(torch.bool)) # bool for torch versions >= 1.2.0; uint8 for versions < 1.2.0
+        masks.append(torch.from_numpy(mask).type(torch.bool).to(device)) # bool for torch versions >= 1.2.0; uint8 for versions < 1.2.0
 
     return masks
 
@@ -103,7 +104,7 @@ def get_positional_encoding(dim, sentence_length):
         encoded_vec[:, 0::2] = numpy.sin(encoded_vec[:, 0::2])
         encoded_vec[:, 1::2] = numpy.cos(encoded_vec[:, 1::2])
 
-        dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+        dtype = get_float_type()
         return torch.from_numpy(encoded_vec.reshape([sentence_length, dim])).type(dtype)
 
 
@@ -122,3 +123,6 @@ def gnmt_length_model(alpha):
 
 def get_device():
     return torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+def get_float_type():
+    return torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
