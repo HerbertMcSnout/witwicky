@@ -10,20 +10,18 @@ it using `--proto function_name`."""
 
 
 def get_config(name, opts):
-    config = {k:(v.format(name=name) if isinstance(v, str) else v)
-              for k, v in base_config.items()}
-    config.update(opts)
+    config = dict(model_name=name)
+    for k, v in base_config.items():
+        if k in opts: v = opts[k]
+        config[k] = v.format(**config) if isinstance(v, str) else v
     return config
 
 
 base_config = {
     ### Locations of files
-    'save_to': './nmt/saved_models/{name}',
-    'data_dir': './nmt/data/{name}',
-    'log_file': './nmt/saved_models/{name}/DEBUG.log',
-
-    # The name of the model
-    'model_name': '{name}',
+    'save_to': './nmt/saved_models/{model_name}',
+    'data_dir': './nmt/data/{model_name}',
+    'log_file': '{save_to}/DEBUG.log',
 
     # Source and target languages
     # Input files should be named with these as extensions
@@ -134,10 +132,40 @@ base_config = {
     'beam_size': 4,   
 }
 
+tree_data_dir = './nmt/data/fun2com'
+tree_save_dir = './nmt/saved_models/{model_name}'
+
+fun2com20 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': tree_data_dir,
+    'save_to': tree_save_dir,
+    'max_epochs': 30,
+    'struct': struct.tree19,
+    'batch_size': 3072,
+    'pos_norm_penalty': 5e-2,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+fun2com19 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': tree_data_dir,
+    'save_to': tree_save_dir,
+    'max_epochs': 30,
+    'struct': struct.tree19,
+    'batch_size': 3072,
+    'pos_norm_penalty': 5e-2,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
 fun2com18 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
+    'data_dir': tree_data_dir,
+    'save_to': tree_save_dir,
     'max_epochs': 30,
     'struct': struct.tree18,
     'batch_size': 3072,
@@ -149,7 +177,8 @@ fun2com18 = {
 fun2com17 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
+    'data_dir': tree_data_dir,
+    'save_to': tree_save_dir,
     'max_epochs': 30,
     'struct': struct.tree,
     'batch_size': 3072,
@@ -162,21 +191,10 @@ fun2com17 = {
 fun2com16 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
+    'data_dir': tree_data_dir,
+    'save_to': tree_save_dir,
     'max_epochs': 30,
     'struct': struct.tree2,
-    'batch_size': 3072,
-    'pos_norm_penalty': 5e-2,
-    'restore_segments': False,
-    'warmup_style': ac.ORG_WARMUP,
-}
-
-fun2com14 = {
-    'src_lang': 'fun',
-    'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
-    'max_epochs': 30,
-    'struct': struct.tree14,
     'batch_size': 3072,
     'pos_norm_penalty': 5e-2,
     'restore_segments': False,
@@ -186,9 +204,23 @@ fun2com14 = {
 fun2com15 = {
     'src_lang': 'fun',
     'trg_lang': 'com',
-    'data_dir': './nmt/data/fun2com',
+    'data_dir': tree_data_dir,
+    'save_to': tree_save_dir,
     'max_epochs': 30,
     'struct': struct.tree15,
+    'batch_size': 3072,
+    'pos_norm_penalty': 5e-2,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+fun2com14 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': tree_data_dir,
+    'save_to': tree_save_dir,
+    'max_epochs': 30,
+    'struct': struct.tree14,
     'batch_size': 3072,
     'pos_norm_penalty': 5e-2,
     'restore_segments': False,
