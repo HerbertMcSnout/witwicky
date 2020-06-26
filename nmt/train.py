@@ -26,7 +26,7 @@ class Trainer(object):
     """Trainer"""
     def __init__(self, args):
         super(Trainer, self).__init__()
-        self.config = configurations.get_config(args.proto, getattr(configurations, args.proto))
+        self.config = configurations.get_config(args.proto, getattr(configurations, args.proto), args.config_overrides)
         self.num_preload = args.num_preload
 
         self.logger = ut.get_logger(self.config['log_file'])

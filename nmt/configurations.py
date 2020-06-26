@@ -9,11 +9,19 @@ import nmt.structs as struct
 it using `--proto function_name`."""
 
 
-def get_config(name, opts):
+def get_config(name, opts, overrides):
+    #overrides = [kv.split('=') for kv in overrides.split()]
+    #overrides = {k:eval(v, globals=globals()) for k, v in overrides}
+    overrides = eval(overrides, globals())
     config = dict(model_name=name)
+    for k, v in opts.items():
+        if k not in overrides:
+            overrides[k] = v
     for k, v in base_config.items():
-        if k in opts: v = opts[k]
+        if k in overrides: v = overrides[k]
         config[k] = v.format(**config) if isinstance(v, str) else v
+    for k in config:
+        assert k in base_config or k == "model_name", 'Unknown config option "{}"'.format(k)
     return config
 
 
@@ -141,7 +149,7 @@ fun2com20 = {
     'data_dir': tree_data_dir,
     'save_to': tree_save_dir,
     'max_epochs': 30,
-    'struct': struct.tree19,
+    'struct': struct.tree20,
     'batch_size': 3072,
     'pos_norm_penalty': 5e-2,
     'restore_segments': False,

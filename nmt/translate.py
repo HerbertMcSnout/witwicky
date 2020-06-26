@@ -15,7 +15,7 @@ import nmt.configurations as configurations
 class Translator(object):
     def __init__(self, args):
         super(Translator, self).__init__()
-        self.config = configurations.get_config(args.proto, getattr(configurations, args.proto))
+        self.config = configurations.get_config(args.proto, getattr(configurations, args.proto), args.config_overrides)
         self.logger = ut.get_logger(self.config['log_file'])
 
         self.input_file = args.input_file

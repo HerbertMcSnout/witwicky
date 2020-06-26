@@ -15,7 +15,7 @@ import nmt.configurations as configurations
 class Extractor(object):
     def __init__(self, args):
         super(Extractor, self).__init__()
-        config = configurations.get_config(getattr(configurations, args.proto))
+        config = configurations.get_config(getattr(configurations, args.proto), args.config_overrides)
         self.logger = ut.get_logger(config['log_file'])
         self.model_file = args.model_file
 
