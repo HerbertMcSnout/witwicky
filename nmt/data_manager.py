@@ -528,7 +528,6 @@ class DataManager(object):
             for src_toks, original_idxs, src_structs in self.get_trans_input(input_file):
                 rets = model.beam_decode(src_toks, src_structs)
             
-                cache = []
                 for i, ret in enumerate(rets):
                     probs = ret['probs'].detach().cpu().numpy().reshape([-1])
                     scores = ret['scores'].detach().cpu().numpy().reshape([-1])
