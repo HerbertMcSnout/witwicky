@@ -80,7 +80,7 @@ class Validator(object):
 
         total_loss = sum(x.item() for x in total_loss)
         total_smoothed_loss = sum(x.item() for x in total_smoothed_loss)
-        total_weight = sum(x.item() for x in total_weight())
+        total_weight = sum(x.item() for x in total_weight)
 
         perp = total_loss / total_weight
         perp = numpy.exp(perp) if perp < 300 else float('inf')
