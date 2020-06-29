@@ -5,14 +5,18 @@ import os
 import nmt.all_constants as ac
 import nmt.structs as struct
 
-"""You can add your own configuration function to this file and select
-it using `--proto function_name`."""
+"""You can add your own configuration variable to this file and select
+it using `--proto variable_name`."""
 
 
-def get_config(name, opts, overrides):
-    #overrides = [kv.split('=') for kv in overrides.split()]
-    #overrides = {k:eval(v, globals=globals()) for k, v in overrides}
-    overrides = eval(overrides, globals())
+def get_config(name, opts, overrides=None):
+    """
+    Returns a dict of configurations, with default values taken from base_config.
+    String options will be formatted with the values of the options defined before them,
+    so "foo/{model_name}/baz" will be formatted to "foo/bar/baz" if the model name is "bar".
+    The order of definition is that of base_config.
+    """
+    overrides = eval(overrides, globals()) if overrides else {}
     config = dict(model_name=name)
     for k, v in opts.items():
         if k not in overrides:
@@ -142,6 +146,32 @@ base_config = {
 
 tree_data_dir = './nmt/data/fun2com'
 tree_save_dir = './nmt/saved_models/{model_name}'
+
+fun2com22 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': tree_data_dir,
+    'save_to': tree_save_dir,
+    'max_epochs': 30,
+    'struct': struct.tree22,
+    'batch_size': 3072,
+    'pos_norm_penalty': 5e-2,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
+
+fun2com21 = {
+    'src_lang': 'fun',
+    'trg_lang': 'com',
+    'data_dir': tree_data_dir,
+    'save_to': tree_save_dir,
+    'max_epochs': 30,
+    'struct': struct.tree21,
+    'batch_size': 3072,
+    'pos_norm_penalty': 5e-2,
+    'restore_segments': False,
+    'warmup_style': ac.ORG_WARMUP,
+}
 
 fun2com20 = {
     'src_lang': 'fun',
