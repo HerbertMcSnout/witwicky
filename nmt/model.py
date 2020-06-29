@@ -85,7 +85,7 @@ class Model(nn.Module):
         }
 
         # Debugging
-        self.debug_stats = {}#{'src_embed_scales':[], 'trg_embed_scales':[], 'word_embeds':[], 'pos_embeds':[]}
+        self.debug_stats = {'loss':[], 'reg':[]}
 
     def init_model(self):
         num_enc_layers = self.config['num_enc_layers']
@@ -109,9 +109,24 @@ class Model(nn.Module):
                 if p.dim() > 1:
                     init_func(p)
                 else:
-                    nn.init.constant_(p, 0.)            
+                    nn.init.constant_(p, 0.)
 
-    def get_input(self, toks, structs=None, training=False):
+    def process_pos_embedding(self, max_len, struct):
+        pad = 0, 0, 0, max_len - struct.size()
+        embed_dim = self.config['embed_dim']
+        pe = struct.get_pos_embedding(embed_dim, self.struct_params).flatten()
+        if not torch.is_tensor(pe): pe = torch.stack(pe)
+        return F.pad(pe, pad)
+    
+    def get_pos_embedding(self, max_len, structs=None):
+        if structs is not None:
+            # [bsz, max_len, embed_dim]
+            return torch.stack([self.process_pos_embedding(max_len, x) for x in structs])
+        else:
+            # [1, max_len, embed_dim]
+            return self.pos_embedding_trg[:max_len, :].unsqueeze(0)
+
+    def get_input(self, toks, structs=None, calc_reg=False):
         max_len = toks.size()[-1]
         embed_dim = self.config['embed_dim']
         embeds = self.src_embedding if structs is not None else self.trg_embedding
@@ -123,46 +138,29 @@ class Model(nn.Module):
         else:
             word_embeds = word_embeds * embed_scale
 
-        if structs is not None:
-            #pos_embeds = [x.get_pos_embedding(embed_dim, self.struct_params).flatten() for x in structs]
-            #pos_embeds = [[x.type(dtype) for x in xs] for xs in pos_embeds]
-            #pos_embeds = [x + [torch.zeros(embed_dim).type(dtype)] * (max_len - len(x)) for x in pos_embeds]
-            #pos_embeds = [torch.stack(x) for x in pos_embeds]
-            #pos_embeds = torch.stack(pos_embeds) # [bsz, max_len, embed_dim]
-
-            def maybe_stack(x):
-                return x if torch.is_tensor(x) else torch.stack(x)
-            
-            # [bsz, max_len, embed_dim]
-            pos_embeds = torch.stack([F.pad(maybe_stack(x.get_pos_embedding(embed_dim, self.struct_params).flatten()),
-                                            (0, 0, 0, max_len - x.size()))
-                                      for x in structs])
-        else:
-            pos_embeds = self.pos_embedding_trg[:toks.size()[-1], :].unsqueeze(0) # [1, max_len, embed_dim]
-        if structs is not None and training:
-            return word_embeds, pos_embeds
-        else:
-            pe_scale = self.src_pos_embed_scale if structs is not None else self.trg_pos_embed_scale
-            return word_embeds + pos_embeds * pe_scale
+        pos_embeds = self.get_pos_embedding(max_len, structs)
+        pe_scale = self.src_pos_embed_scale if structs is not None else self.trg_pos_embed_scale
+        reg_penalty = 0.0
+        if calc_reg: # Penalize pos embeddings with (pre-scaled) norms other than 1:
+            norms = pos_embeds.norm(dim=-1) + (toks == ac.PAD_ID) # set all padding values to 1 so they get no penalty
+            reg_penalty = self.struct.get_reg_penalty(norms).sum(dim=[0,1]) * self.config['pos_norm_penalty']
+        return word_embeds + pos_embeds * pe_scale, reg_penalty
 
     def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
-        
-        src_toks_mask = src_toks == ac.PAD_ID
-        encoder_mask = src_toks_mask.unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
+        encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
         decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1]), dtype=torch.bool, device=ut.get_device()), diagonal=1)
         decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
 
-        word_embeds, pos_embeds = self.get_input(src_toks, src_structs, training=True)
-        encoder_inputs = word_embeds + pos_embeds * self.src_pos_embed_scale
+        encoder_inputs, reg_penalty = self.get_input(src_toks, src_structs, calc_reg=hasattr(self.struct, "get_reg_penalty"))
         
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
 
-        decoder_inputs = self.get_input(trg_toks, training=True)
+        decoder_inputs, _ = self.get_input(trg_toks)
         decoder_outputs = self.decoder(decoder_inputs, decoder_mask, encoder_outputs, encoder_mask)
 
         logits = self.logit_fn(decoder_outputs)
         neglprobs = F.log_softmax(logits, -1)
-        neglprobs = neglprobs * self.trg_vocab_mask.reshape(1, -1) # .type(neglprobs.type()).reshape(1, -1)
+        neglprobs = neglprobs * self.trg_vocab_mask.reshape(1, -1)
         targets = targets.reshape(-1, 1)
         non_pad_mask = targets != ac.PAD_ID
         nll_loss = -neglprobs.gather(dim=-1, index=targets)
@@ -177,14 +175,10 @@ class Model(nn.Module):
             loss = (1.0 - label_smoothing) * nll_loss + label_smoothing * smooth_loss / self.trg_vocab_mask.sum()
         else:
             loss = nll_loss
-
-        #pos_embeds = pos_embeds.type(loss.type())
         
-        # Penalize pos embeddings with (pre-scaled) norms other than 1
-        if hasattr(self.struct, "get_reg_penalty"):
-            ns = pos_embeds.norm(dim=2) + src_toks_mask # set all padding values to 1
-            pos_penalty = self.struct.get_reg_penalty(ns).sum(dim=[0,1]) * self.config['pos_norm_penalty']
-            loss += pos_penalty
+        self.debug_stats['loss'].append(loss.detach().item())
+        self.debug_stats['reg'].append(reg_penalty.detach().item())
+        loss += reg_penalty
 
         return {
             'loss': loss,
@@ -206,7 +200,7 @@ class Model(nn.Module):
         Return: See encoders.Decoder.beam_decode
         """
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
-        encoder_inputs = self.get_input(src_toks, src_structs)
+        encoder_inputs, _ = self.get_input(src_toks, src_structs)
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
         max_lengths = torch.sum(src_toks != ac.PAD_ID, dim=-1).type(src_toks.type()) + 50
 
