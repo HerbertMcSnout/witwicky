@@ -110,6 +110,15 @@ class Model(nn.Module):
                     init_func(p)
                 else:
                     nn.init.constant_(p, 0.)
+        
+        self.decoder_mask = None
+
+    def get_decoder_mask(self, size):
+        if self.decoder_mask is None or self.decoder_mask.size()[-1] < size:
+            self.decoder_mask = torch.triu(torch.ones((1, 1, size, size), dtype=torch.bool, device=ut.get_device()), diagonal=1)
+            return self.decoder_mask
+        else:
+            return self.decoder_mask[:, :, :size, :size]
 
     def process_pos_embedding(self, max_len, struct):
         pad = 0, 0, 0, max_len - struct.size()
@@ -148,8 +157,9 @@ class Model(nn.Module):
 
     def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
-        decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1]), dtype=torch.bool, device=ut.get_device()), diagonal=1)
-        decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
+        #decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1]), dtype=torch.bool, device=ut.get_device()), diagonal=1)
+        #decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
+        decoder_mask = self.get_decoder_mask(trg_toks.size()[-1])
 
         encoder_inputs, reg_penalty = self.get_input(src_toks, src_structs, calc_reg=hasattr(self.struct, "get_reg_penalty"))
         
@@ -177,7 +187,7 @@ class Model(nn.Module):
             loss = nll_loss
         
         self.debug_stats['loss'].append(loss.detach().item())
-        self.debug_stats['reg'].append(reg_penalty.detach().item())
+        self.debug_stats['reg'].append(float(reg_penalty))
         loss += reg_penalty
 
         return {

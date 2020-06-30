@@ -96,7 +96,7 @@ class Validator(object):
         model.train()
         self.logger.info('dev perp: {}'.format(perp))
         self.logger.info('smoothed dev perp: {}'.format(smoothed_perp))
-        self.logger.info('Calculating dev perp took: {:.2f} minutes'.format(float(time.time() - start_time) / 60.0))
+        self.logger.info('Calculating dev perp took {}'.format(ut.format_time(time.time() - start_time)))
 
     def evaluate_bleu(self, model):
         model.eval()
@@ -124,7 +124,7 @@ class Validator(object):
         output = output.decode('utf-8').strip('\n')
         out_parse = re.match(r'BLEU = [-.0-9]+', output)
         self.logger.info(output)
-        self.logger.info('Validation took: {:.2f} minutes'.format(float(time.time() - start) / 60.0))
+        self.logger.info('Validation took {}'.format(ut.format_time(time.time() - start)))
 
         bleu = float('-inf')
         if out_parse is None:

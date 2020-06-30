@@ -405,7 +405,7 @@ class DataManager(object):
             # First we shuffle training data
             start = time.time()
             ut.shuffle_file(ids_file)
-            self.logger.info('Shuffling {} takes {:.2f} seconds'.format(ids_file, time.time() - start))
+            self.logger.info('Shuffling {} took {}'.format(ids_file, ut.format_time(time.time() - start)))
 
         
         with open(ids_file, 'r') as f:
@@ -547,5 +547,5 @@ class DataManager(object):
             ftrans.write('\n'.join(all_best_trans))
             btrans.write('\n\n'.join(all_beam_trans))
             
-        logger.info('Finished translating {}, took {:.2f} minutes'.format(input_file, float(time.time() - start) / 60.0))
+        logger.info('Finished translating {}, took {}'.format(input_file, ut.format_time(time.time() - start)))
 

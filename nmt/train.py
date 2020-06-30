@@ -44,19 +44,16 @@ class Trainer(object):
 
         # For logging
         self.log_freq = 100  # log train stat every this-many batches
-        #self.log_train_loss = 0. # total train loss every log_freq batches
-        #self.log_nll_loss = 0.
-        #self.log_train_weights = 0.
+        self.log_train_loss = []
+        self.log_nll_loss = []
+        self.log_train_weights = []
+        self.log_grad_norms = []
         self.num_batches_done = 0 # number of batches done for the whole training
         self.epoch_batches_done = 0 # number of batches done for this epoch
         self.epoch_loss = 0. # total train loss for whole epoch
         self.epoch_nll_loss = 0. # total train loss for whole epoch
         self.epoch_weights = 0. # total train weights (# target words) for whole epoch
         self.epoch_time = 0. # total exec time for whole epoch, sounds like that tabloid
-
-        self.log_train_loss = []
-        self.log_nll_loss = []
-        self.log_train_weights = []
 
         # get model
         self.model = Model(self.config).to(ut.get_device())
@@ -84,11 +81,11 @@ class Trainer(object):
 
     def report_epoch(self, e):
 
-        self.logger.info('{} batches'.format(self.epoch_batches_done))
         self.logger.info('Finished epoch {}'.format(e))
-        self.logger.info('    Took {}'.format(ut.format_seconds(self.epoch_time)))
+        self.logger.info('    Took {}'.format(ut.format_time(self.epoch_time)))
         self.logger.info('    avg words/sec    {:.2f}'.format(self.epoch_weights / self.epoch_time))
         self.logger.info('    avg sec/batch    {:.2f}'.format(self.epoch_time / self.epoch_batches_done))
+        self.logger.info('    {} batches'.format(self.epoch_batches_done))
 
         train_smooth_perp = self.epoch_loss / self.epoch_weights
         train_true_perp = self.epoch_nll_loss / self.epoch_weights
@@ -101,6 +98,7 @@ class Trainer(object):
         self.log_train_loss = []
         self.log_nll_loss = []
         self.log_train_weights = []
+        self.log_grad_norms = []
 
         train_smooth_perp = numpy.exp(train_smooth_perp) if train_smooth_perp < 300 else float('inf')
         self.train_smooth_perps.append(train_smooth_perp)
@@ -139,33 +137,24 @@ class Trainer(object):
 
         opt_loss.backward()
         # clip gradient
-        global_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config['grad_clip'])
+        grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config['grad_clip']).detach()
 
         # update
         self.adjust_lr()
         self.optimizer.step()
 
         # update training stats
-        #num_words = (targets.cpu() != ac.PAD_ID).detach().numpy().sum()
-        #num_words = (targets != ac.PAD_ID).detach().sum().numpy()
         num_words = (targets != ac.PAD_ID).detach().sum()
 
-        #loss = loss.detach().cpu().numpy()
-        #nll_loss = nll_loss.detach().cpu().numpy()
         loss = loss.detach()
         nll_loss = nll_loss.detach()
         self.num_batches_done += 1
-        #self.log_train_loss += loss # TODO
-        #self.log_nll_loss += nll_loss # TODO
-        #self.log_train_weights += num_words # TODO
         self.log_train_loss.append(loss)
         self.log_nll_loss.append(nll_loss)
         self.log_train_weights.append(num_words)
+        self.log_grad_norms.append(grad_norm)
 
         self.epoch_batches_done += 1
-        #self.epoch_loss += loss
-        #self.epoch_nll_loss += nll_loss
-        #self.epoch_weights += num_words
         self.epoch_time += time.time() - start
 
         if self.num_batches_done % self.log_freq == 0:
@@ -185,14 +174,18 @@ class Trainer(object):
             avg_true_perp = log_nll_loss / log_train_weights
             avg_true_perp = numpy.exp(avg_true_perp) if avg_true_perp < 300 else float('inf')
 
+            avg_grad_norm = sum(self.log_grad_norms) / len(self.log_grad_norms)
+            median_grad_norm = sorted(self.log_grad_norms)[len(self.log_grad_norms)//2]
+
             self.log_train_loss = []
             self.log_nll_loss = []
             self.log_train_weights = []
+            self.log_grad_norms = []
 
             self.logger.info('Batch {}, epoch {}/{}:'.format(b, e + 1, self.config['max_epochs']))
             self.logger.info('   avg smooth, true perp: {:.2f}, {:.2f}'.format(avg_smooth_perp, avg_true_perp))
             self.logger.info('   {} trg words/sec, {:.2f} sec/batch'.format(int(acc_speed_word), acc_speed_time))
-            self.logger.info('   global norm: {:.2f}'.format(global_norm))
+            self.logger.info('   avg, median grad norm: {:.2f}, {:.2f}'.format(avg_grad_norm, median_grad_norm))
 
     def adjust_lr(self):
         if self.config['warmup_style'] == ac.ORG_WARMUP:
@@ -307,14 +300,12 @@ class Trainer(object):
                 if self.is_patience_exhausted(self.config['lr_decay_patience']):
                     if self.config['val_by_bleu']:
                         metric = 'bleu'
-                        scores = self.validator.bleu_curve[-1 - self.config['lr_decay_patience']:]
-                        scores = map(str, list(scores))
-                        scores = ', '.join(scores)
+                        scores = self.validator.bleu_curve
                     else:
                         metric = 'perp'
-                        scores = self.validator.perp_curve[-1 - self.config['lr_decay_patience']:]
-                        scores = map(str, list(scores))
-                        scores = ', '.join(scores)
+                        scores = self.validator.perp_curve
+                    #scores = ', '.join(map(str, list(scores[-1 - self.config['lr_decay_patience']:])))
+                    scores = ', '.join([str(x) for x in scores[-1 - self.config['lr_decay_patience']:]])
 
                     self.logger.info('Past {} scores are {}'.format(metric, scores))
                     # when don't use warmup, decay lr if dev not improve
