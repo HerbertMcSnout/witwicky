@@ -29,25 +29,27 @@ def cast_tree(t):
 for model in listdir(saved_models_dir):
   fp = "{0}/{1}/{1}.pth".format(saved_models_dir, model)
 
-  if exists(fp) and hasattr(config, model):
+  if hasattr(config, model):
     cnfg = config.get_config(model, getattr(config, model))
+    params = None
     struct = cnfg["struct"]
     tree = struct.parse(sample)
-    if isinstance(tree, structs.tree_utils.Tree):
-      ks = struct.get_params(cnfg).keys()
-      m = torch.load(fp, map_location=torch.device("cpu"))
-      params = [m[k] for k in ks]
-      
-      pe = cast_tree(struct.parse(sample).get_pos_embedding(cnfg["embed_dim"], params))
+    if exists(fp):
+      if isinstance(tree, structs.tree_utils.Tree):
+        params = struct.get_params(cnfg)
+        m = torch.load(fp, map_location=torch.device("cpu"))
+    else:
+      params = struct.get_params(cnfg)
+    if params is not None:
+      pe = cast_tree(tree.get_pos_embedding(cnfg["embed_dim"], [v for k, v in params.items()]))
       
       w, h = matplotlib.figure.figaspect(0.5)
       fig = plt.figure(figsize=(w, h))
-    
+      
       ks_mtx = []
       height_ratios = []
       text_already = -1
-      for k in ks:
-        p = m[k]
+      for k, p in params.items():
         if p.dim() == 2:
           ks_mtx.append(p)
           height_ratios.append(4)
@@ -59,7 +61,7 @@ for model in listdir(saved_models_dir):
           height_ratios.append(2)
         else:
           height_ratios[text_already] += 1
-
+  
       height_ratios.append(sum(height_ratios)//3)
       
       gs = gridspec.GridSpec(nrows=len(height_ratios), ncols=3, figure=fig, height_ratios=height_ratios, width_ratios=[2,2,1])
@@ -71,7 +73,7 @@ for model in listdir(saved_models_dir):
       
       ax_pe.set_title("Position Embedding", pad=-60)
       ax_pe_norm.set_title("Frobenius Norm", pad=-60)
-
+  
       cmin = min(p.min() for p in ks_mtx)
       cmax = max(p.max() for p in ks_mtx)
       cmin, cmax = plot_tree.get_value_range(0, min(cmin, -0.3), max(cmax, 0.3))
@@ -81,8 +83,7 @@ for model in listdir(saved_models_dir):
       param_axs = []
       text_ax = None
       num_texts = 0
-      for k in ks:
-        p = m[k]
+      for k, p in params.items():
         if p.dim() == 0 or len(p) == 1:
           if text_ax is None:
             text_ax = fig.add_subplot(gs[gi, 2])
@@ -122,7 +123,7 @@ for model in listdir(saved_models_dir):
       plt.close("all")
 
   else:
-    print("{} doesn't exist".format(model))
+    print("{} doesn't have a config".format(model))
 
 #def plot(title, *t, height=None):
 #    if len(t) != 1: t = torch.stack(list(t))
