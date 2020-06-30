@@ -54,6 +54,20 @@ def get_validation_frequency(train_length_file, val_frequency, batch_size):
 def format_seconds(seconds):
     return str(timedelta(seconds=seconds))
 
+def format_time(secs):
+    ms_exact = secs * 1000
+    secs_exact = secs
+    mins_exact = secs_exact / 60
+    hrs_exact = mins_exact / 60
+    ms = int((secs_exact % 1) * 1000)
+    secs = int((mins_exact % 1) * 60)
+    mins = int((hrs_exact % 1) * 60)
+    hrs = int(hrs_exact)
+    if hrs_exact >= 1: return f"{hrs}:{mins}:{secs}"
+    elif mins_exact >= 1: return f"{mins}:{secs}.{ms:.0f}"
+    elif secs_exact >= 1: return f"{secs}.{ms:03.0f}s"
+    else: return f"{ms}ms"
+
 
 def get_vocab_masks(config, src_vocab_size, trg_vocab_size):
     masks = []
