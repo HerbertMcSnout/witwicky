@@ -22,12 +22,13 @@ def parse(fun_str):
 
 def get_params(config):
   embed_dim = config['embed_dim']
-  mu_l = tree_utils.init_tensor(embed_dim, embed_dim)
-  mu_r = tree_utils.init_tensor(embed_dim, embed_dim)
-  lam = tree_utils.init_tensor(embed_dim)
-  lam_l = tree_utils.init_tensor(embed_dim)
-  lam_r = tree_utils.init_tensor(embed_dim)
-  return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam, "lam_l":lam_l, "lam_r":lam_r}
+  return dict(
+    mu_l = tree_utils.init_tensor(embed_dim, embed_dim),
+    mu_r = tree_utils.init_tensor(embed_dim, embed_dim),
+    lam = tree_utils.init_tensor(embed_dim),
+    lam_l = tree_utils.init_tensor(embed_dim),
+    lam_r = tree_utils.init_tensor(embed_dim),
+  )
 
 def get_reg_penalty(x):
   return torch.abs(torch.log(x))

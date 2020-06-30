@@ -21,14 +21,15 @@ def parse(fun_str):
 
 def get_params(config):
   embed_dim = config['embed_dim']
-  mu_l_up = tree_utils.init_tensor(embed_dim, embed_dim)
-  mu_r_up = tree_utils.init_tensor(embed_dim, embed_dim)
-  mu_l_dn = tree_utils.init_tensor(embed_dim, embed_dim)
-  mu_r_dn = tree_utils.init_tensor(embed_dim, embed_dim)
-  lam = tree_utils.init_tensor(embed_dim)
-  lam_l = tree_utils.init_tensor(embed_dim)
-  lam_r = tree_utils.init_tensor(embed_dim)
-  return {"mu_l_up":mu_l_up, "mu_r_up":mu_r_up, "mu_l_dn":mu_l_dn, "mu_r_dn":mu_r_dn, "lam":lam, "lam_l":lam_l, "lam_r":lam_r}
+  return dict(
+    mu_l_up = tree_utils.init_tensor(embed_dim, embed_dim),
+    mu_r_up = tree_utils.init_tensor(embed_dim, embed_dim),
+    mu_l_dn = tree_utils.init_tensor(embed_dim, embed_dim),
+    mu_r_dn = tree_utils.init_tensor(embed_dim, embed_dim),
+    lam = tree_utils.init_tensor(embed_dim),
+    lam_l = tree_utils.init_tensor(embed_dim),
+    lam_r = tree_utils.init_tensor(embed_dim),
+  )
 
 def get_reg_penalty(x):
   return torch.max(x, 1/x) - 1

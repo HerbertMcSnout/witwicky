@@ -7,12 +7,6 @@ class Tree(tree_utils.Tree):
   def get_pos_embedding(self, embed_dim, params):
     mu_l, mu_r, lam_leaf, lam_root, lam_leaf_l, lam_leaf_r = params
     step_scale = embed_dim ** 0.5
-    #mu_l *= step_scale / mu_l.norm()
-    #mu_r *= step_scale / mu_r.norm()
-    #lam_leaf /= lam_leaf.norm()
-    #lam_root /= lam_root.norm()
-    #lam_leaf_l /= lam_leaf_l.norm()
-    #lam_leaf_r /= lam_leaf_r.norm()
 
     def f_in(_, l, r): return (mu_l @ l) * (mu_r @ r) * step_scale
 
@@ -41,20 +35,14 @@ def parse(fun_str):
 
 def get_params(config):
   embed_dim = config['embed_dim']
-  mu_l = tree_utils.init_tensor(embed_dim, embed_dim)
-  mu_r = tree_utils.init_tensor(embed_dim, embed_dim)
-  lam_leaf   = tree_utils.init_tensor(embed_dim) # inside
-  lam_root   = tree_utils.init_tensor(embed_dim) # outside
-  lam_leaf_l = tree_utils.init_tensor(embed_dim) # outside
-  lam_leaf_r = tree_utils.init_tensor(embed_dim) # outside
-  
-  #torch.nn.init.orthogonal_(mu_l)
-  #torch.nn.init.orthogonal_(mu_r)
-  #torch.nn.init.normal_(lam_leaf, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_root, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_leaf_l, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_leaf_r, mean=0, std=embed_dim ** -0.5)
-  return {"mu_l":mu_l, "mu_r":mu_r, "lam_leaf":lam_leaf, "lam_root":lam_root, "lam_leaf_l":lam_leaf_l, "lam_leaf_r":lam_leaf_r}
+  return dict(
+    mu_l = tree_utils.init_tensor(embed_dim, embed_dim),
+    mu_r = tree_utils.init_tensor(embed_dim, embed_dim),
+    lam_leaf   = tree_utils.init_tensor(embed_dim), # inside
+    lam_root   = tree_utils.init_tensor(embed_dim), # outside
+    lam_leaf_l = tree_utils.init_tensor(embed_dim), # outside
+    lam_leaf_r = tree_utils.init_tensor(embed_dim), # outside
+  )
 
 def get_reg_penalty(x):
   eps_h = 0.01

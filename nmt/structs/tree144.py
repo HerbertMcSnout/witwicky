@@ -3,7 +3,6 @@ from .struct import Struct
 import nmt.structs.tree_utils as tree_utils
 
 class Tree(tree_utils.Tree):
-  
   def get_pos_embedding(self, embed_dim, params):
     mu_l, mu_r, lam_leaf, lam_root, lam_leaf_l, lam_leaf_r = params
     step_scale = embed_dim ** 0.5
@@ -22,12 +21,14 @@ class Tree(tree_utils.Tree):
 
     def f_in_aux(v, l, r): return v, l[0], r[0]
     def f_mult(io): return io[0] * io[1] * step_scale
+    def f_norm(n): return n / n.sum()
 
     pe = self
     pe = pe.fold_up_tree(f_in, lam_leaf)
     pe = pe.fold_up_tree(f_in_aux, (None, None))
     pe = pe.fold_down_tree(f_out, (pe.v[0], lam_root))
     pe = pe.map(f_mult)
+    pe = pe.map(f_norm)
     return pe
 
 def parse(fun_str):
@@ -43,7 +44,3 @@ def get_params(config):
     lam_leaf_l = tree_utils.init_tensor(embed_dim), # outside
     lam_leaf_r = tree_utils.init_tensor(embed_dim), # outside
   )
-  
-def get_reg_penalty(batch_pe_norms):
-  "For each x in batch_pe_norms, returns sqrt(|ln x|^2  + eps) - sqrt(eps)"
-  return tree_utils.reg_smooth(torch.abs(torch.log((batch_pe_norms - 1) * 0.2 + 1.0)), 1.0) # fun2com10: eps = 0.01

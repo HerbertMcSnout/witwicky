@@ -22,16 +22,11 @@ def parse(fun_str):
 
 def get_params(config):
   embed_dim = config['embed_dim']
-  mu_l = tree_utils.init_tensor(embed_dim, embed_dim)
-  mu_r = tree_utils.init_tensor(embed_dim, embed_dim)
-  lam  = tree_utils.init_tensor(embed_dim)
-  mu_l_scale = tree_utils.init_tensor()
-  mu_r_scale = tree_utils.init_tensor()
-  lam_scale = tree_utils.init_tensor()
-  #mu_l_scale = torch.tensor([1.])
-  #mu_r_scale = torch.tensor([1.])
-  #lam_scale  = torch.tensor([1.])
-  #torch.nn.init.orthogonal_(mu_l)
-  #torch.nn.init.orthogonal_(mu_r)
-  #torch.nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
-  return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam, "mu_l_scale":mu_l_scale, "mu_r_scale":mu_r_scale, "lam_scale":lam_scale}
+  return dict(
+    mu_l = tree_utils.init_tensor(embed_dim, embed_dim),
+    mu_r = tree_utils.init_tensor(embed_dim, embed_dim),
+    lam  = tree_utils.init_tensor(embed_dim),
+    mu_l_scale = tree_utils.init_tensor(),
+    mu_r_scale = tree_utils.init_tensor(),
+    lam_scale = tree_utils.init_tensor(),
+  )

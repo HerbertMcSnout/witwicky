@@ -6,22 +6,25 @@ class Tree(tree_utils.Tree):
   
   def get_pos_embedding(self, embed_dim, params):
     mu_l, mu_r, lam_leaf, lam_root, lam_leaf_l, lam_leaf_r = params
-    step_scale = embed_dim ** 0.5
 
-    def f_in(_, l, r): return (mu_l @ l) * (mu_r @ r) * step_scale
+    def scale(x):
+      return x
+      #return x * (embed_dim ** 0.5)
+
+    def f_in(_, l, r): return scale((mu_l @ l) * (mu_r @ r))
 
     def f_out(in_vlr, p, is_left):
       in_v, in_l, in_r = in_vlr
       in_p, out_p = p
       if is_left:
         in_r = in_r if in_r is not None else lam_leaf_r
-        return in_l, torch.einsum("i,ij,i->j", out_p, mu_l, mu_r @ in_r) * step_scale
+        return in_l, scale(torch.einsum("i,ij,i->j", out_p, mu_l, mu_r @ in_r))
       else:
         in_l = in_l if in_l is not None else lam_leaf_l
-        return in_r, torch.einsum("i,i,ij->j", out_p, mu_l @ in_l, mu_r) * step_scale
+        return in_r, scale(torch.einsum("i,i,ij->j", out_p, mu_l @ in_l, mu_r))
 
     def f_in_aux(v, l, r): return v, l[0], r[0]
-    def f_mult(io): return io[0] * io[1] * step_scale
+    def f_mult(io): return scale(io[0] * io[1])
 
     pe = self
     pe = pe.fold_up_tree(f_in, lam_leaf)
@@ -43,7 +46,6 @@ def get_params(config):
     lam_leaf_l = tree_utils.init_tensor(embed_dim), # outside
     lam_leaf_r = tree_utils.init_tensor(embed_dim), # outside
   )
-  
-def get_reg_penalty(batch_pe_norms):
-  "For each x in batch_pe_norms, returns sqrt(|ln x|^2  + eps) - sqrt(eps)"
-  return tree_utils.reg_smooth(torch.abs(torch.log((batch_pe_norms - 1) * 0.2 + 1.0)), 1.0) # fun2com10: eps = 0.01
+
+def get_reg_penalty(x):
+  return x * 0.0 # torch.max(x, 1/x) - 1.0

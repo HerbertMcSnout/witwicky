@@ -14,13 +14,11 @@ def parse(fun_str):
 
 def get_params(config):
   embed_dim = config['embed_dim']
-  mu_l = tree_utils.init_tensor(embed_dim, embed_dim)
-  mu_r = tree_utils.init_tensor(embed_dim, embed_dim)
-  lam  = tree_utils.init_tensor(embed_dim)
-  #torch.nn.init.normal_(mu_l, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(mu_r, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
-  return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam}
+  return dict(
+    mu_l = tree_utils.init_tensor(embed_dim, embed_dim),
+    mu_r = tree_utils.init_tensor(embed_dim, embed_dim),
+    lam  = tree_utils.init_tensor(embed_dim),
+  )
 
 def get_reg_penalty(batch_pe_norms):
   return tree_utils.reg_smooth(torch.exp(torch.abs(torch.log(batch_pe_norms))) - 1, 0.01)

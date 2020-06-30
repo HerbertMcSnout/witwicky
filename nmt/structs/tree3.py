@@ -46,17 +46,10 @@ def parse(fun_str):
 
 def get_params(args):
   embed_dim = args['embed_dim']
-  mu_l = tree_utils.init_tensor(embed_dim, embed_dim)
-  mu_r = tree_utils.init_tensor(embed_dim, embed_dim)
-  lam_root   = tree_utils.init_tensor(embed_dim) # outside
-  lam_leaf_l = tree_utils.init_tensor(embed_dim) # outside
-  lam_leaf_r = tree_utils.init_tensor(embed_dim) # outside
-  
-  #torch.nn.init.orthogonal_(mu_l)
-  #torch.nn.init.orthogonal_(mu_r)
-  #torch.nn.init.normal_(lam_leaf_l, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_leaf_r, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_root, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_leaf_l, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_leaf_r, mean=0, std=embed_dim ** -0.5)
-  return {"mu_l":mu_l, "mu_r":mu_r, "lam_root":lam_root, "lam_leaf_l":lam_leaf_l, "lam_leaf_r":lam_leaf_r}
+  return dict(
+    mu_l = tree_utils.init_tensor(embed_dim, embed_dim),
+    mu_r = tree_utils.init_tensor(embed_dim, embed_dim),
+    lam_root   = tree_utils.init_tensor(embed_dim), # outside
+    lam_leaf_l = tree_utils.init_tensor(embed_dim), # outside
+    lam_leaf_r = tree_utils.init_tensor(embed_dim), # outside
+  )

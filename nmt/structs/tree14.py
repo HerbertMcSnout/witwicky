@@ -35,36 +35,16 @@ def parse(fun_str):
 
 def get_params(config):
   embed_dim = config['embed_dim']
-  mu_l = tree_utils.init_tensor(embed_dim, embed_dim)
-  mu_r = tree_utils.init_tensor(embed_dim, embed_dim)
-  lam_leaf   = tree_utils.init_tensor(embed_dim) # inside
-  lam_root   = tree_utils.init_tensor(embed_dim) # outside
-  lam_leaf_l = tree_utils.init_tensor(embed_dim) # outside
-  lam_leaf_r = tree_utils.init_tensor(embed_dim) # outside
-  
-  #torch.nn.init.orthogonal_(mu_l)
-  #torch.nn.init.orthogonal_(mu_r)
-  #torch.nn.init.normal_(lam_leaf, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_root, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_leaf_l, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_leaf_r, mean=0, std=embed_dim ** -0.5)
-  return {"mu_l":mu_l, "mu_r":mu_r, "lam_leaf":lam_leaf, "lam_root":lam_root, "lam_leaf_l":lam_leaf_l, "lam_leaf_r":lam_leaf_r}
+  return dict(
+    mu_l = tree_utils.init_tensor(embed_dim, embed_dim),
+    mu_r = tree_utils.init_tensor(embed_dim, embed_dim),
+    lam_leaf   = tree_utils.init_tensor(embed_dim), # inside
+    lam_root   = tree_utils.init_tensor(embed_dim), # outside
+    lam_leaf_l = tree_utils.init_tensor(embed_dim), # outside
+    lam_leaf_r = tree_utils.init_tensor(embed_dim), # outside
+  )
 
 def get_reg_penalty(x):
-  # smooth min/max for some small, nonzero number as min and large number as max for batch_pe_norms
-  #eps = 0.1
-  #k = 0.25
-  #return torch.max(torch.max(x - 1, (x + eps) ** -1 - (1 + eps) ** -1) - k, torch.tensor([0]).type(x.type()))
-
-  #k = 0.01
-  
-  #t = x + k
-  
-  #return t + 1/t - 2
-
-  #return 1 - torch.min(x, x ** -1)
-
   eps_b = 0.05
   eps_h = 0.01
-
   return torch.clamp((x + eps_h) + 1/(x + eps_h) - 2 - eps_b, min=0.0)

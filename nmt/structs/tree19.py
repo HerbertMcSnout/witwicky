@@ -22,17 +22,13 @@ def parse(fun_str):
 
 def get_params(config):
   embed_dim = config['embed_dim']
-  mu_l = tree_utils.init_tensor(embed_dim, embed_dim)
-  mu_r = tree_utils.init_tensor(embed_dim, embed_dim)
-  lam = tree_utils.init_tensor(embed_dim)
-  lam_l = tree_utils.init_tensor(embed_dim)
-  lam_r = tree_utils.init_tensor(embed_dim)
-  #torch.nn.init.orthogonal_(mu_l)
-  #torch.nn.init.orthogonal_(mu_r)
-  #torch.nn.init.normal_(lam, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_l, mean=0, std=embed_dim ** -0.5)
-  #torch.nn.init.normal_(lam_r, mean=0, std=embed_dim ** -0.5)
-  return {"mu_l":mu_l, "mu_r":mu_r, "lam":lam, "lam_l":lam_l, "lam_r":lam_r}
+  return dict(
+    mu_l = tree_utils.init_tensor(embed_dim, embed_dim),
+    mu_r = tree_utils.init_tensor(embed_dim, embed_dim),
+    lam = tree_utils.init_tensor(embed_dim),
+    lam_l = tree_utils.init_tensor(embed_dim),
+    lam_r = tree_utils.init_tensor(embed_dim),
+  )
 
 def get_reg_penalty(x):
   return torch.max(x, 1/x) - 1
