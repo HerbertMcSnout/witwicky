@@ -83,8 +83,8 @@ class Trainer(object):
 
         self.logger.info('Finished epoch {}'.format(e))
         self.logger.info('    Took {}'.format(ut.format_time(self.epoch_time)))
-        self.logger.info('    avg words/sec    {:.2f}'.format(self.epoch_weights / self.epoch_time))
-        self.logger.info('    avg sec/batch    {:.2f}'.format(self.epoch_time / self.epoch_batches_done))
+        self.logger.info('    avg words/sec {:.2f}'.format(self.epoch_weights / self.epoch_time))
+        self.logger.info('    avg sec/batch {:.2f}'.format(self.epoch_time / self.epoch_batches_done))
         self.logger.info('    {} batches'.format(self.epoch_batches_done))
 
         train_smooth_perp = self.epoch_loss / self.epoch_weights
