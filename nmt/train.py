@@ -40,7 +40,10 @@ class Trainer(object):
         self.validator = Validator(self.config, self.data_manager)
 
         self.validate_freq = int(self.config['validate_freq'])
-        self.logger.info('Evaluate every {} {}'.format(self.validate_freq, 'epochs' if self.config['val_per_epoch'] else 'batches'))
+        if self.validate_freq == 1:
+            self.logger.info('Evaluate every {}'.format('epoch' if self.config['val_per_epoch'] else 'batch'))
+        else:
+            self.logger.info('Evaluate every {:,} {}'.format(self.validate_freq, 'epochs' if self.config['val_per_epoch'] else 'batches'))
 
         # For logging
         self.log_freq = 100  # log train stat every this-many batches
@@ -48,13 +51,16 @@ class Trainer(object):
         self.log_nll_loss = []
         self.log_train_weights = []
         self.log_grad_norms = []
-        self.num_batches_done = 0 # number of batches done for the whole training
-        self.epoch_batches_done = 0 # number of batches done for this epoch
+        self.total_batches = 0 # number of batches done for the whole training
         self.epoch_loss = 0. # total train loss for whole epoch
         self.epoch_nll_loss = 0. # total train loss for whole epoch
         self.epoch_weights = 0. # total train weights (# target words) for whole epoch
         self.epoch_time = 0. # total exec time for whole epoch, sounds like that tabloid
 
+        # Estimated number of batches per epoch
+        self.est_batches = self.data_manager.read_tok_count() // self.config['batch_size']
+        self.logger.info('Guessing around {:,} batches per epoch'.format(self.est_batches))
+        
         # get model
         self.model = Model(self.config).to(ut.get_device())
 
@@ -79,18 +85,18 @@ class Trainer(object):
         torch.save({}, self.debug_path)
         self.initial_debug_stats = deepcopy(self.model.debug_stats)
 
-    def report_epoch(self, e):
+    def report_epoch(self, epoch, batches):
 
-        self.logger.info('Finished epoch {}'.format(e))
+        self.logger.info('Finished epoch {}'.format(epoch))
         self.logger.info('    Took {}'.format(ut.format_time(self.epoch_time)))
         self.logger.info('    avg words/sec {:.2f}'.format(self.epoch_weights / self.epoch_time))
-        self.logger.info('    avg sec/batch {:.2f}'.format(self.epoch_time / self.epoch_batches_done))
-        self.logger.info('    {} batches'.format(self.epoch_batches_done))
+        self.logger.info('    avg sec/batch {:.2f}'.format(self.epoch_time / batches))
+        self.logger.info('    {} batches'.format(batches))
 
         train_smooth_perp = self.epoch_loss / self.epoch_weights
         train_true_perp = self.epoch_nll_loss / self.epoch_weights
 
-        self.epoch_batches_done = 0
+        self.est_batches = batches
         self.epoch_time = 0.
         self.epoch_nll_loss = 0.
         self.epoch_loss = 0.
@@ -105,7 +111,7 @@ class Trainer(object):
         train_true_perp = numpy.exp(train_true_perp) if train_true_perp < 300 else float('inf')
         self.train_true_perps.append(train_true_perp)
 
-        self.logger.info('    smoothed, true perp: {:.2f}, {:.2f}'.format(float(train_smooth_perp), float(train_true_perp)))
+        self.logger.info('    smooth, true perp: {:.2f}, {:.2f}'.format(float(train_smooth_perp), float(train_true_perp)))
 
         # Save debug_stats
         debug_stats = torch.load(self.debug_path)
@@ -115,7 +121,7 @@ class Trainer(object):
 
         return 
 
-    def run_log(self, b, e, batch_data):
+    def run_log(self, batch, epoch, batch_data):
       #with torch.autograd.detect_anomaly(): # throws exception when any forward computation produces nan
         start = time.time()
         src_toks, src_structs, trg_toks, targets = batch_data
@@ -124,7 +130,7 @@ class Trainer(object):
         self.optimizer.zero_grad()
 
         # get loss
-        ret = self.model(src_toks, src_structs, trg_toks, targets, b, e + 1)
+        ret = self.model(src_toks, src_structs, trg_toks, targets, batch, epoch)
         loss = ret['loss']
         nll_loss = ret['nll_loss']
 
@@ -148,16 +154,14 @@ class Trainer(object):
 
         loss = loss.detach()
         nll_loss = nll_loss.detach()
-        self.num_batches_done += 1
+        self.total_batches += 1
         self.log_train_loss.append(loss)
         self.log_nll_loss.append(nll_loss)
         self.log_train_weights.append(num_words)
         self.log_grad_norms.append(grad_norm)
-
-        self.epoch_batches_done += 1
         self.epoch_time += time.time() - start
 
-        if self.num_batches_done % self.log_freq == 0:
+        if self.total_batches % self.log_freq == 0:
             log_train_loss = sum(x.item() for x in self.log_train_loss)
             log_nll_loss = sum(x.item() for x in self.log_nll_loss)
             log_train_weights = sum(x.item() for x in self.log_train_weights)
@@ -167,7 +171,7 @@ class Trainer(object):
             self.epoch_weights += log_train_weights
             
             acc_speed_word = self.epoch_weights / self.epoch_time
-            acc_speed_time = self.epoch_time / self.epoch_batches_done
+            acc_speed_time = self.epoch_time / batch
 
             avg_smooth_perp = log_train_loss / log_train_weights
             avg_smooth_perp = numpy.exp(avg_smooth_perp) if avg_smooth_perp < 300 else float('inf')
@@ -175,21 +179,33 @@ class Trainer(object):
             avg_true_perp = numpy.exp(avg_true_perp) if avg_true_perp < 300 else float('inf')
 
             avg_grad_norm = sum(self.log_grad_norms) / len(self.log_grad_norms)
-            median_grad_norm = sorted(self.log_grad_norms)[len(self.log_grad_norms)//2]
+            #median_grad_norm = sorted(self.log_grad_norms)[len(self.log_grad_norms)//2]
+
+            est_percent = batch / self.est_batches
+            epoch_len = max(5, ut.get_num_digits(self.config['max_epochs']))
+            batch_len = max(5, ut.get_num_digits(self.est_batches))
 
             self.log_train_loss = []
             self.log_nll_loss = []
             self.log_train_weights = []
             self.log_grad_norms = []
+            self.logger.info(" | ".join([f'{epoch:{epoch_len}}',
+                                         f'{batch:{batch_len}}',
+                                         f'{est_percent:4.0%}',
+                                         f'{avg_smooth_perp:11.4g}',
+                                         f'{avg_true_perp:9.4g}',
+                                         f'{avg_grad_norm:9.4g}',
+                                         f'{acc_speed_word:7.4g}',
+                                         f'{acc_speed_time:6.4g}s']))
 
-            self.logger.info('Batch {}, epoch {}/{}:'.format(b, e + 1, self.config['max_epochs']))
-            self.logger.info('   avg smooth, true perp: {:.2f}, {:.2f}'.format(avg_smooth_perp, avg_true_perp))
-            self.logger.info('   {} trg words/sec, {:.2f} sec/batch'.format(int(acc_speed_word), acc_speed_time))
-            self.logger.info('   avg, median grad norm: {:.2f}, {:.2f}'.format(avg_grad_norm, median_grad_norm))
+            #self.logger.info('Batch {}, epoch {}/{}:'.format(batch, epoch + 1, self.config['max_epochs']))
+            #self.logger.info('   avg smooth, true perp: {:.2f}, {:.2f}'.format(avg_smooth_perp, avg_true_perp))
+            #self.logger.info('   {} trg words/sec, {:.2f} sec/batch'.format(int(acc_speed_word), acc_speed_time))
+            #self.logger.info('   avg, median grad norm: {:.2f}, {:.2f}'.format(avg_grad_norm, median_grad_norm))
 
     def adjust_lr(self):
         if self.config['warmup_style'] == ac.ORG_WARMUP:
-            step = self.num_batches_done + 1.0
+            step = self.total_batches + 1.0
             if step < self.config['warmup_steps']:
                 lr = self.config['embed_dim'] ** (-0.5) * step * self.config['warmup_steps'] ** (-1.5)
             else:
@@ -198,7 +214,7 @@ class Trainer(object):
                 p['lr'] = lr
         elif self.config['warmup_style'] == ac.FIXED_WARMUP:
             warmup_steps = self.config['warmup_steps']
-            step = self.num_batches_done + 1.0
+            step = self.total_batches + 1.0
             start_lr = self.config['start_lr']
             peak_lr = self.config['lr']
             min_lr = self.config['min_lr']
@@ -210,7 +226,7 @@ class Trainer(object):
                 p['lr'] = lr
         elif self.config['warmup_style'] == ac.UPFLAT_WARMUP:
             warmup_steps = self.config['warmup_steps']
-            step = self.num_batches_done + 1.0
+            step = self.total_batches + 1.0
             start_lr = self.config['start_lr']
             peak_lr = self.config['lr']
             min_lr = self.config['min_lr']
@@ -223,16 +239,20 @@ class Trainer(object):
 
     def train(self):
         self.model.train()
-        for e in range(self.config['max_epochs']):
-            b = 0
+        for epoch in range(1, self.config['max_epochs'] + 1):
+            batch = 0
             for batch_data in self.data_manager.get_batch(mode=ac.TRAINING, num_preload=self.num_preload):
-                b += 1
-                self.run_log(b, e, batch_data)
+                if batch == 0:
+                    epoch_str = ' ' * max(0, ut.get_num_digits(self.config['max_epochs']) - 5) + 'epoch'
+                    batch_str = ' ' * max(0, ut.get_num_digits(self.est_batches) - 5) + 'batch'
+                    self.logger.info(epoch_str + ' | ' + batch_str + ' | est% | smooth perp | true perp | grad norm | trg w/s | s/batch')
+                batch += 1
+                self.run_log(batch, epoch, batch_data)
                 if not self.config['val_per_epoch']:
                     self.maybe_validate()
 
-            self.report_epoch(e + 1)
-            if self.config['val_per_epoch'] and (e + 1) % self.validate_freq == 0:
+            self.report_epoch(epoch, batch)
+            if self.config['val_per_epoch'] and epoch % self.validate_freq == 0:
                 self.maybe_validate(just_validate=True)
             
             if self.is_patience_exhausted(self.config['early_stop_patience']):
@@ -244,10 +264,10 @@ class Trainer(object):
             self.maybe_validate(just_validate=True)
 
         self.logger.info('Training finished')
-        self.logger.info('Train smoothed perps:')
-        self.logger.info(', '.join(["{:.2f}".format(x) for x in self.train_smooth_perps]))
+        self.logger.info('Train smooth perps:')
+        self.logger.info(', '.join(['{:.2f}'.format(x) for x in self.train_smooth_perps]))
         self.logger.info('Train true perps:')
-        self.logger.info(', '.join(["{:.2f}".format(x) for x in self.train_true_perps]))
+        self.logger.info(', '.join(['{:.2f}'.format(x) for x in self.train_true_perps]))
         numpy.save(join(self.config['save_to'], 'train_smooth_perps.npy'), self.train_smooth_perps)
         numpy.save(join(self.config['save_to'], 'train_true_perps.npy'), self.train_true_perps)
 
@@ -257,7 +277,7 @@ class Trainer(object):
         # Evaluate on test
         test_file = self.data_manager.data_files[ac.TESTING][self.data_manager.src_lang]
         if exists(test_file):
-            self.logger.info('Evaluate on test')
+            self.logger.info('Evaluate test')
             self.restart_to_best_checkpoint()
             self.validator.translate(self.model, test_file)
             self.logger.info('Translate dev set')
@@ -285,12 +305,12 @@ class Trainer(object):
         return patience and len(curve) > patience and (curve[-1] < minmax(curve[-1-patience:-1])) == val_bleu
 
     def maybe_validate(self, just_validate=False):
-        if self.num_batches_done % self.validate_freq == 0 or just_validate:
+        if self.total_batches % self.validate_freq == 0 or just_validate:
             self.save_checkpoint()
             self.validator.validate_and_save(self.model)
 
             # if doing annealing
-            step = self.num_batches_done + 1.0
+            step = self.total_batches + 1.0
             warmup_steps = self.config['warmup_steps']
 
             if self.config['warmup_style'] == ac.NO_WARMUP \

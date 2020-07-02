@@ -24,7 +24,7 @@ def get_logger(logfile=None):
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
-        '%(asctime)s:%(filename)16s:%(lineno)4s: %(message)s')
+        '%(asctime)s %(filename)16s:%(lineno)4s | %(message)s')
 
     if not logger.handlers:
         debug_handler = logging.FileHandler(_logfile)
@@ -140,3 +140,7 @@ def get_device():
 
 def get_float_type():
     return torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+
+def get_num_digits(x):
+    "Returns the number of digits needed to print positive, non-zero integer x in base 10"
+    return int(numpy.log10(x) + 1)
