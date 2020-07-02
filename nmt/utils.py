@@ -1,6 +1,6 @@
 import os, os.path
 import logging
-from datetime import timedelta
+#from datetime import timedelta
 import subprocess
 
 import numpy
@@ -51,21 +51,18 @@ def get_validation_frequency(train_length_file, val_frequency, batch_size):
     return int(num_train_toks * val_frequency / batch_size)
 
 
-def format_seconds(seconds):
-    return str(timedelta(seconds=seconds))
-
 def format_time(secs):
     ms_exact = secs * 1000
     secs_exact = secs
     mins_exact = secs_exact / 60
     hrs_exact = mins_exact / 60
-    ms = int((secs_exact % 1) * 1000)
+    ms = int((secs_exact % 1) * 1000 + 0.5)
     secs = int((mins_exact % 1) * 60)
     mins = int((hrs_exact % 1) * 60)
     hrs = int(hrs_exact)
-    if hrs_exact >= 1: return f"{hrs}:{mins}:{secs}"
-    elif mins_exact >= 1: return f"{mins}:{secs}.{ms:.0f}"
-    elif secs_exact >= 1: return f"{secs}.{ms:03.0f}s"
+    if hrs_exact >= 1: return f"{hrs}:{mins:02}:{secs:02}"
+    elif mins_exact >= 1: return f"{mins}:{secs:02}.{ms:03}"
+    elif secs_exact >= 1: return f"{secs}.{ms:03}s"
     else: return f"{ms}ms"
 
 
