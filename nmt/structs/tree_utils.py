@@ -141,7 +141,7 @@ def init_tensor(*size):
     t = torch.empty(*size, device=device)
     torch.nn.init.orthogonal_(t)
   else:
-    assert False, f"nmt.structs.tree_utils.init_tensor(*size) only implemented for len(size) == 0, 1, and 2"
+    assert False, "nmt.structs.tree_utils.init_tensor(*size) only implemented for len(size) == 0, 1, and 2, but got len({}) = {}".format(size, len(size))
   return t
 
 def reg_smooth(x, eps):
