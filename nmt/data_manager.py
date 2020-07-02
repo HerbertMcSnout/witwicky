@@ -290,6 +290,17 @@ class DataManager(object):
         with open(joint_tok_count, 'w') as f:
             f.write('{}\n'.format(str(tok_count)))
 
+    def read_tok_count(self, mode=ac.TRAINING):
+        fp = self.tok_count_files[mode]
+        count = -1
+        try:
+            with open(fp, 'r') as fh:
+                count = int(fh.read())
+        except:
+            self.logger.error('Error reading token count from {}'.format(fp))
+        finally:
+            return count
+
     def replace_with_unk(self, data):
         drop_mask = numpy.random.choice([True, False], data.shape, p=[self.word_dropout, 1.0 - self.word_dropout])
         drop_mask = numpy.logical_and(drop_mask, data != ac.PAD_ID)
