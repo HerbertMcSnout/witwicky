@@ -67,7 +67,7 @@ class Validator(object):
         model.eval()
         start_time = time.time()
         total_loss = []
-        total_smoothed_loss = []
+        total_smooth_loss = []
         total_weight = []
 
         with torch.no_grad():
@@ -75,27 +75,26 @@ class Validator(object):
                 # get loss
                 ret = model(src_toks, src_structs, trg_toks, targets)
                 total_loss.append(ret['nll_loss'].detach())
-                total_smoothed_loss.append(ret['loss'].detach())
+                total_smooth_loss.append(ret['loss'].detach())
                 total_weight.append((targets != ac.PAD_ID).detach().sum())
 
         total_loss = sum(x.item() for x in total_loss)
-        total_smoothed_loss = sum(x.item() for x in total_smoothed_loss)
+        total_smooth_loss = sum(x.item() for x in total_smooth_loss)
         total_weight = sum(x.item() for x in total_weight)
 
         perp = total_loss / total_weight
         perp = numpy.exp(perp) if perp < 300 else float('inf')
         perp = round(perp, ndigits=3)
 
-        smoothed_perp = total_smoothed_loss / total_weight
-        smoothed_perp = numpy.exp(smoothed_perp) if smoothed_perp < 300 else float('inf')
-        smoothed_perp = round(smoothed_perp, ndigits=3)
+        smooth_perp = total_smooth_loss / total_weight
+        smooth_perp = numpy.exp(smooth_perp) if smooth_perp < 300 else float('inf')
+        smooth_perp = round(smooth_perp, ndigits=3)
 
-        self.perp_curve = numpy.append(self.perp_curve, smoothed_perp)
+        self.perp_curve = numpy.append(self.perp_curve, smooth_perp)
         numpy.save(self.perp_curve_path, self.perp_curve)
 
         model.train()
-        self.logger.info('dev perp: {}'.format(perp))
-        self.logger.info('smoothed dev perp: {}'.format(smoothed_perp))
+        self.logger.info('smooth, true dev perp: {}'.format(smooth_perp, perp))
         self.logger.info('Calculating dev perp took {}'.format(ut.format_time(time.time() - start_time)))
 
     def evaluate_bleu(self, model):
