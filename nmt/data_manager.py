@@ -381,11 +381,9 @@ class DataManager(object):
         trg_inputs = []
         trg_seq_lengths = []
 
-        num_samples = 0
         for line in n_batches_string_list:
             data = line.strip()
             if data:
-                num_samples += 1
                 data = data.split('|||')
                 _src_struct = self.parse_struct(data[0]).map(int)
                 _src_toks = _src_struct.flatten()
