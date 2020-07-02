@@ -181,7 +181,7 @@ class Trainer(object):
             avg_grad_norm = sum(self.log_grad_norms) / len(self.log_grad_norms)
             #median_grad_norm = sorted(self.log_grad_norms)[len(self.log_grad_norms)//2]
 
-            est_percent = batch / self.est_batches
+            est_percent = int(100 * batch / self.est_batches)
             epoch_len = max(5, ut.get_num_digits(self.config['max_epochs']))
             batch_len = max(5, ut.get_num_digits(self.est_batches))
 
@@ -189,19 +189,14 @@ class Trainer(object):
             self.log_nll_loss = []
             self.log_train_weights = []
             self.log_grad_norms = []
-            self.logger.info(" | ".join([f'{epoch:{epoch_len}}',
-                                         f'{batch:{batch_len}}',
-                                         f'{est_percent:4.0%}',
-                                         f'{avg_smooth_perp:11.4g}',
-                                         f'{avg_true_perp:9.4g}',
-                                         f'{avg_grad_norm:9.4g}',
-                                         f'{acc_speed_word:7.4g}',
-                                         f'{acc_speed_time:6.4g}s']))
-
-            #self.logger.info('Batch {}, epoch {}/{}:'.format(batch, epoch + 1, self.config['max_epochs']))
-            #self.logger.info('   avg smooth, true perp: {:.2f}, {:.2f}'.format(avg_smooth_perp, avg_true_perp))
-            #self.logger.info('   {} trg words/sec, {:.2f} sec/batch'.format(int(acc_speed_word), acc_speed_time))
-            #self.logger.info('   avg, median grad norm: {:.2f}, {:.2f}'.format(avg_grad_norm, median_grad_norm))
+            self.logger.info("  ".join([f'{epoch:{epoch_len}}',
+                                        f'{batch:{batch_len}}',
+                                        f'{est_percent:3}%',
+                                        f'{avg_smooth_perp:#11.4g}',
+                                        f'{avg_true_perp:#9.4g}',
+                                        f'{avg_grad_norm:#9.4g}',
+                                        f'{acc_speed_word:#7.4g}',
+                                        f'{acc_speed_time:#6.4g}s']))
 
     def adjust_lr(self):
         if self.config['warmup_style'] == ac.ORG_WARMUP:
@@ -245,7 +240,7 @@ class Trainer(object):
                 if batch == 0:
                     epoch_str = ' ' * max(0, ut.get_num_digits(self.config['max_epochs']) - 5) + 'epoch'
                     batch_str = ' ' * max(0, ut.get_num_digits(self.est_batches) - 5) + 'batch'
-                    self.logger.info(epoch_str + ' | ' + batch_str + ' | est% | smooth perp | true perp | grad norm | trg w/s | s/batch')
+                    self.logger.info(epoch_str + '  ' + batch_str + '  est%  smooth perp  true perp  grad norm  trg w/s  s/batch')
                 batch += 1
                 self.run_log(batch, epoch, batch_data)
                 if not self.config['val_per_epoch']:
