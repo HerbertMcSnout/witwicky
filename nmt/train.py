@@ -240,7 +240,7 @@ class Trainer(object):
                 if batch == 0:
                     epoch_str = ' ' * max(0, ut.get_num_digits(self.config['max_epochs']) - 5) + 'epoch'
                     batch_str = ' ' * max(0, ut.get_num_digits(self.est_batches) - 5) + 'batch'
-                    self.logger.info(epoch_str + '  ' + batch_str + '  est%  smooth perp  true perp  grad norm  trg w/s  s/batch')
+                    self.logger.info('  '.join([epoch_str, batch_str, 'est%', 'smooth perp', 'true perp', 'grad norm', 'trg w/s', 's/batch']))
                 batch += 1
                 self.run_log(batch, epoch, batch_data)
                 if not self.config['val_per_epoch']:
