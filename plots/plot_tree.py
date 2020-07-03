@@ -156,7 +156,11 @@ def plot_tree(ax, tree, cm="cividis", median=None):
     min_v, max_v = get_value_range(median, min_v, max_v)
 
     # Normalize tree values to [0, 1]
-    tree = tree.map(lambda xs: [(x - min_v) / (max_v - min_v) for x in xs])
+    rng = max_v - min_v
+    # if rng one of 0, +inf, -inf, or nan
+    if rng == 0 or rng == float("inf") or rng == float("-inf") or rng != rng:
+      rng = float("nan")
+    tree = tree.map(lambda xs: [(x - min_v) / rng for x in xs])
   
     acc = []
     acc.append([0.5, 0, 1, 0, 2*math.pi, 0]) # makes sure 2pi = one revolution
