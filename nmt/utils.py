@@ -17,17 +17,20 @@ def ensure_dirs_exists(filepath):
     return True
 
 
-def get_logger(logfile=None):
-    """Global logger for every logging"""
-    _logfile = logfile if logfile else './DEBUG.log'
-    ensure_dirs_exists(_logfile)
+def get_logger(logfile='./DEBUG.log'):
+    "Initializes (if necessary) logger, then returns it"
+    ensure_dirs_exists(logfile)
+    # Performance recommendations per
+    # https://docs.python.org/3/howto/logging.html#optimization
+    logging.logThreads = 0
+    logging.logProcesses = 0
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
         '%(asctime)s %(filename)16s:%(lineno)4s | %(message)s')
 
     if not logger.handlers:
-        debug_handler = logging.FileHandler(_logfile)
+        debug_handler = logging.FileHandler(logfile)
         debug_handler.setFormatter(formatter)
         debug_handler.setLevel(logging.DEBUG)
         logger.addHandler(debug_handler)
@@ -36,6 +39,7 @@ def get_logger(logfile=None):
 
 
 def shuffle_file(input_file):
+    "Calls the shell command shuf on input_file"
     shuffled_file = input_file + '.shuf'
     scriptdir = os.path.dirname(os.path.abspath(__file__))
     commands = 'bash {}/../scripts/shuffle_file.sh {} {}'.format(scriptdir, input_file, shuffled_file)
@@ -52,6 +56,7 @@ def get_validation_frequency(train_length_file, val_frequency, batch_size):
 
 
 def format_time(secs):
+    "Formats secs as a nice, human-readable time (in hrs, mins, secs, ms when significant)"
     ms_exact = secs * 1000
     secs_exact = secs
     mins_exact = secs_exact / 60
@@ -62,11 +67,11 @@ def format_time(secs):
     hrs = int(hrs_exact)
     if hrs_exact >= 1: return f"{hrs}:{mins:02}:{secs:02}"
     elif mins_exact >= 1: return f"{mins}:{secs:02}.{ms:03}"
-    elif secs_exact >= 1: return f"{secs}.{ms:03}s"
-    else: return f"{ms}ms"
+    else: return f"{secs}.{ms:03}s"
 
 
 def get_vocab_masks(config, src_vocab_size, trg_vocab_size):
+    "Computes and returns [src_vocab_mask, trg_vocab_mask]"
     masks = []
     device = get_device()
     for vocab_size, lang in [(src_vocab_size, config['src_lang']), (trg_vocab_size, config['trg_lang'])]:
@@ -83,6 +88,7 @@ def get_vocab_masks(config, src_vocab_size, trg_vocab_size):
 
 
 def get_vocab_sizes(config):
+    "Returns sizes of src_vocab, trg_vocab"
     def _get_vocab_size(vocab_file):
         vocab_size = 0
         with open(vocab_file) as f:
@@ -96,17 +102,19 @@ def get_vocab_sizes(config):
 
     return _get_vocab_size(src_vocab_file), _get_vocab_size(trg_vocab_file)
 
-positional_encoding = None
+position_encoding = None
 
-def set_positional_encoding(dim, max_len):
-    global positional_encoding
-    if positional_encoding is None:
-        positional_encoding = get_positional_encoding(dim, max_len)
-        return positional_encoding
+def set_position_encoding(dim, max_len):
+    "Computes and caches position encoding to global var"
+    global position_encoding
+    if position_encoding is None:
+        position_encoding = get_position_encoding(dim, max_len)
+        return position_encoding
 
-def get_positional_encoding(dim, sentence_length):
-    if positional_encoding is not None:
-        return positional_encoding[:sentence_length, :]
+def get_position_encoding(dim, sentence_length):
+    "Returns sequence-to-sequence position encoding [sentence_length, dim]"
+    if position_encoding is not None:
+        return position_encoding[:sentence_length, :]
     else:
         div_term = numpy.power(10000.0, - (numpy.arange(dim) // 2).astype(numpy.float32) * 2.0 / dim)
         div_term = div_term.reshape(1, -1)
@@ -133,9 +141,11 @@ def gnmt_length_model(alpha):
     return f
 
 def get_device():
+    "Returns cuda:0 if available, or otherwise cpu"
     return torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 def get_float_type():
+    "Chooses between torch.cuda.FloatTensor and torch.FloatTensor"
     return torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 
 def get_num_digits(x):
