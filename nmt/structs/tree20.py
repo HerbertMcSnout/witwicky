@@ -30,5 +30,6 @@ def get_params(config):
     lam_r = tree_utils.init_tensor(embed_dim),
   )
 
-def get_reg_penalty(x):
-  return torch.abs(torch.log(x))
+def get_reg_penalty(x, mask):
+  norms = x.norm(dim=-1) + 1 - mask # set all padding values to 1 so they get no penalty
+  return torch.abs(torch.log(norms)).sum()

@@ -151,8 +151,9 @@ class Model(nn.Module):
         pe_scale = self.src_pos_embed_scale if structs is not None else self.trg_pos_embed_scale
         reg_penalty = 0.0
         if calc_reg: # Penalize pos embeddings with (pre-scaled) norms other than 1:
-            norms = pos_embeds.norm(dim=-1) + (toks == ac.PAD_ID) # set all padding values to 1 so they get no penalty
-            reg_penalty = self.struct.get_reg_penalty(norms).sum(dim=[0,1]) * self.config['pos_norm_penalty']
+            #norms = pos_embeds.norm(dim=-1) + (toks == ac.PAD_ID) # set all padding values to 1 so they get no penalty
+            #reg_penalty = self.struct.get_reg_penalty(norms).sum(dim=[0,1]) * self.config['pos_norm_penalty']
+            reg_penalty = self.struct.get_reg_penalty(pos_embeds, toks != ac.PAD_ID) * self.config['pos_norm_penalty']
         return word_embeds + pos_embeds * pe_scale, reg_penalty
 
     def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):

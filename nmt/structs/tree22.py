@@ -33,4 +33,5 @@ def get_params(config):
   )
 
 def get_reg_penalty(x):
-  return torch.max(x, 1/x) - 1
+  norms = x.norm(dim=-1) + 1 - mask # set all padding values to 1 so they get no penalty
+  return (torch.max(norms, 1/norms) - 1).sum()

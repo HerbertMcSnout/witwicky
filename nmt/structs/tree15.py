@@ -44,8 +44,9 @@ def get_params(config):
     lam_leaf_r = tree_utils.init_tensor(embed_dim), # outside
   )
 
-def get_reg_penalty(x):
+def get_reg_penalty(x, mask):
+  norms = x.norm(dim=-1) + 1 - mask # set all padding values to 1 so they get no penalty
   eps_h = 0.01
   eps_k = 5.0
-  t = torch.max(x - eps_h, 1/(x + eps_h)) - 1 + eps_h
+  t = torch.max(norms - eps_h, 1/(norms + eps_h)) - 1 + eps_h
   return t * torch.tanh(t/eps_k)
