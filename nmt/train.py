@@ -115,7 +115,7 @@ class Trainer(object):
 
         # Save debug_stats
         debug_stats = torch.load(self.debug_path)
-        debug_stats[e] = self.model.debug_stats
+        debug_stats[epoch] = self.model.debug_stats
         torch.save(debug_stats, self.debug_path)
         self.model.debug_stats = deepcopy(self.initial_debug_stats)
 
