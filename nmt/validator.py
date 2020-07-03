@@ -123,7 +123,6 @@ class Validator(object):
         output = output.decode('utf-8').strip('\n')
         out_parse = re.match(r'BLEU = [-.0-9]+', output)
         self.logger.info(output)
-        self.logger.info('Validation took {}'.format(ut.format_time(time.time() - start)))
 
         bleu = float('-inf')
         if out_parse is None:
