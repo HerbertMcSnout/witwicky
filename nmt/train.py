@@ -242,6 +242,7 @@ class Trainer(object):
             batch = 0
             for batch_data in self.data_manager.get_batch(mode=ac.TRAINING, num_preload=self.num_preload):
                 if batch == 0:
+                    self.logger.info('Begin epoch {}'.format(epoch))
                     epoch_str = ' ' * max(0, ut.get_num_digits(self.config['max_epochs']) - 5) + 'epoch'
                     batch_str = ' ' * max(0, ut.get_num_digits(self.est_batches) - 5) + 'batch'
                     self.logger.info('  '.join([epoch_str, batch_str, 'est%', 'remaining', 'trg w/s', 's/batch', 'smooth perp', 'true perp', 'grad norm']))
