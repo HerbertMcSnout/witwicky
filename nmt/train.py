@@ -184,19 +184,23 @@ class Trainer(object):
             est_percent = int(100 * batch / self.est_batches)
             epoch_len = max(5, ut.get_num_digits(self.config['max_epochs']))
             batch_len = max(5, ut.get_num_digits(self.est_batches))
+            if batch > self.est_batches: remaining = '?'
+            else: remaining = ut.format_time(acc_speed_time * (self.est_batches - batch))
 
             self.log_train_loss = []
             self.log_nll_loss = []
             self.log_train_weights = []
             self.log_grad_norms = []
-            self.logger.info("  ".join([f'{epoch:{epoch_len}}',
-                                        f'{batch:{batch_len}}',
-                                        f'{est_percent:3}%',
-                                        f'{avg_smooth_perp:#11.4g}',
-                                        f'{avg_true_perp:#9.4g}',
-                                        f'{avg_grad_norm:#9.4g}',
-                                        f'{acc_speed_word:#7.4g}',
-                                        f'{acc_speed_time:#6.4g}s']))
+            cells = [f'{epoch:{epoch_len}}',
+                     f'{batch:{batch_len}}',
+                     f'{est_percent:3}%',
+                     f'{avg_smooth_perp:#11.4g}',
+                     f'{avg_true_perp:#9.4g}',
+                     f'{avg_grad_norm:#9.4g}',
+                     f'{acc_speed_word:#7.4g}',
+                     f'{acc_speed_time:#6.4g}s',
+                     f'{remaining:>9}']
+            self.logger.info('  '.join(cells))
 
     def adjust_lr(self):
         if self.config['warmup_style'] == ac.ORG_WARMUP:
@@ -240,7 +244,7 @@ class Trainer(object):
                 if batch == 0:
                     epoch_str = ' ' * max(0, ut.get_num_digits(self.config['max_epochs']) - 5) + 'epoch'
                     batch_str = ' ' * max(0, ut.get_num_digits(self.est_batches) - 5) + 'batch'
-                    self.logger.info('  '.join([epoch_str, batch_str, 'est%', 'smooth perp', 'true perp', 'grad norm', 'trg w/s', 's/batch']))
+                    self.logger.info('  '.join([epoch_str, batch_str, 'est%', 'smooth perp', 'true perp', 'grad norm', 'trg w/s', 's/batch', 'remaining']))
                 batch += 1
                 self.run_log(batch, epoch, batch_data)
                 if not self.config['val_per_epoch']:
