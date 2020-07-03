@@ -15,6 +15,7 @@ from .tree143 import Tree as Tree143
 from .tree144 import Tree as Tree144
 from .tree14_log import Tree as TreeLog
 from .tree14_sum import Tree as TreeSum
+from .tree14_3d import Tree as Tree3d
 # There's probably some easier way to include relative files in a module...
 
 """
