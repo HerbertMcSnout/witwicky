@@ -94,7 +94,7 @@ class Validator(object):
         numpy.save(self.perp_curve_path, self.perp_curve)
 
         model.train()
-        self.logger.info('smooth, true dev perp: {}'.format(smooth_perp, perp))
+        self.logger.info('smooth, true dev perp: {}, {}'.format(smooth_perp, perp))
         self.logger.info('Calculating dev perp took {}'.format(ut.format_time(time.time() - start_time)))
 
     def evaluate_bleu(self, model):
