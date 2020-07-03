@@ -61,13 +61,12 @@ def format_time(secs):
     secs_exact = secs
     mins_exact = secs_exact / 60
     hrs_exact = mins_exact / 60
-    ms = int((secs_exact % 1) * 1000 + 0.5)
     secs = int((mins_exact % 1) * 60)
     mins = int((hrs_exact % 1) * 60)
     hrs = int(hrs_exact)
-    if hrs_exact >= 1: return f"{hrs}:{mins:02}:{secs:02}"
-    elif mins_exact >= 1: return f"{mins}:{secs:02}.{ms:03}"
-    else: return f"{secs}.{ms:03}s"
+    if hrs_exact >= 1: return f"{hrs}:{mins:02}:{secs_exact:02.0f}"
+    elif mins_exact >= 1: return f"{mins}:{secs_exact:02.0f}"
+    else: return f"{secs}.{ms_exact:03.0f}s"
 
 
 def get_vocab_masks(config, src_vocab_size, trg_vocab_size):
