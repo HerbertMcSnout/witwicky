@@ -527,6 +527,7 @@ class DataManager(object):
             for line in f:
                 if line.strip():
                     num_sents += 1
+        num_sents_digits = ut.get_num_digits(num_sents)
         all_best_trans = [''] * num_sents
         all_beam_trans = [''] * num_sents
         
@@ -548,7 +549,7 @@ class DataManager(object):
         
                     count += 1
                     if count % 1000 == 0:
-                        logger.info('  Line {}, avg {:.4f} sec/line'.format(count, (time.time() - start) / count))
+                        logger.info('  Line {:>{},} / {:,}, avg {:.4f} sec/line'.format(count, num_sents_digits, num_sents, (time.time() - start) / count))
         
         model.train()
         
