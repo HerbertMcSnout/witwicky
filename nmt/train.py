@@ -194,12 +194,12 @@ class Trainer(object):
             cells = [f'{epoch:{epoch_len}}',
                      f'{batch:{batch_len}}',
                      f'{est_percent:3}%',
+                     f'{remaining:>9}',
                      f'{avg_smooth_perp:#11.4g}',
                      f'{avg_true_perp:#9.4g}',
                      f'{avg_grad_norm:#9.4g}',
                      f'{acc_speed_word:#7.4g}',
-                     f'{acc_speed_time:#6.4g}s',
-                     f'{remaining:>9}']
+                     f'{acc_speed_time:#6.4g}s']
             self.logger.info('  '.join(cells))
 
     def adjust_lr(self):
@@ -244,7 +244,7 @@ class Trainer(object):
                 if batch == 0:
                     epoch_str = ' ' * max(0, ut.get_num_digits(self.config['max_epochs']) - 5) + 'epoch'
                     batch_str = ' ' * max(0, ut.get_num_digits(self.est_batches) - 5) + 'batch'
-                    self.logger.info('  '.join([epoch_str, batch_str, 'est%', 'smooth perp', 'true perp', 'grad norm', 'trg w/s', 's/batch', 'remaining']))
+                    self.logger.info('  '.join([epoch_str, batch_str, 'est%', 'remaining', 'smooth perp', 'true perp', 'grad norm', 'trg w/s', 's/batch']))
                 batch += 1
                 self.run_log(batch, epoch, batch_data)
                 if not self.config['val_per_epoch']:
