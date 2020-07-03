@@ -11,9 +11,6 @@ class Tree(tree_utils.Tree):
     mu_l, mu_r, lam_leaf, lam_root, lam_leaf_l, lam_leaf_r = params
 
     def f_in(_, l, r):
-      #l2 = l if l is not None else lam_leaf#_l
-      #r2 = r if r is not None else lam_leaf#_r
-      #return normalize((mu_l @ l2) * (mu_r @ r2))
       l2 = (mu_l @ l) if l is not None else lam_leaf_l
       r2 = (mu_r @ r) if r is not None else lam_leaf_r
       return l2 * r2
@@ -22,10 +19,8 @@ class Tree(tree_utils.Tree):
       in_v, in_l, in_r = in_vlr
       in_p, out_p = p
       if is_left:
-        #return in_l, torch.einsum("i,ij,i->j", out_p, mu_l, mu_r @ in_r)
         return in_l, torch.einsum("i,ij,ik,k->j", out_p, mu_l, mu_r, in_r)
       else:
-        #return in_r, torch.einsum("i,i,ij->j", out_p, mu_l @ in_l, mu_r)
         return in_r, torch.einsum("i,ij,ik,j->k", out_p, mu_l, mu_r, in_l)
 
     def f_in_aux(v, l, r): return v, l[0], r[0]
@@ -53,5 +48,7 @@ def get_params(config):
   )
 
 def get_reg_penalty(x, mask):
-  norms = x.norm(dim=-1) + ~mask # set all padding values to 1 so they get no penalty
-  return (torch.max(norms, 1/norms) - 1).sum()
+  # x : [bsz, max_len, embed_dim]
+  return torch.abs(x.sum(dim=-1)).sum()
+#  norms = x.norm(dim=-1) + 1 - mask # set all padding values to 1 so they get no penalty
+#  return (torch.max(norms, 1/norms) - 1).sum()

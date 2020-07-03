@@ -8,6 +8,7 @@ def normalize(x):
 class Tree(tree_utils.Tree):
   
   def get_pos_embedding(self, embed_dim, params):
+    params = [torch.exp(x) for x in params]
     mu_l, mu_r, lam_leaf, lam_root, lam_leaf_l, lam_leaf_r = params
 
     def f_in(_, l, r):
@@ -52,6 +53,5 @@ def get_params(config):
     lam_leaf_r = normalize(torch.nn.init.normal_(torch.empty(embed_dim), mean=0., std=1.)), # outside
   )
 
-def get_reg_penalty(x, mask):
-  norms = x.norm(dim=-1) + ~mask # set all padding values to 1 so they get no penalty
-  return (torch.max(norms, 1/norms) - 1).sum()
+def get_reg_penalty(x):
+  return torch.max(x, 1/x) - 1

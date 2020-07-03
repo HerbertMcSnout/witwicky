@@ -45,7 +45,7 @@ def get_params(config):
   )
 
 def get_reg_penalty(x, mask):
-  norms = x.norm(dim=-1) + 1 - mask # set all padding values to 1 so they get no penalty
+  norms = x.norm(dim=-1) + ~mask # set all padding values to 1 so they get no penalty
   return (torch.max(norms, 1/norms) - 1).sum()
   #return tree_utils.reg_smooth(torch.clamp(x - 1, min=0), 0.01)
   #return tree_utils.reg_smooth(torch.abs(x - 1), 0.01)

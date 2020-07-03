@@ -45,7 +45,7 @@ def get_params(config):
   )
 
 def get_reg_penalty(x, mask):
-  norms = x.norm(dim=-1) + 1 - mask # set all padding values to 1 so they get no penalty
+  norms = x.norm(dim=-1) + ~mask # set all padding values to 1 so they get no penalty
   eps_b = 0.05
   eps_h = 0.01
   return torch.clamp((norms + eps_h) + 1/(norms + eps_h) - 2 - eps_b, min=0.0).sum()

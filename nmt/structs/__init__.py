@@ -3,14 +3,6 @@ from .tree_utils import parse
 from .sequence import SequenceStruct
 from .tree import Tree
 from .tree2 import Tree as Tree2
-from .tree3 import Tree as Tree3
-from .tree4 import Tree as Tree4
-from .tree5 import Tree as Tree5
-from .tree6 import Tree as Tree6
-from .tree7 import Tree as Tree7
-from .tree8 import Tree as Tree8
-from .tree10 import Tree as Tree10
-from .tree11 import Tree as Tree11
 from .tree14 import Tree as Tree14
 from .tree15 import Tree as Tree15
 from .tree18 import Tree as Tree18
@@ -21,6 +13,8 @@ from .tree22 import Tree as Tree22
 from .tree142 import Tree as Tree142
 from .tree143 import Tree as Tree143
 from .tree144 import Tree as Tree144
+from .tree14_log import Tree as TreeLog
+from .tree14_sum import Tree as TreeSum
 # There's probably some easier way to include relative files in a module...
 
 """
