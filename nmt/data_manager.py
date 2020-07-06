@@ -384,10 +384,10 @@ class DataManager(object):
         for line in n_batches_string_list:
             data = line.strip()
             if data:
-                data = data.split('|||')
-                _src_struct = self.parse_struct(data[0]).map(int)
+                src_data, trg_data = data.split('|||')
+                _src_struct = self.parse_struct(src_data).map(int)
                 _src_toks = _src_struct.flatten()
-                _trg_toks = list(map(int, data[1].strip().split()))
+                _trg_toks = [int(x) for x in trg_data.split()]
 
                 _src_len = len(_src_toks)
                 _trg_len = len(_trg_toks)
