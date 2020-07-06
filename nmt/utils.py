@@ -5,8 +5,12 @@ import subprocess
 
 import numpy
 import torch
+import random
 
 import nmt.all_constants as ac
+
+random.seed(ac.SEED)
+
 
 def ensure_dirs_exists(filepath):
     "Creates the directories containing filepath, if it does not yet exist. Returns if the path already existed."
@@ -39,12 +43,12 @@ def get_logger(logfile='./DEBUG.log'):
 
 
 def shuffle_file(input_file):
-    "Calls the shell command shuf on input_file"
-    shuffled_file = input_file + '.shuf'
-    scriptdir = os.path.dirname(os.path.abspath(__file__))
-    commands = 'bash {}/../scripts/shuffle_file.sh {} {}'.format(scriptdir, input_file, shuffled_file)
-    subprocess.check_call(commands, shell=True)
-    subprocess.check_call('mv {} {}'.format(shuffled_file, input_file), shell=True)
+    with open(input_file, 'r') as fh:
+        data = [(random.random(), line) for line in fh]
+    data.sort()
+    with open(input_file, 'w') as fh:
+        for _, line in data:
+            fh.write(line)
 
 
 def get_validation_frequency(train_length_file, val_frequency, batch_size):
