@@ -121,10 +121,10 @@ class Model(nn.Module):
             return self.decoder_mask[:, :, :size, :size]
 
     def process_pos_embedding(self, max_len, struct):
-        pad = 0, 0, 0, max_len - struct.size()
         embed_dim = self.config['embed_dim']
         pe = struct.get_pos_embedding(embed_dim, self.struct_params).flatten()
         if not torch.is_tensor(pe): pe = torch.stack(pe)
+        pad = 0, 0, 0, max_len - pe.size()[0]
         return F.pad(pe, pad)
     
     def get_pos_embedding(self, max_len, structs=None):
