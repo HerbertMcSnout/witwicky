@@ -528,6 +528,7 @@ class DataManager(object):
                 if line.strip():
                     num_sents += 1
         num_sents_digits = ut.get_num_digits(num_sents)
+        num_sents_digits += (num_sents_digits - 1) // 3 # 1,234,567
         all_best_trans = [''] * num_sents
         all_beam_trans = [''] * num_sents
         
