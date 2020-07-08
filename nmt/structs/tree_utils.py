@@ -48,27 +48,27 @@ class Tree(Struct):
     r = self.r.map(f) if self.r else None
     return self.new(v, l, r)
 
-  def flatten(self, acc=None, lefts=[]):
-    if acc is None:
-      acc = []
-      self.flatten(acc)
-      return acc
-    else:
+  def flatten(self):
+    stack = [self]
+    acc = []
+    while stack:
+      node = stack.pop()
+      if node.r: stack.append(node.r)
+      if node.l: stack.append(node.l)
       acc.append(self.v)
-      if self.l: lefts.append(self.l)
-      if self.r: self.r.flatten(acc, lefts)
-      elif len(lefts) > 0: lefts.pop().flatten(acc, lefts)
+    return acc
 
   def fold_up(self, f, leaf=None):
     return f(self.v, self.l.fold_up(f, leaf) if self.l else leaf, self.r.fold_up(f, leaf) if self.r else leaf)
 
   def fold_up_tree(self, f, leaf=None):
-    l = self.l.fold_up_tree(f, leaf) if self.l else None
-    r = self.r.fold_up_tree(f, leaf) if self.r else None
-    lv = l.v if self.l else leaf
-    rv = r.v if self.r else leaf
-    v = f(self.v, lv, rv)
-    return self.new(v, l, r)
+    return self.fold_up(lambda v, l, r: self.new(f(v, (l.v if l else leaf), (r.v if r else leaf)), l, r))
+    #l = self.l.fold_up_tree(f, leaf) if self.l else None
+    #r = self.r.fold_up_tree(f, leaf) if self.r else None
+    #lv = l.v if self.l else leaf
+    #rv = r.v if self.r else leaf
+    #v = f(self.v, lv, rv)
+    #return self.new(v, l, r)
 
   def fold_down_tree(self, f, root=None):
     l = self.l.fold_down_tree(f, f(self.v, root, True)) if self.l else None
@@ -97,6 +97,7 @@ def parse_clean(fun_str, remove_parens=True):
 
   return fun_str
 
+
 def parse_lc_rs_h(fun_str):
   children = []
   start = 0
@@ -119,10 +120,37 @@ def parse_lc_rs_h(fun_str):
 
   return children, pos
 
+#def construct_tree(tree, cls=nTree):
+#  stack = [tree]
+#  resolved = []
+#  while stack:
+#    node = stack.pop()
+#    if isinstance(node, str):
+#      resolved.append(cls(node))
+#    elif isinstance(node, list):
+#      value = node[0]
+#      children = node[1:]
+#      if children:
+#        stack.append((value, len(children)))
+#        stack.extend(reversed(children))
+#      else:
+#        resolved.append(cls(value))
+#    elif isinstance(node, tuple):
+#      value, num_children = node
+#      resolved, children = resolved[:-num_children], resolved[-num_children:]
+#      t = cls(value, children[0], None)
+#      t2 = t.l
+#      for child in children[1:]:
+#        t2.r = child
+#        t2 = t2.r
+#      resolved.append(t)
+#  return resolved.pop()
+
 def construct_tree(children, siblings=[], cls=Tree):
   return cls(children if isinstance(children, str) else children[0],
              construct_tree(children[1], children[2:], cls=cls) if len(children) > 1 and not isinstance(children, str) else None,
              construct_tree(siblings[0], siblings[1:], cls=cls) if len(siblings) > 0 else None)
+
 
 def parse(fun_str, cls=Tree):
   return construct_tree(parse_lc_rs_h(parse_clean(fun_str))[0], cls=cls)
@@ -153,19 +181,4 @@ def reg_smooth2(x, eps):
   return x * torch.tanh(eps * x)
 
 
-#  def fold_up_iterative(self, f, leaf=None):
-#    stack = [(self, True)]
-#    resolved = []
-#    while stack:
-#      last, is_node = stack.pop()
-#      if last is None:
-#        resolved.append(leaf)
-#      elif is_node:
-#        stack.append((last.v, False))
-#        stack.append((last.l, True))
-#        stack.append((last.r, True))
-#      else:
-#        l = resolved.pop()
-#        r = resolved.pop()
-#        resolved.append(f(last, l, r))
-#    return resolved[0]
+
