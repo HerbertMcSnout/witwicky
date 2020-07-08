@@ -25,14 +25,14 @@ if __name__ == '__main__':
     parser.add_argument('--save-to', required='--var-list' in sys.argv, help='Directory to save extracted vars to')
     parser.add_argument('--config-overrides', type=str,
                         help='Dict of k-v pairs to override config with')
+    parser.add_argument('--do-nothing', type=bool, default=False)
     args = parser.parse_args()
 
-    if args.mode == 'train':
-        trainer = Trainer(args)
-        trainer.train()
-    elif args.mode == 'translate':
-        translator = Translator(args)
-    elif args.mode == 'extract':
-        extractor = Extractor(args)
-    else:
-        print('Yo wassup!')
+    if not args.do_nothing:
+        if args.mode == 'train':
+            trainer = Trainer(args)
+            trainer.train()
+        elif args.mode == 'translate':
+            translator = Translator(args)
+        elif args.mode == 'extract':
+            extractor = Extractor(args)
