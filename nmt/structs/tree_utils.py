@@ -55,7 +55,7 @@ class Tree(Struct):
       node = stack.pop()
       if node.r: stack.append(node.r)
       if node.l: stack.append(node.l)
-      acc.append(self.v)
+      acc.append(node.v)
     return acc
 
   def fold_up(self, f, leaf=None):
