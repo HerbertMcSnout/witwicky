@@ -21,7 +21,10 @@ class Translator(object):
         self.input_file = args.input_file
         self.model_file = args.model_file
 
-        if self.input_file is None or self.model_file is None or not os.path.exists(self.input_file) or not os.path.exists(self.model_file):
+        if self.model_file is None:
+            self.model_file = os.path.join(self.config['save_to'], '{}.pth'.format(self.config['model_name']))
+
+        if self.input_file is None or not os.path.exists(self.input_file) or not os.path.exists(self.model_file):
             raise ValueError('Input file or model file does not exist')
 
         self.data_manager = DataManager(self.config)

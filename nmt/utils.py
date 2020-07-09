@@ -21,7 +21,7 @@ def ensure_dirs_exists(filepath):
 
 def get_logger(logfile='./DEBUG.log'):
     "Initializes (if necessary) logger, then returns it"
-    ensure_dirs_exists(logfile)
+    if logfile: ensure_dirs_exists(logfile)
     # Performance recommendations per
     # https://docs.python.org/3/howto/logging.html#optimization
     logging.logThreads = 0
@@ -32,9 +32,12 @@ def get_logger(logfile='./DEBUG.log'):
         '%(asctime)s %(filename)16s:%(lineno)4s | %(message)s')
 
     if not logger.handlers:
-        debug_handler = logging.FileHandler(logfile)
-        debug_handler.setFormatter(formatter)
-        debug_handler.setLevel(logging.DEBUG)
+        if logfile is not None:
+            debug_handler = logging.FileHandler(logfile)
+            debug_handler.setFormatter(formatter)
+            debug_handler.setLevel(logging.DEBUG)
+        else:
+            debug_handler = logging.NullHandler()
         logger.addHandler(debug_handler)
 
     return logger
