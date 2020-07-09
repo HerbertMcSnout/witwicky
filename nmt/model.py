@@ -120,20 +120,18 @@ class Model(nn.Module):
         else:
             return self.decoder_mask[:, :, :size, :size]
 
-    def process_pos_embedding(self, max_len, struct):
-        embed_dim = self.config['embed_dim']
-        pe = struct.get_pos_embedding(embed_dim, self.struct_params).flatten()
-        if not torch.is_tensor(pe): pe = torch.stack(pe)
-        pad = 0, 0, 0, max_len - pe.size()[0]
-        return F.pad(pe, pad)
+    def maybe_stack(self, xs):
+        "If xs is not already a tensor, stack it (assumes xs in this case is a sequence)"
+        return xs if torch.is_tensor(xs) else torch.stack(xs)
     
     def get_pos_embedding(self, max_len, structs=None):
         if structs is not None:
-            # [bsz, max_len, embed_dim]
-            return torch.stack([self.process_pos_embedding(max_len, x) for x in structs])
+            embed_dim = self.config['embed_dim']
+            pe = [self.maybe_stack(x.get_pos_embedding(embed_dim, self.struct_params).flatten()) # [bsz, embed_dim]
+                  for x in structs]
+            return torch.nn.utils.rnn.pad_sequence(pe, batch_first=True) # [bsz, max_len, embed_dim]
         else:
-            # [1, max_len, embed_dim]
-            return self.pos_embedding_trg[:max_len, :].unsqueeze(0)
+            return self.pos_embedding_trg[:max_len, :].unsqueeze(0) # [1, max_len, embed_dim]
 
     def get_input(self, toks, structs=None, calc_reg=False):
         max_len = toks.size()[-1]
