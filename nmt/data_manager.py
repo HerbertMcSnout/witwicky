@@ -131,7 +131,7 @@ class DataManager(object):
                     src_line_parsed = self.parse_struct(src_line)
                     src_line_words = src_line_parsed.flatten()
                     trg_line_words = trg_line.strip().split()
-                    if 0 < len(src_line_words) <= self.max_train_length and 0 < len(trg_line_words) <= self.max_train_length:
+                    if 0 < len(src_line_words) < self.max_train_length and 0 < len(trg_line_words) < self.max_train_length:
                         src_vocab.update(src_line_words)
                         trg_vocab.update(trg_line_words)
 
