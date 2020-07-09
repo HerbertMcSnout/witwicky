@@ -24,7 +24,7 @@ class Validator(object):
         self.val_by_bleu = config['val_by_bleu']
         self.save_to = config['save_to']
 
-        self.get_cpkt_path = lambda score: join(self.save_to, '{}-{:.2f}.pth'.format(config['model_name'], score))
+        self.get_cpkt_path = lambda score: join(self.save_to, '{}-{}.pth'.format(config['model_name'], score))
         self.n_best = config['n_best']
 
         scriptdir = os.path.dirname(os.path.abspath(__file__))
