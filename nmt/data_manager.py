@@ -6,6 +6,8 @@ from itertools import islice
 from collections import Counter
 import numpy
 import torch
+import shutil
+from io import StringIO
 
 import nmt.utils as ut
 import nmt.all_constants as ac
@@ -78,7 +80,9 @@ class DataManager(object):
         # We don't want to modify anything in data_dir/ during
         # training, so copy data_dir/train.ids to save_to/train.ids
         # so we can shuffle it without modifying it in self.data_dir
-        os.popen('cp {} {}'.format(self.ids_files[ac.TRAINING], train_ids_file))
+        shutil.copy(self.ids_files[ac.TRAINING], train_ids_file)
+        #os.popen('cp {} {}'.format(self.ids_files[ac.TRAINING], train_ids_file))
+        
         self.ids_files[ac.TRAINING] = train_ids_file
 
     def create_all_vocabs(self):
@@ -131,7 +135,7 @@ class DataManager(object):
                     src_line_parsed = self.parse_struct(src_line)
                     src_line_words = src_line_parsed.flatten()
                     trg_line_words = trg_line.strip().split()
-                    if 0 < len(src_line_words) < self.max_train_length and 0 < len(trg_line_words) < self.max_train_length:
+                    if 0 < len(src_line_words) + 1 < self.max_train_length and 0 < len(trg_line_words) + 1 < self.max_train_length:
                         src_vocab.update(src_line_words)
                         trg_vocab.update(trg_line_words)
 
@@ -274,12 +278,13 @@ class DataManager(object):
                 src_prsd = self.parse_struct(src_line)
                 trg_toks = trg_line.strip().split()
 
-                if 0 < src_prsd.size() < self.max_train_length and 0 < len(trg_toks) < self.max_train_length:
+                # "+ 1" for BOS_ID/EOS_ID
+                if 0 < src_prsd.size() + 1 < self.max_train_length and 0 < len(trg_toks) + 1 < self.max_train_length:
                     num_lines += 1
                     if num_lines % 10000 == 0:
                         self.logger.info('    converting line {}'.format(num_lines))
                     src_prsd = src_prsd.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
-                    #src_prsd.push(ac.EOS_ID)
+                    src_prsd.maybe_add_eos(ac.EOS_ID)
 
                     src_ids = src_prsd.flatten()
                     trg_ids = [ac.BOS_ID] + [self.trg_vocab.get(w, ac.UNK_ID) for w in trg_toks]
@@ -448,8 +453,8 @@ class DataManager(object):
         structs = []
         with open(input_file, 'r') as f:
             for line in f:
-                src_struct = self.parse_struct(line)
-                src_struct = src_struct.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+                src_struct = self.parse_struct(line).map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+                src_struct.maybe_add_eos(ac.EOS_ID)
                 toks = src_struct.flatten()
                 data.append(toks)
                 data_lengths.append(len(toks))
@@ -560,3 +565,13 @@ class DataManager(object):
             
         logger.info('Finished translating {}, took {}'.format(input_file, ut.format_time(time.time() - start)))
 
+    def translate_line(self, model, line, beam=False):
+        "Translates a single line of text, with no file I/O. If beam is True, return tuple (best, beams)."
+        struct = self.parse_struct(line).map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+        toks = torch.tensor(struct.flatten()).type(torch.long).to(ut.get_device()).unsqueeze(0)
+        ret, = model.beam_decode(toks, [struct])
+        probs = ret['probs'].detach().cpu().numpy().reshape([-1])
+        scores = ret['scores'].detach().cpu().numpy().reshape([-1])
+        symbols = ret['symbols'].detach().cpu().numpy()
+        best, beams = self.get_trans(probs, scores, symbols)
+        return (best, beams) if beam else best

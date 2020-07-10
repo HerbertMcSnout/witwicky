@@ -13,9 +13,9 @@ parser.add_argument('--input-file', type=str,
                     help='Input file if mode == translate')
 parser.add_argument('--model-file', type=str, required=False,
                     help='Path to saved checkpoint if mode == translate or interactive')
-parser.add_argument('--src-formatter', type=str, required=False,
+parser.add_argument('--preprocessor', type=str, required=False,
                     help='Optional path to executable that formats input from interactive mode')
-parser.add_argument('--trg-formatter', type=str, required=False,
+parser.add_argument('--postprocessor', type=str, required=False,
                     help='Optional path to executable that formats output from interactive mode')
 parser.add_argument('--var-list', nargs='+',
                     help='List of model vars to extracted')

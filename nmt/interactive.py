@@ -1,9 +1,9 @@
 import os
-from logging import NullHandler
 import torch
 import subprocess
-from io import StringIO
-import nmt.all_constants as ac
+import time
+import sys
+import tempfile
 import nmt.utils as ut
 from nmt.model import Model
 from nmt.data_manager import DataManager
@@ -12,9 +12,7 @@ import nmt.configurations as configurations
 class InteractiveTranslator(object):
     def __init__(self, args):
         super(InteractiveTranslator, self).__init__()
-        print("Initializing...")
         self.config = configurations.get_config(args.proto, getattr(configurations, args.proto), args.config_overrides)
-        self.logger = ut.get_logger(logfile=None)
         
         self.model_file = args.model_file
         if self.model_file is None:
@@ -25,64 +23,53 @@ class InteractiveTranslator(object):
 
         self.data_manager = DataManager(self.config)
 
-        self.src_formatter = self.maybe_spawn_process(args.src_formatter)
-        self.trg_formatter = self.maybe_spawn_process(args.trg_formatter)
+        _, self.input_fp = tempfile.mkstemp()
+        _, self.output_fp = tempfile.mkstemp()
+        self.input_fhw = open(self.input_fp, 'wb', buffering=1)
+        self.input_fhr = open(self.input_fp, 'r', buffering=1)
+        self.output_fhw = open(self.output_fp, 'wb', buffering=1)
+        self.output_fhr = open(self.output_fp, 'r', buffering=1)
+
+        self.preprocessor = self.maybe_spawn_process(args.preprocessor, self.input_fhw)
+        self.postprocessor = self.maybe_spawn_process(args.postprocessor, self.output_fhw)
 
         self.translate()
 
-    def maybe_spawn_process(self, cmd):
-      if cmd:
-        return subprocess.Popen(cmd,
-                                bufsize=1,
-                                shell=True,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
+    def maybe_spawn_process(self, cmd, outh):
+        if cmd:
+            return subprocess.Popen(cmd, bufsize=1, stdin=subprocess.PIPE, stdout=outh, stderr=subprocess.STDOUT)
 
-    def maybe_terminate_process(self, process):
-      if process:
-        process.terminate()
+    def communicate_with_process(self, process, msg, fh):
+        if process:
+            msg = msg.replace('\n', '\\n') + '\n'
+            process.stdin.write(msg.encode('utf-8'))
+            process.stdin.flush()
+            out = None
+            while not out:
+                time.sleep(0.01)
+                out = fh.readline()
+            return out.rstrip('\n').replace('\\n', '\n')
+        else:
+            return msg
 
-    def format_h(self, txt, process):
-      if process:
-        out, err = process.communicate(txt.encode())
-        out = out.decode('utf-8').strip('\n')
-        return out
-      else:
-        return txt
-
-    def format_src(self, txt):
-      return self.format_h(txt, self.src_formatter)
-    
-    def format_trg(self, txt):
-      return self.format_h(txt, self.trg_formatter)
-
-    def read_input(self):
-      return input()
+    def terminate(self):
+        if self.preprocessor: self.preprocessor.terminate()
+        if self.postprocessor: self.postprocessor.terminate()
+        self.input_fhw.close()
+        self.input_fhr.close()
+        self.output_fhw.close()
+        self.output_fhr.close()
+        os.remove(self.input_fp)
+        os.remove(self.output_fp)
 
     def translate(self):
-      device = ut.get_device()
-      model = Model(self.config).to(device)
-      model.load_state_dict(torch.load(self.model_file, map_location=device))
-      best_trans_fp = './.interactive.tmp.best_trans'
-      beam_trans_fp = './.interactive.tmp.beam_trans'
-      input_fp = './.interactive.tmp.input'
-      print("Ready")
-      txt = self.read_input()
-      while txt:
-        src_input = self.format_src(txt)
-        with open(input_fp, 'w') as inh:
-          inh.write(txt + '\n')
-        try:
-          self.data_manager.translate(model, input_fp, (best_trans_fp, beam_trans_fp), self.logger)
-        except:
-          print("Error translating")
-        with open(best_trans_fp, 'r') as outh:
-          output = outh.readline().strip('\n')
-        print(output)
-        txt = self.read_input()
-      self.maybe_terminate_process(self.src_formatter)
-      self.maybe_terminate_process(self.trg_formatter)
-      os.remove(best_trans_fp)
-      os.remove(beam_trans_fp)
-      os.remove(input_fp)
+        device = ut.get_device()
+        model = Model(self.config).to(device)
+        model.load_state_dict(torch.load(self.model_file, map_location=device))
+        for line in sys.stdin:
+            txt = line.rstrip('\n')
+            src_input = self.communicate_with_process(self.preprocessor, txt, self.input_fhr)
+            try: trans = self.data_manager.translate_line(model, src_input)
+            except: trans = ""
+            print(self.communicate_with_process(self.postprocessor, trans, self.output_fhr))
+        self.terminate()
