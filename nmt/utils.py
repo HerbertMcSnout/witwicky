@@ -154,5 +154,5 @@ def get_float_type():
     return torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 
 def get_num_digits(x):
-    "Returns the number of digits needed to print positive, non-zero integer x in base 10"
-    return int(numpy.log10(x) + 1)
+    "Returns the number of digits needed to print positive integer x in base 10"
+    return int(numpy.log10(x) + 1) if x else 1
