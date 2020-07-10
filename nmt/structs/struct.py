@@ -30,3 +30,7 @@ class Struct:
   def size(self):
     "Returns the number of words this Struct flattens to"
     return len(self.flatten())
+  
+  def maybe_add_eos(self, EOS_ID):
+    "(Optional) Override if this struct needs to get and EOS token"
+    pass
