@@ -501,7 +501,10 @@ class DataManager(object):
 
         return u' '.join(words)
 
-    def get_trans(self, probs, scores, symbols):
+    def get_trans(self, ret):
+        probs = ret['probs'].detach().cpu().numpy().reshape([-1])
+        scores = ret['scores'].detach().cpu().numpy().reshape([-1])
+        symbols = ret['symbols'].detach().cpu().numpy()
         sorted_rows = numpy.argsort(scores)[::-1]
         best_trans = None
         beam_trans = []
@@ -532,8 +535,7 @@ class DataManager(object):
             for line in f:
                 if line.strip():
                     num_sents += 1
-        num_sents_digits = ut.get_num_digits(num_sents)
-        num_sents_digits += (num_sents_digits - 1) // 3 # 1,234,567
+        num_sents_digits = (4 * ut.get_num_digits(num_sents) - 1) // 3 # factor in thousands-separator
         all_best_trans = [''] * num_sents
         all_beam_trans = [''] * num_sents
         
@@ -545,11 +547,7 @@ class DataManager(object):
                 rets = model.beam_decode(src_toks, src_structs)
             
                 for i, ret in enumerate(rets):
-                    probs = ret['probs'].detach().cpu().numpy().reshape([-1])
-                    scores = ret['scores'].detach().cpu().numpy().reshape([-1])
-                    symbols = ret['symbols'].detach().cpu().numpy()
-                    
-                    best_trans, beam_trans = self.get_trans(probs, scores, symbols)
+                    best_trans, beam_trans = self.get_trans(ret)
                     all_best_trans[original_idxs[i]] = best_trans
                     all_beam_trans[original_idxs[i]] = beam_trans
         
@@ -564,14 +562,17 @@ class DataManager(object):
             btrans.write('\n\n'.join(all_beam_trans))
             
         logger.info('Finished translating {}, took {}'.format(input_file, ut.format_time(time.time() - start)))
-
+        
     def translate_line(self, model, line, beam=False):
         "Translates a single line of text, with no file I/O. If beam is True, return tuple (best, beams)."
         struct = self.parse_struct(line).map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
         toks = torch.tensor(struct.flatten()).type(torch.long).to(ut.get_device()).unsqueeze(0)
         ret, = model.beam_decode(toks, [struct])
-        probs = ret['probs'].detach().cpu().numpy().reshape([-1])
-        scores = ret['scores'].detach().cpu().numpy().reshape([-1])
-        symbols = ret['symbols'].detach().cpu().numpy()
-        best, beams = self.get_trans(probs, scores, symbols)
+        best, beams = self.get_trans(ret)
         return (best, beams) if beam else best
+
+    def translate_batch(self, model, toks, structs, beam=False):
+        rets = model.beam_decode(toks, structs)
+        for ret in rets:
+            best, beams = self.get_trans(ret)
+            yield (best, beams) if beam else best
