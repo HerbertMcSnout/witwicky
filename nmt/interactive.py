@@ -5,6 +5,7 @@ import time
 import sys
 import tempfile
 import nmt.utils as ut
+import nmt.all_constants as ac
 from nmt.model import Model
 from nmt.data_manager import DataManager
 import nmt.configurations as configurations
@@ -12,7 +13,13 @@ import nmt.configurations as configurations
 class InteractiveTranslator(object):
     def __init__(self, args):
         super(InteractiveTranslator, self).__init__()
+        self.minibatch = args.minibatch_interactive
         self.config = configurations.get_config(args.proto, getattr(configurations, args.proto), args.config_overrides)
+
+        self.batch_size = self.config['batch_size'] if args.minibatch_interactive else None
+        self.struct = self.config['struct']
+
+        self.new_batch()
         
         self.model_file = args.model_file
         if self.model_file is None:
@@ -33,7 +40,39 @@ class InteractiveTranslator(object):
         self.preprocessor = self.maybe_spawn_process(args.preprocessor, self.input_fhw)
         self.postprocessor = self.maybe_spawn_process(args.postprocessor, self.output_fhw)
 
-        self.translate()
+        device = ut.get_device()
+        self.model = Model(self.config).to(device)
+        self.model.load_state_dict(torch.load(self.model_file, map_location=device))
+        self.model.eval()
+
+        self.read()
+
+    def new_batch(self):
+        self.current_batch_toks = []
+        self.current_batch_structs = []
+        self.current_batch_size = 0
+
+    def add_to_batch(self, line):
+        try: prsd = self.struct.parse(line)
+        except AssertionError: pass
+        prsd = prsd.map(lambda w: self.data_manager.src_vocab.get(w, ac.UNK_ID))
+        prsd.maybe_add_eos(ac.EOS_ID)
+        size = prsd.size()
+
+        if self.batch_size and self.current_batch_size + size > self.batch_size:
+            self.translate()
+            self.new_batch()
+        self.current_batch_toks.append(torch.tensor(prsd.flatten()))
+        self.current_batch_structs.append(prsd)
+        self.current_batch_size += size
+        if not self.batch_size: # if no buffering
+            self.translate()
+            self.new_batch()
+
+    def translate(self):
+        toks = torch.nn.utils.rnn.pad_sequence(self.current_batch_toks, padding_value=ac.PAD_ID, batch_first=True)
+        for line in self.data_manager.translate_batch(self.model, toks, self.current_batch_structs):
+            print(self.communicate_with_process(self.postprocessor, line, self.output_fhr))
 
     def maybe_spawn_process(self, cmd, outh):
         if cmd:
@@ -62,14 +101,12 @@ class InteractiveTranslator(object):
         os.remove(self.input_fp)
         os.remove(self.output_fp)
 
-    def translate(self):
-        device = ut.get_device()
-        model = Model(self.config).to(device)
-        model.load_state_dict(torch.load(self.model_file, map_location=device))
+    def read(self):
         for line in sys.stdin:
             txt = line.rstrip('\n')
             src_input = self.communicate_with_process(self.preprocessor, txt, self.input_fhr)
-            try: trans = self.data_manager.translate_line(model, src_input)
-            except: trans = ""
-            print(self.communicate_with_process(self.postprocessor, trans, self.output_fhr))
+            #try: trans = self.data_manager.translate_line(model, src_input)
+            #except: trans = ""
+            #print(self.communicate_with_process(self.postprocessor, trans, self.output_fhr))
+            self.add_to_batch(src_input)
         self.terminate()

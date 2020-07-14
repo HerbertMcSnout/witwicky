@@ -17,6 +17,8 @@ parser.add_argument('--preprocessor', type=str, required=False,
                     help='Optional path to executable that formats input from interactive mode')
 parser.add_argument('--postprocessor', type=str, required=False,
                     help='Optional path to executable that formats output from interactive mode')
+parser.add_argument('--minibatch-interactive', type=bool, required=False, default=False,
+                    help='Make interactive mode wait until it can translate an entire batch')
 parser.add_argument('--var-list', nargs='+',
                     help='List of model vars to extracted')
 parser.add_argument('--save-to', required='--var-list' in sys.argv, help='Directory to save extracted vars to')
