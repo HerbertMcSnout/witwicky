@@ -1,6 +1,6 @@
 import torch
 import nmt.utils as ut
-from .struct import Struct
+from nmt.structs.struct import Struct
 
 class Record(object):
   def __init__(self, **kwargs):

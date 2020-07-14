@@ -22,6 +22,6 @@ def get_params(config):
 
 def get_reg_penalty(x, mask):
   x = x.norm(dim=-1) + ~mask # set all padding values to 1 so they get no penalty
-  x = torch.max(x, 1/x) - 1
+  x = x + 1/x - 2
   x = x.sum()
   return x

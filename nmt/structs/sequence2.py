@@ -23,6 +23,9 @@ class SequenceStruct(Struct):
       pos_seq = params[0]
       return SequenceStruct(pos_seq[:self.size(), :])
 
+  def maybe_add_eos(self, EOS_ID):
+    self.data += [ EOS_ID ]
+
 def parse(s):
   return SequenceStruct(s.strip().split())
 

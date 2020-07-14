@@ -1,5 +1,5 @@
 import torch
-from .struct import Struct
+from nmt.structs.struct import Struct
 import nmt.structs.tree_utils as tree_utils
 
 class Tree(tree_utils.Tree):
