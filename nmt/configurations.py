@@ -29,19 +29,6 @@ def get_config(name, opts, overrides=None):
     for k, v in opts.items():
         config[k] = v.format(**config) if isinstance(v, str) else v
     return config
-    
-    #overrides = eval(overrides, globals())
-    #config = dict(model_name=name)
-    #for k, v in opts.items():
-    #    if k not in overrides:
-    #        overrides[k] = v
-    #for k, v in base_config.items():
-    #    if k in overrides: v = overrides[k]
-    #    config[k] = v.format(**config) if isinstance(v, str) else v
-    #for k in list(config.keys()) + list(overrides.keys()):
-    #    assert k in base_config, 'Unknown config option "{}"'.format(k)
-    #return config
-
 
 
 base_config = dict(
