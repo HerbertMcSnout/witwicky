@@ -1,28 +1,18 @@
-from .struct import Struct
-from .tree_utils import parse
-from .sequence import SequenceStruct
-from .tree import Tree
-from .tree2 import Tree as Tree2
-from .tree14 import Tree as Tree14
-from .tree15 import Tree as Tree15
-from .tree18 import Tree as Tree18
-from .tree19 import Tree as Tree19
-from .tree20 import Tree as Tree20
-from .tree21 import Tree as Tree21
-from .tree22 import Tree as Tree22
-from .tree142 import Tree as Tree142
-from .tree143 import Tree as Tree143
-from .tree144 import Tree as Tree144
-from .tree14_log import Tree as TreeLog
-from .tree14_sum import Tree as TreeSum
-from .tree14_3d import Tree as Tree3d
-# There's probably some easier way to include relative files in a module...
+import sys
+import os
+import importlib
+import struct
+
+exclude = ['__init__.py', 'struct.py']
+
+cd = os.path.dirname(__file__)
+for fn in os.listdir(cd):
+  if fn.endswith('.py') and fn not in exclude:
+    importlib.import_module('nmt.structs.' + fn[:-3])
 
 """
-Each struct is a module with
-- a subclass of Struct
-- a 'parse' function (str -> Struct)
-- a 'get_params' function (config -> [torch.Tensor(embed_dim)])
-- (optional) a get_reg_penalty function (torch.Tensor(batch_size, max_len) -> torch.Tensor(batch_size, max_len))
-    This should map each node's position embedding Frobenius norm to a regularization penalty number.
+Each struct is a module with               type
+- a 'parse' function                       str -> Struct implementation
+- a 'get_params' function                  config -> {name1: torch.Tensor(*), ...}
+- (optional) a get_reg_penalty function    torch.Tensor(batch_size, max_len, embed_dim) -> torch.Tensor()
 """
