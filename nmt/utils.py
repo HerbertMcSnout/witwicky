@@ -107,19 +107,14 @@ def get_vocab_sizes(config):
 
     return _get_vocab_size(src_vocab_file), _get_vocab_size(trg_vocab_file)
 
-position_encoding = None
-
-def set_position_encoding(dim, max_len):
-    "Computes and caches position encoding to global var"
-    global position_encoding
-    if position_encoding is None:
-        position_encoding = get_position_encoding(dim, max_len)
-        return position_encoding
+position_encoding_cached = None
+position_encoding_len_cached = None
 
 def get_position_encoding(dim, sentence_length):
     "Returns sequence-to-sequence position encoding [sentence_length, dim]"
-    if position_encoding is not None:
-        return position_encoding[:sentence_length, :]
+    global position_encoding_cached, position_encoding_len_cached
+    if position_encoding_cached is not None and sentence_length <= position_encoding_len_cached:
+        return position_encoding_cached[:sentence_length, :]
     else:
         div_term = numpy.power(10000.0, - (numpy.arange(dim) // 2).astype(numpy.float32) * 2.0 / dim)
         div_term = div_term.reshape(1, -1)
@@ -129,7 +124,9 @@ def get_position_encoding(dim, sentence_length):
         encoded_vec[:, 1::2] = numpy.cos(encoded_vec[:, 1::2])
 
         dtype = get_float_type()
-        return torch.from_numpy(encoded_vec.reshape([sentence_length, dim])).type(dtype)
+        position_encoding_cached = torch.from_numpy(encoded_vec.reshape([sentence_length, dim])).type(dtype)
+        position_encoding_len_cached = sentence_length
+        return position_encoding_cached
 
 
 def normalize(x, scale=True):

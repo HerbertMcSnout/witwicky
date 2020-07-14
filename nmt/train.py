@@ -39,7 +39,7 @@ class Trainer(object):
         self.data_manager = DataManager(self.config)
         self.validator = Validator(self.config, self.data_manager)
 
-        self.validate_freq = int(self.config['validate_freq'])
+        self.validate_freq = self.config['validate_freq']
         if self.validate_freq == 1:
             self.logger.info('Evaluate every {}'.format('epoch' if self.config['val_per_epoch'] else 'batch'))
         else:
@@ -118,8 +118,6 @@ class Trainer(object):
         debug_stats[epoch] = self.model.debug_stats
         torch.save(debug_stats, self.debug_path)
         self.model.debug_stats = deepcopy(self.initial_debug_stats)
-
-        return 
 
     def run_log(self, batch, epoch, batch_data):
       #with torch.autograd.detect_anomaly(): # throws exception when any forward computation produces nan
@@ -255,8 +253,8 @@ class Trainer(object):
             if self.config['val_per_epoch'] and epoch % self.validate_freq == 0:
                 self.maybe_validate(just_validate=True)
             
-            if self.is_patience_exhausted(self.config['early_stop_patience']):
-                self.logger.info('No improvement for last {} epochs; stopping early!'.format(self.config['early_stop_patience']))
+            if self.is_patience_exhausted(self.config['early_stop_patience'] // self.validate_freq):
+                self.logger.info('No improvement for last {} epochs; stopping early!'.format(self.config['early_stop_patience'] * self.validate_freq))
                 break
 
         # validate 1 last time
@@ -317,14 +315,13 @@ class Trainer(object):
                or (self.config['warmup_style'] == ac.UPFLAT_WARMUP and step >= warmup_steps) \
                and self.config['lr_decay'] > 0:
 
-                if self.is_patience_exhausted(self.config['lr_decay_patience']):
+                if self.is_patience_exhausted(self.config['lr_decay_patience'] // self.validate_freq):
                     if self.config['val_by_bleu']:
                         metric = 'bleu'
                         scores = self.validator.bleu_curve
                     else:
                         metric = 'perp'
                         scores = self.validator.perp_curve
-                    #scores = ', '.join(map(str, list(scores[-1 - self.config['lr_decay_patience']:])))
                     scores = ', '.join([str(x) for x in scores[-1 - self.config['lr_decay_patience']:]])
 
                     self.logger.info('Past {} scores are {}'.format(metric, scores))

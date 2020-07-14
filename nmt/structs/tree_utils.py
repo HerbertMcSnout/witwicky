@@ -48,7 +48,7 @@ class Tree(Struct):
     r = self.r.map(f) if self.r else None
     return self.new(v, l, r)
 
-  def flatten(self):
+  def _flatten(self):
     stack = [self]
     acc = []
     while stack:
@@ -63,12 +63,6 @@ class Tree(Struct):
 
   def fold_up_tree(self, f, leaf=None):
     return self.fold_up(lambda v, l, r: self.new(f(v, (l.v if l else leaf), (r.v if r else leaf)), l, r))
-    #l = self.l.fold_up_tree(f, leaf) if self.l else None
-    #r = self.r.fold_up_tree(f, leaf) if self.r else None
-    #lv = l.v if self.l else leaf
-    #rv = r.v if self.r else leaf
-    #v = f(self.v, lv, rv)
-    #return self.new(v, l, r)
 
   def fold_down_tree(self, f, root=None):
     l = self.l.fold_down_tree(f, f(self.v, root, True)) if self.l else None

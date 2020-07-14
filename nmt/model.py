@@ -29,7 +29,7 @@ class Model(nn.Module):
 
         # get trg positonal embedding
         if not learned_pos:
-            self.pos_embedding_trg = ut.set_position_encoding(embed_dim, max_len)
+            self.pos_embedding_trg = ut.get_position_encoding(embed_dim, max_len)
         else:
             self.pos_embedding_trg = Parameter(torch.empty(max_len, embed_dim, dtype=torch.float, device=device))
             nn.init.normal_(self.pos_embedding_trg, mean=0, std=embed_dim ** -0.5)

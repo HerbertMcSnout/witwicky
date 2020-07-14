@@ -367,10 +367,12 @@ class DataManager(object):
                 trg_seq_lengths[s_idx:e_idx])
 
             if mode == ac.TRAINING:
-                self.replace_with_unk(src_input_batch) # src
-                self.replace_with_unk(trg_input_batch) # trg
-                # Make sure that we never use the values in structs again
-                #src_structs_batch = [t.map(lambda x: 0 if x is not None else x) for t in src_structs_batch]
+                self.replace_with_unk(src_input_batch)
+                self.replace_with_unk(trg_input_batch)
+
+            # Make sure only the structure of src is used
+            src_structs_batch = [struct.forget() for struct in src_structs_batch]
+            
             s_idx = e_idx
             src_input_batches.append(src_input_batch)
             src_structs_batches.append(src_structs_batch)
@@ -455,6 +457,7 @@ class DataManager(object):
             for line in f:
                 src_struct = self.parse_struct(line).map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
                 src_struct.maybe_add_eos(ac.EOS_ID)
+                src_struct.set_clip_length(self.max_train_length)
                 toks = src_struct.flatten()
                 data.append(toks)
                 data_lengths.append(len(toks))
@@ -480,17 +483,14 @@ class DataManager(object):
                 else:
                     e_idx += 1
 
-            #max_in_batch = max(data_lengths[s_idx:e_idx])
-            #src_inputs = numpy.zeros((e_idx - s_idx, max_in_batch), dtype=numpy.int32)
-            #for i in range(s_idx, e_idx):
-            #    src_inputs[i - s_idx] = list(data[i]) + (max_in_batch - data_lengths[i]) * [ac.PAD_ID]
-            src_inputs = torch.nn.utils.rnn.pad_sequence([torch.tensor(x) for x in data[s_idx:e_idx]], padding_value=ac.PAD_ID, batch_first=True)
+            src_inputs = torch.nn.utils.rnn.pad_sequence(
+                [torch.tensor(x) for x in data[s_idx:e_idx]],
+                padding_value=ac.PAD_ID,
+                batch_first=True).type(torch.long).to(device)
             original_idxs = sorted_idxs[s_idx:e_idx]
             batch_structs = structs[s_idx:e_idx]
             s_idx = e_idx
-            yield (torch.from_numpy(src_inputs).type(torch.long).to(device),
-                   original_idxs,
-                   batch_structs)
+            yield src_inputs, original_idxs, batch_structs
 
 
     def _ids_to_trans(self, trans_ids):

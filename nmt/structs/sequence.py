@@ -10,18 +10,21 @@ class SequenceStruct(Struct):
   def __str__(self):
     return " ".join([str(x) for x in self.data])
 
-  def flatten(self):
+  def _flatten(self):
     return self.data
 
   def map(self, f):
     return SequenceStruct([f(x) for x in self.data])
 
   def get_pos_embedding(self, embed_dim, params):
+    max_len = self.get_clip_length()
+    size = self.size()
+    pe_len = (max_len and min(max_len, size)) or size
     if len(params) == 0:
-      return SequenceStruct(get_position_encoding(embed_dim, self.size()) * ((embed_dim / 2) ** -0.5))
+      return SequenceStruct(get_position_encoding(embed_dim, pe_len) * ((embed_dim / 2) ** -0.5))
     else:
-      pos_seq = params[0]
-      return SequenceStruct(pos_seq[:self.size(), :])
+      pos_seq, = params
+      return SequenceStruct(pos_seq[:pe_len, :])
 
 def parse(s):
   return SequenceStruct(s.strip().split())
