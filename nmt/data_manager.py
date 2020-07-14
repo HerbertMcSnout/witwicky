@@ -466,6 +466,7 @@ class DataManager(object):
         data = numpy.array(data)[sorted_idxs]
         structs = numpy.array(structs)[sorted_idxs]
 
+        device = ut.get_device()
         batch_size = self.batch_size // self.beam_size
         s_idx = 0
         while s_idx < len(data):
@@ -479,14 +480,14 @@ class DataManager(object):
                 else:
                     e_idx += 1
 
-            max_in_batch = max(data_lengths[s_idx:e_idx])
-            src_inputs = numpy.zeros((e_idx - s_idx, max_in_batch), dtype=numpy.int32)
-            for i in range(s_idx, e_idx):
-                src_inputs[i - s_idx] = list(data[i]) + (max_in_batch - data_lengths[i]) * [ac.PAD_ID]
+            #max_in_batch = max(data_lengths[s_idx:e_idx])
+            #src_inputs = numpy.zeros((e_idx - s_idx, max_in_batch), dtype=numpy.int32)
+            #for i in range(s_idx, e_idx):
+            #    src_inputs[i - s_idx] = list(data[i]) + (max_in_batch - data_lengths[i]) * [ac.PAD_ID]
+            src_inputs = torch.nn.utils.rnn.pad_sequence([torch.tensor(x) for x in data[s_idx:e_idx]], padding_value=ac.PAD_ID, batch_first=True)
             original_idxs = sorted_idxs[s_idx:e_idx]
             batch_structs = structs[s_idx:e_idx]
             s_idx = e_idx
-            device = ut.get_device()
             yield (torch.from_numpy(src_inputs).type(torch.long).to(device),
                    original_idxs,
                    batch_structs)
@@ -509,12 +510,10 @@ class DataManager(object):
         best_trans = None
         beam_trans = []
         for i, r in enumerate(sorted_rows):
-            trans_ids = symbols[r]
-            trans_out = self._ids_to_trans(trans_ids)
+            trans_out = self._ids_to_trans(symbols[r])
             beam_trans.append(u'{} {:.2f} {:.2f}'.format(trans_out, scores[r], probs[r]))
             if i == 0: # highest prob trans
                 best_trans = trans_out
-
         return best_trans, u'\n'.join(beam_trans)
 
     def translate(self, model, input_file, output_dir, logger):
@@ -563,16 +562,11 @@ class DataManager(object):
             
         logger.info('Finished translating {}, took {}'.format(input_file, ut.format_time(time.time() - start)))
         
-    def translate_line(self, model, line, beam=False):
-        "Translates a single line of text, with no file I/O. If beam is True, return tuple (best, beams)."
+    def translate_line(self, model, line):
+        "Translates a single line of text, with no file I/O"
         struct = self.parse_struct(line).map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
         toks = torch.tensor(struct.flatten()).type(torch.long).to(ut.get_device()).unsqueeze(0)
-        ret, = model.beam_decode(toks, [struct])
-        best, beams = self.get_trans(ret)
-        return (best, beams) if beam else best
+        return self.translate_batch(model, toks, [struct])[0]
 
-    def translate_batch(self, model, toks, structs, beam=False):
-        rets = model.beam_decode(toks, structs)
-        for ret in rets:
-            best, beams = self.get_trans(ret)
-            yield (best, beams) if beam else best
+    def translate_batch(self, model, toks, structs):
+        return [self.get_trans(x)[0] for x in model.beam_decode(toks, structs)]

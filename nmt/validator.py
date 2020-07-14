@@ -37,6 +37,8 @@ class Validator(object):
         self.val_trans_out = join(self.save_to, 'val_trans.txt')
         self.val_beam_out = join(self.save_to, 'val_beam_trans.txt')
 
+        self.write_val_trans = config['write_val_trans']
+
         # I'll leave test alone for now since this version of the code doesn't automatically
         # report BLEU on test anw. The reason is it's up to the dataset to use multi-bleu
         # or NIST bleu. I'll include it in the future
@@ -133,11 +135,12 @@ class Validator(object):
         else:
             bleu = float(out_parse.group()[6:])
 
-        validation_file = "{}-{}".format(val_trans_out, bleu)
-        shutil.copyfile(val_trans_out, validation_file)
+        if self.write_val_trans:
+            best_file = "{}-{:.2f}".format(val_trans_out, bleu)
+            shutil.copyfile(val_trans_out, best_file)
 
-        beam_file = "{}-{}".format(val_beam_out, bleu)
-        shutil.copyfile(val_beam_out, beam_file)
+            beam_file = "{}-{:.2f}".format(val_beam_out, bleu)
+            shutil.copyfile(val_beam_out, beam_file)
 
         # add summaries
         self.bleu_curve = numpy.append(self.bleu_curve, bleu)

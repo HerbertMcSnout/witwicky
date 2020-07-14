@@ -24,7 +24,7 @@ def get_config(name, opts, overrides=None):
     for k, v in base_config.items():
         if k in overrides: v = overrides[k]
         config[k] = v.format(**config) if isinstance(v, str) else v
-    for k in config:
+    for k in list(config.keys()) + list(overrides.keys()):
         assert k in base_config or k == "model_name", 'Unknown config option "{}"'.format(k)
     return config
 
@@ -141,7 +141,8 @@ base_config = dict(
     length_alpha = 0.6,
 
     ### Decoding options
-    beam_size = 4,   
+    beam_size = 4,
+    write_val_trans = False,
 )
 
 
@@ -211,6 +212,37 @@ fun2com17 = dict(
     warmup_style = ac.ORG_WARMUP,
 )
 
+fun2com173 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree173,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com17_all = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    max_epochs = 30,
+    struct = struct.tree,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com172_all = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    max_epochs = 30,
+    data_dir = './nmt/data/fun2com17_all',
+    struct = struct.tree172,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
 
 fun2com16 = dict(
     src_lang = 'fun',
@@ -278,11 +310,176 @@ fun2com144 = dict(
     warmup_style = ac.ORG_WARMUP,
 )
 
+fun2com1442 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree1442,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com1443 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree1443,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com1444 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree1444,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2comM = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.treem,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com1444i = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree1444i,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com1444o = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree1444o,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com1445 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree1445,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com145 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree144,
+    batch_size = 3072,
+    embed_dim = 256,
+    ff_dim = 256 * 4,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com146 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree144,
+    batch_size = 3072,
+    embed_dim = 128,
+    ff_dim = 128 * 4,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com147 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree144,
+    batch_size = 3072,
+    embed_dim = 64,
+    ff_dim = 64 * 4,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com148 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree144,
+    batch_size = 3072,
+    embed_dim = 32,
+    ff_dim = 32 * 4,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+
+fun2com14_sum = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree14_sum,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com_3d = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/fun2com',
+    max_epochs = 30,
+    struct = struct.tree14_3d,
+    batch_size = 3072,
+    embed_dim = 64,
+    ff_dim = 64 * 4,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+
 fun2com_seq = dict(
     src_lang = 'fun',
     trg_lang = 'com',
     max_epochs = 30,
     struct = struct.sequence,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+fun2com_seq2 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    max_epochs = 30,
+    struct = struct.sequence2,
     batch_size = 3072,
     restore_segments = False,
     warmup_style = ac.ORG_WARMUP,
@@ -319,7 +516,7 @@ fun2com_sbt = dict(
     warmup_style = ac.ORG_WARMUP,
 )
 
-fun2com172 = dict(list(fun2com17.items()) + list(dict(learn_pos_scale = True, separate_embed_scales = True).items()))
+#fun2com172 = dict(list(fun2com17.items()) + list(dict(learn_pos_scale = True, separate_embed_scales = True).items()))
 
 
 fun2com_all = dict(
@@ -334,8 +531,117 @@ fun2com_all = dict(
 )
 
 
+fun2com_rdr_all = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    max_epochs = 30,
+    struct = struct.sequence,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
 
+fun2com_seq_all = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    max_epochs = 30,
+    struct = struct.sequence,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
 
+fun2com_seq_all2 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    max_epochs = 30,
+    struct = struct.sequence2,
+    batch_size = 3072,
+    restore_segments = False,
+    warmup_style = ac.ORG_WARMUP,
+)
+
+java2doc14 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/java2doc',
+    save_to = './nmt/java2doc_models/{model_name}',
+    max_epochs = 100,
+    early_stop_patience = 30,
+    struct = struct.tree1444,
+    batch_size = 3072,
+    restore_segments = False,
+    max_train_length = 2000,
+    #warmup_style = ac.ORG_WARMUP,
+)
+
+java2doc14f = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/java2doc',
+    save_to = './nmt/java2doc_models/{model_name}',
+    max_epochs = 100,
+    early_stop_patience = 30,
+    struct = struct.tree1444f,
+    batch_size = 3072,
+    restore_segments = False,
+    max_train_length = 2000,
+    #warmup_style = ac.ORG_WARMUP,
+)
+
+java2doc14f2 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/java2doc',
+    save_to = './nmt/java2doc_models/{model_name}',
+    max_epochs = 100,
+    early_stop_patience = 30,
+    struct = struct.tree1444,
+    batch_size = 3072,
+    restore_segments = False,
+    max_train_length = 2000,
+    #warmup_style = ac.ORG_WARMUP,
+)
+
+java2doc17 = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    data_dir = './nmt/data/java2doc',
+    save_to = './nmt/java2doc_models/{model_name}',
+    max_epochs = 100,
+    early_stop_patience = 30,
+    struct = struct.tree,
+    batch_size = 3072,
+    restore_segments = False,
+    max_train_length = 2000,
+    #warmup_style = ac.ORG_WARMUP,
+)
+
+java2doc_seq = dict(
+    src_lang = 'fun',
+    trg_lang = 'com',
+    save_to = './nmt/java2doc_models/{model_name}',
+    max_epochs = 100,
+    early_stop_patience = 30,
+    struct = struct.sequence2,
+    batch_size = 3072,
+    restore_segments = False,
+    max_train_length = 2000,
+    #warmup_style = ac.ORG_WARMUP,
+)
+
+java2doc_raw = dict(
+    src_lang = 'java',
+    trg_lang = 'doc',
+    save_to = './nmt/java2doc_models/{model_name}',
+    max_epochs = 100,
+    early_stop_patience = 30,
+    struct = struct.sequence2,
+    batch_size = 3072,
+    restore_segments = False,
+    max_train_length = 2000,
+    #warmup_style = ac.ORG_WARMUP,
+)
 
 
 
