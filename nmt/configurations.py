@@ -440,17 +440,6 @@ fun2com148 = dict(
 )
 
 
-fun2com14_sum = dict(
-    src_lang = 'fun',
-    trg_lang = 'com',
-    data_dir = './nmt/data/fun2com',
-    max_epochs = 30,
-    struct = struct.tree14_sum,
-    batch_size = 3072,
-    restore_segments = False,
-    warmup_style = ac.ORG_WARMUP,
-)
-
 fun2com_3d = dict(
     src_lang = 'fun',
     trg_lang = 'com',
@@ -569,20 +558,6 @@ java2doc14 = dict(
     max_epochs = 100,
     early_stop_patience = 30,
     struct = struct.tree1444,
-    batch_size = 3072,
-    restore_segments = False,
-    max_train_length = 2000,
-    #warmup_style = ac.ORG_WARMUP,
-)
-
-java2doc14f = dict(
-    src_lang = 'fun',
-    trg_lang = 'com',
-    data_dir = './nmt/data/java2doc',
-    save_to = './nmt/java2doc_models/{model_name}',
-    max_epochs = 100,
-    early_stop_patience = 30,
-    struct = struct.tree1444f,
     batch_size = 3072,
     restore_segments = False,
     max_train_length = 2000,
