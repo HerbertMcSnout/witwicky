@@ -50,7 +50,7 @@ class InteractiveTranslator(object):
     def new_batch(self):
         self.current_batch_toks = []
         self.current_batch_structs = []
-        self.current_batch_size = 0
+        self.current_batch_max_len = 0
 
     def add_to_batch(self, line):
         try: prsd = self.struct.parse(line)
@@ -59,12 +59,12 @@ class InteractiveTranslator(object):
         prsd.maybe_add_eos(ac.EOS_ID)
         size = prsd.size()
 
-        if self.batch_size and self.current_batch_size + size > self.batch_size:
+        if self.batch_size and max(self.current_batch_max_len, size) * len(self.current_batch_toks) > self.batch_size:
             self.translate()
             self.new_batch()
         self.current_batch_toks.append(torch.tensor(prsd.flatten()))
         self.current_batch_structs.append(prsd)
-        self.current_batch_size += size
+        self.current_batch_max_len = max(self.current_batch_max_len, size)
         if not self.batch_size: # if no buffering
             self.translate()
             self.new_batch()
