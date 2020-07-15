@@ -141,9 +141,8 @@ class DataManager(object):
                     src_line_parsed = self.parse_struct(src_line)
                     src_line_words = src_line_parsed.flatten()
                     trg_line_words = trg_line.strip().split()
-                    if 0 < len(src_line_words) < self.max_src_length - 1 and 0 < len(trg_line_words) < self.max_trg_length - 1:
-                        src_vocab.update(src_line_words)
-                        trg_vocab.update(trg_line_words)
+                    src_vocab.update(src_line_words)
+                    trg_vocab.update(trg_line_words)
 
             _write_vocab_file(src_vocab, max_src_vocab_size, src_vocab_file)
             _write_vocab_file(trg_vocab, max_trg_vocab_size, trg_vocab_file)
@@ -284,8 +283,7 @@ class DataManager(object):
                 src_prsd = self.parse_struct(src_line)
                 trg_toks = trg_line.strip().split()
 
-                # "- 1" for BOS_ID/EOS_ID
-                if 0 < src_prsd.size() < self.max_src_length - 1 and 0 < len(trg_toks) < self.max_trg_length - 1:
+                if 0 < src_prsd.size() and 0 < len(trg_toks):
                     num_lines += 1
                     if num_lines % 10000 == 0:
                         self.logger.info('    converting line {}'.format(num_lines))
@@ -294,7 +292,7 @@ class DataManager(object):
 
                     src_ids = src_prsd.flatten()
                     trg_ids = [ac.BOS_ID] + [self.trg_vocab.get(w, ac.UNK_ID) for w in trg_toks]
-                    tok_count += len(src_ids) + len(trg_ids)
+                    tok_count += len(src_ids) + len(trg_ids) + 1
                     data = u'{}|||{}\n'.format(str(src_prsd), u' '.join(map(str, trg_ids)))
                     tokens_f.write(data)
 
@@ -394,8 +392,11 @@ class DataManager(object):
             if data:
                 src_data, trg_data = data.split('|||')
                 _src_struct = self.parse_struct(src_data).map(int)
+                _src_struct.set_clip_length(self.max_src_length)
                 _src_toks = _src_struct.flatten()
                 _trg_toks = [int(x) for x in trg_data.split()]
+                if len(_trg_toks) > self.max_trg_length:
+                    _trg_toks = _trg_toks[:self.max_trg_length]
 
                 _src_len = len(_src_toks)
                 _trg_len = len(_trg_toks)
@@ -564,6 +565,7 @@ class DataManager(object):
     def translate_line(self, model, line):
         "Translates a single line of text, with no file I/O"
         struct = self.parse_struct(line).map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+        struct.set_clip_length(self.max_src_length)
         toks = torch.tensor(struct.flatten()).type(torch.long).to(ut.get_device()).unsqueeze(0)
         return self.translate_batch(model, toks, [struct])[0]
 

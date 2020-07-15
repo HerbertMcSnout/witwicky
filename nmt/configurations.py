@@ -388,7 +388,7 @@ java2doc_base = adapt(
     src_lang = 'java',
     trg_lang = 'doc',
     save_to = './nmt/java2doc_models/{model_name}',
-    max_src_length = 2000,
+    max_src_length = 1000,
     max_epochs = 200,
     early_stop_patience = 20,
     validate_freq = 1,
@@ -407,3 +407,4 @@ java2doc17 = adapt(java2doc_tree_base, struct = struct.tree)
 java2doc_seq = adapt(java2doc_base, struct = struct.sequence)
 java2doc_raw = adapt(java2doc_base, struct = struct.sequence)
 
+java2doc_bpe = adapt(java2doc_base, struct = struct.treebpe, joint_vocab_size = 16000)
