@@ -21,7 +21,8 @@ class Model(nn.Module):
         embed_dim = self.config['embed_dim']
         tie_mode = self.config['tie_mode']
         fix_norm = self.config['fix_norm']
-        max_len = self.config['max_train_length']
+        max_src_len = self.config['max_src_length']
+        max_trg_len = self.config['max_trg_length']
         learned_pos = self.config['learned_pos']
         learn_pos_scale = self.config['learn_pos_scale']
 
@@ -29,9 +30,9 @@ class Model(nn.Module):
 
         # get trg positonal embedding
         if not learned_pos:
-            self.pos_embedding_trg = ut.get_position_encoding(embed_dim, max_len)
+            self.pos_embedding_trg = ut.get_position_encoding(embed_dim, max_trg_len)
         else:
-            self.pos_embedding_trg = Parameter(torch.empty(max_len, embed_dim, dtype=torch.float, device=device))
+            self.pos_embedding_trg = Parameter(torch.empty(max_trg_len, embed_dim, dtype=torch.float, device=device))
             nn.init.normal_(self.pos_embedding_trg, mean=0, std=embed_dim ** -0.5)
 
         self.struct = self.config['struct']
@@ -120,15 +121,14 @@ class Model(nn.Module):
         else:
             return self.decoder_mask[:, :, :size, :size]
 
-    def maybe_stack(self, xs):
-        "If xs is not already a tensor, stack it (assumes xs in this case is a sequence)"
-        return xs if torch.is_tensor(xs) else torch.stack(xs)
+    def get_pos_embedding_h(self, x):
+        embed_dim = self.config['embed_dim']
+        pe = x.get_pos_embedding(embed_dim, self.struct_params).flatten()
+        return pe if torch.is_tensor(pe) else torch.stack(pe) # [bsz, embed_dim]
     
     def get_pos_embedding(self, max_len, structs=None):
         if structs is not None:
-            embed_dim = self.config['embed_dim']
-            pe = [self.maybe_stack(x.get_pos_embedding(embed_dim, self.struct_params).flatten()) # [bsz, embed_dim]
-                  for x in structs]
+            pe = [self.get_pos_embedding_h(x) for x in structs]
             return torch.nn.utils.rnn.pad_sequence(pe, batch_first=True) # [bsz, max_len, embed_dim]
         else:
             return self.pos_embedding_trg[:max_len, :].unsqueeze(0) # [1, max_len, embed_dim]
@@ -211,7 +211,9 @@ class Model(nn.Module):
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
         encoder_inputs, _ = self.get_input(src_toks, src_structs)
         encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
-        max_lengths = torch.sum(src_toks != ac.PAD_ID, dim=-1).type(src_toks.type()) + 50
+        max_lengths1 = torch.sum(src_toks != ac.PAD_ID, dim=-1).type(src_toks.type()) + 50
+        max_lengths2 = torch.tensor(self.config['max_trg_length']).type(src_toks.type())
+        max_lengths = torch.min(max_lengths1, max_lengths2)
 
         def get_trg_inp(ids, time_step):
             ids = ids.type(src_toks.type())

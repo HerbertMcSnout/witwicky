@@ -58,6 +58,21 @@ class Tree(Struct):
       acc.append(node.v)
     return acc
 
+  def set_clip_length(self, clip):
+    if clip is None:
+      return -1, self
+    elif clip:
+      clip -= 1
+      l, r = None, None
+      if clip > 0 and self.l:
+        clip, l = self.l.set_clip_length(clip)
+      if clip > 0 and self.r:
+        clip, r = self.r.set_clip_length(clip)
+      self.l, self.r = l, r
+      return clip, self
+    else:
+      return clip, None
+
   def fold_up(self, f, leaf=None):
     return f(self.v, self.l.fold_up(f, leaf) if self.l else leaf, self.r.fold_up(f, leaf) if self.r else leaf)
 

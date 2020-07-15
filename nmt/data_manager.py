@@ -27,7 +27,8 @@ class DataManager(object):
         self.share_vocab = config['share_vocab']
         self.word_dropout = config['word_dropout']
         self.batch_sort_src = config['batch_sort_src']
-        self.max_train_length = config['max_train_length']
+        self.max_src_length = config['max_src_length']
+        self.max_trg_length = config['max_trg_length']
         self.parse_struct = config['struct'].parse
 
         self.vocab_sizes = {
@@ -85,6 +86,11 @@ class DataManager(object):
         
         self.ids_files[ac.TRAINING] = train_ids_file
 
+
+
+
+    ############## Vocab Functions ##############
+
     def create_all_vocabs(self):
         self.create_vocabs()
         self.create_joint_vocab()
@@ -135,7 +141,7 @@ class DataManager(object):
                     src_line_parsed = self.parse_struct(src_line)
                     src_line_words = src_line_parsed.flatten()
                     trg_line_words = trg_line.strip().split()
-                    if 0 < len(src_line_words) + 1 < self.max_train_length and 0 < len(trg_line_words) + 1 < self.max_train_length:
+                    if 0 < len(src_line_words) < self.max_src_length - 1 and 0 < len(trg_line_words) < self.max_trg_length - 1:
                         src_vocab.update(src_line_words)
                         trg_vocab.update(trg_line_words)
 
@@ -278,8 +284,8 @@ class DataManager(object):
                 src_prsd = self.parse_struct(src_line)
                 trg_toks = trg_line.strip().split()
 
-                # "+ 1" for BOS_ID/EOS_ID
-                if 0 < src_prsd.size() + 1 < self.max_train_length and 0 < len(trg_toks) + 1 < self.max_train_length:
+                # "- 1" for BOS_ID/EOS_ID
+                if 0 < src_prsd.size() < self.max_src_length - 1 and 0 < len(trg_toks) < self.max_trg_length - 1:
                     num_lines += 1
                     if num_lines % 10000 == 0:
                         self.logger.info('    converting line {}'.format(num_lines))
@@ -288,23 +294,17 @@ class DataManager(object):
 
                     src_ids = src_prsd.flatten()
                     trg_ids = [ac.BOS_ID] + [self.trg_vocab.get(w, ac.UNK_ID) for w in trg_toks]
-                    tok_count += max(len(src_ids), len(trg_ids)) + 1
+                    tok_count += len(src_ids) + len(trg_ids)
                     data = u'{}|||{}\n'.format(str(src_prsd), u' '.join(map(str, trg_ids)))
                     tokens_f.write(data)
 
         with open(joint_tok_count, 'w') as f:
             f.write('{}\n'.format(str(tok_count)))
 
-    def read_tok_count(self, mode=ac.TRAINING):
-        fp = self.tok_count_files[mode]
-        count = -1
-        try:
-            with open(fp, 'r') as fh:
-                count = int(fh.read())
-        except:
-            self.logger.error('Error reading token count from {}'.format(fp))
-        finally:
-            return count
+
+
+
+    ############## Batch Functions ##############
 
     def replace_with_unk(self, data):
         drop_mask = numpy.random.choice([True, False], data.shape, p=[self.word_dropout, 1.0 - self.word_dropout])
@@ -353,7 +353,7 @@ class DataManager(object):
             while e_idx < len(src_inputs):
                 max_src_in_batch = max(max_src_in_batch, src_seq_lengths[e_idx])
                 max_trg_in_batch = max(max_trg_in_batch, trg_seq_lengths[e_idx])
-                count = (e_idx - s_idx + 1) * max(max_src_in_batch, max_trg_in_batch)
+                count = (e_idx - s_idx + 1) * (max_src_in_batch + max_trg_in_batch) #max(max_src_in_batch, max_trg_in_batch)
                 if count > batch_size:
                     break
                 else:
@@ -371,6 +371,7 @@ class DataManager(object):
                 self.replace_with_unk(trg_input_batch)
 
             # Make sure only the structure of src is used
+            # (some toks may have been replaced with UNK)
             src_structs_batch = [struct.forget() for struct in src_structs_batch]
             
             s_idx = e_idx
@@ -416,14 +417,14 @@ class DataManager(object):
 
     def get_batch(self, mode=ac.TRAINING, num_preload=1000, alternate_batch_size=None):
         ids_file = self.ids_files[mode]
-        shuffle = mode == ac.TRAINING
-        if shuffle:
-            # First we shuffle training data
+        if mode == ac.TRAINING:
+            # Shuffle training dataset
             start = time.time()
             ut.shuffle_file(ids_file)
             self.logger.info('Shuffling {} took {}'.format(ids_file, ut.format_time(time.time() - start)))
 
-        
+        batch_size = self.batch_size if alternate_batch_size is None else alternate_batch_size        
+        device = ut.get_device()
         with open(ids_file, 'r') as f:
             while True:
                 next_n_lines = list(islice(f, num_preload))
@@ -431,8 +432,6 @@ class DataManager(object):
                     break
 
                 src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths = self.process_n_batches(next_n_lines)
-                batch_size = self.batch_size if alternate_batch_size is None else alternate_batch_size
-                device = ut.get_device()
                 batches = self.prepare_batches(src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths, batch_size, mode=mode)
                 for src_inputs, src_structs, trg_inputs, trg_target in zip(*batches):
                     yield (torch.from_numpy(src_inputs).type(torch.long).to(device),
@@ -457,7 +456,7 @@ class DataManager(object):
             for line in f:
                 src_struct = self.parse_struct(line).map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
                 src_struct.maybe_add_eos(ac.EOS_ID)
-                src_struct.set_clip_length(self.max_train_length)
+                src_struct.set_clip_length(self.max_src_length)
                 toks = src_struct.flatten()
                 data.append(toks)
                 data_lengths.append(len(toks))
@@ -477,7 +476,7 @@ class DataManager(object):
             max_in_batch = data_lengths[s_idx]
             while e_idx < len(data):
                 max_in_batch = max(max_in_batch, data_lengths[e_idx])
-                count = (e_idx - s_idx + 1) * (2 * max_in_batch)
+                count = (e_idx - s_idx + 1) * (max_in_batch + min(max_in_batch, self.max_trg_length))
                 if count > batch_size:
                     break
                 else:
@@ -570,3 +569,14 @@ class DataManager(object):
 
     def translate_batch(self, model, toks, structs):
         return [self.get_trans(x)[0] for x in model.beam_decode(toks, structs)]
+
+    def read_tok_count(self, mode=ac.TRAINING):
+        fp = self.tok_count_files[mode]
+        count = -1
+        try:
+            with open(fp, 'r') as fh:
+                count = int(fh.read())
+        except:
+            self.logger.error('Error reading token count from {}'.format(fp))
+        finally:
+            return count

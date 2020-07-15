@@ -16,15 +16,17 @@ class SequenceStruct(Struct):
   def map(self, f):
     return SequenceStruct([f(x) for x in self.data])
 
+  def set_clip_length(self, clip):
+    if clip > len(self.data):
+      self.data = self.data[:clip]
+
   def get_pos_embedding(self, embed_dim, params):
-    max_len = self.get_clip_length()
     size = self.size()
-    pe_len = (max_len and min(max_len, size)) or size
     if len(params) == 0:
-      return SequenceStruct(get_position_encoding(embed_dim, pe_len) * ((embed_dim / 2) ** -0.5))
+      return SequenceStruct(get_position_encoding(embed_dim, size) * ((embed_dim / 2) ** -0.5))
     else:
       pos_seq, = params
-      return SequenceStruct(pos_seq[:pe_len, :])
+      return SequenceStruct(pos_seq[:size, :])
 
 def parse(s):
   return SequenceStruct(s.strip().split())

@@ -46,9 +46,6 @@ base_config = dict(
 
     ### Model options
 
-    # Filter out sentences longer than this (minus one for bos/eos)
-    max_train_length = 1000,
-
     # Vocabulary sizes
     src_vocab_size = 0,
     trg_vocab_size = 0,
@@ -141,6 +138,10 @@ base_config = dict(
     # For gnmt, this is the exponent; for linear, this is the strength of the reward
     length_alpha = 0.6,
 
+    # Filter out sentences longer than this (minus one for bos/eos)
+    max_src_length = 1000,
+    max_trg_length = 1000,
+
     ### Decoding options
     beam_size = 4,
     write_val_trans = False,
@@ -152,6 +153,7 @@ fun2com_base = adapt(
     trg_lang = 'com',
     max_epochs = 30,
     batch_size = 3072,
+    max_trg_length = 25,
     restore_segments = False,
     warmup_style = ac.ORG_WARMUP,
 )
@@ -349,7 +351,7 @@ fun2com_src = adapt(
 
 fun2com_sbt = adapt(
     fun2com_base,
-    max_train_length = 2000,
+    max_src_length = 2000,
     struct = struct.sequence,
 )
 
@@ -357,7 +359,7 @@ fun2com_sbt = adapt(
 
 fun2com_all = adapt(
     fun2com_base,
-    max_train_length = 2000,
+    max_src_length = 2000,
     struct = struct.sequence,
 )
 
@@ -386,10 +388,11 @@ java2doc_base = adapt(
     src_lang = 'java',
     trg_lang = 'doc',
     save_to = './nmt/java2doc_models/{model_name}',
+    max_src_length = 2000,
     max_epochs = 200,
     early_stop_patience = 20,
     validate_freq = 1,
-    length_alpha = 0.8,
+    length_alpha = 0.2,
     dropout = 0.2,
     lr = 1e-4,
     restore_segments = False,
@@ -397,7 +400,7 @@ java2doc_base = adapt(
 
 java2doc_tree_base = adapt(java2doc_base, data_dir = './nmt/data/java2doc')
 
-java2doc14 = adapt(java2doc_tree_base, struct = struct.tree1444, batch_size = 3072)
+java2doc14 = adapt(java2doc_tree_base, struct = struct.tree1444)
 java2docm = adapt(java2doc_tree_base, struct = struct.treem)
 java2docm2 = adapt(java2doc_tree_base, struct = struct.treem2)
 java2doc17 = adapt(java2doc_tree_base, struct = struct.tree)
