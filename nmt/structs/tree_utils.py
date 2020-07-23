@@ -129,40 +129,43 @@ def parse_lc_rs_h(fun_str):
 
   return children, pos
 
-#def construct_tree(tree, cls=nTree):
-#  stack = [tree]
-#  resolved = []
-#  while stack:
-#    node = stack.pop()
-#    if isinstance(node, str):
-#      resolved.append(cls(node))
-#    elif isinstance(node, list):
-#      value = node[0]
-#      children = node[1:]
-#      if children:
-#        stack.append((value, len(children)))
-#        stack.extend(reversed(children))
-#      else:
-#        resolved.append(cls(value))
-#    elif isinstance(node, tuple):
-#      value, num_children = node
-#      resolved, children = resolved[:-num_children], resolved[-num_children:]
-#      t = cls(value, children[0], None)
-#      t2 = t.l
-#      for child in children[1:]:
-#        t2.r = child
-#        t2 = t2.r
-#      resolved.append(t)
-#  return resolved.pop()
 
-def construct_tree(children, siblings=[], cls=Tree):
-  return cls(children if isinstance(children, str) else children[0],
-             construct_tree(children[1], children[2:], cls=cls) if len(children) > 1 and not isinstance(children, str) else None,
-             construct_tree(siblings[0], siblings[1:], cls=cls) if len(siblings) > 0 else None)
+def construct_tree(tree, cls=Tree):
+  stack = [tree]
+  resolved = []
+  while stack:
+    node = stack.pop()
+    if isinstance(node, str):
+      resolved.append(cls(node))
+    elif isinstance(node, list):
+      value = node[0]
+      children = node[1:]
+      if children:
+        stack.append((value, len(children)))
+        stack.extend(reversed(children))
+      else:
+        resolved.append(cls(value))
+    elif isinstance(node, tuple):
+      value, num_children = node
+      resolved, children = resolved[:-num_children], resolved[-num_children:]
+      t = cls(value, children[0], None)
+      t2 = t.l
+      for child in children[1:]:
+        t2.r = child
+        t2 = t2.r
+      resolved.append(t)
+  return resolved.pop()
 
+#def construct_tree(children, siblings=[], cls):
+#  return cls(children if isinstance(children, str) else children[0],
+#             construct_tree(children[1], children[2:], cls) if len(children) > 1 and not isinstance(children, str) else None,
+#             construct_tree(siblings[0], siblings[1:], cls) if len(siblings) > 0 else None)
 
-def parse(fun_str, cls=Tree):
-  return construct_tree(parse_lc_rs_h(parse_clean(fun_str))[0], cls=cls)
+def maybe_clip(tree, clip):
+  return tree.set_clip_length(clip)[1] if clip else tree
+
+def parse(fun_str, cls=Tree, clip=None):
+  return maybe_clip(construct_tree(parse_lc_rs_h(parse_clean(fun_str))[0], cls=cls), clip)
 
 def parse_no_binarization(fun_str):
   return parse_lc_rs_h(parse_clean(fun_str))[0]

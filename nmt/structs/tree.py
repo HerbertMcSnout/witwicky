@@ -9,8 +9,8 @@ class Tree(tree_utils.Tree):
     def f(_, p, is_left): return (mu_l if is_left else mu_r) @ p
     return self.fold_down_tree(f, lam)
 
-def parse(fun_str):
-  return tree_utils.parse(fun_str, cls=Tree)
+def parse(fun_str, clip=None):
+  return tree_utils.parse(fun_str, cls=Tree, clip=clip)
 
 def get_params(config):
   embed_dim = config['embed_dim']

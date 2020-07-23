@@ -17,7 +17,7 @@ class SequenceStruct(Struct):
     return SequenceStruct([f(x) for x in self.data])
 
   def set_clip_length(self, clip):
-    self.data = self.data[:clip]
+    self.data = self.data[:clip - 1] # -1 b/c EOS not yet added
 
   def get_pos_embedding(self, embed_dim, params):
     size = self.size()

@@ -138,7 +138,8 @@ class DataManager(object):
                     count += 1
                     if count % 10000 == 0:
                         self.logger.info('    processing line {}'.format(count))
-                    src_line_parsed = self.parse_struct(src_line)
+                    src_line_parsed = self.parse_struct(src_line, clip=self.max_src_length)
+                    #src_line_parsed.set_clip_length(self.max_src_length)
                     src_line_words = src_line_parsed.flatten()
                     trg_line_words = trg_line.strip().split()
                     src_vocab.update(src_line_words)
@@ -274,13 +275,15 @@ class DataManager(object):
         open(joint_file, 'w').close()
         open(joint_tok_count, 'w').close()
         num_lines = 0
-        tok_count = 0
+        src_tok_count = 0
+        trg_tok_count = 0
         with open(src_file, 'r') as src_f, \
                 open(trg_file, 'r') as trg_f, \
                 open(joint_file, 'w') as tokens_f:
 
             for src_line, trg_line in zip(src_f, trg_f):
-                src_prsd = self.parse_struct(src_line)
+                src_prsd = self.parse_struct(src_line, clip=self.max_src_length)
+                #src_prsd.set_clip_length(self.max_src_length)
                 trg_toks = trg_line.strip().split()
 
                 if 0 < src_prsd.size() and 0 < len(trg_toks):
@@ -292,12 +295,13 @@ class DataManager(object):
 
                     src_ids = src_prsd.flatten()
                     trg_ids = [ac.BOS_ID] + [self.trg_vocab.get(w, ac.UNK_ID) for w in trg_toks]
-                    tok_count += len(src_ids) + len(trg_ids) + 1
+                    src_tok_count += len(src_ids)
+                    trg_tok_count += len(trg_ids)
                     data = u'{}|||{}\n'.format(str(src_prsd), u' '.join(map(str, trg_ids)))
                     tokens_f.write(data)
 
         with open(joint_tok_count, 'w') as f:
-            f.write('{}\n'.format(str(tok_count)))
+            f.write('{} {}\n'.format(str(src_tok_count), str(trg_tok_count)))
 
 
 
@@ -391,8 +395,9 @@ class DataManager(object):
             data = line.strip()
             if data:
                 src_data, trg_data = data.split('|||')
-                _src_struct = self.parse_struct(src_data).map(int)
-                _src_struct.set_clip_length(self.max_src_length)
+                _src_struct = self.parse_struct(src_data, clip=self.max_src_length)
+                #_src_struct.set_clip_length(self.max_src_length)
+                _src_struct = _src_struct.map(int)
                 _src_toks = _src_struct.flatten()
                 _trg_toks = [int(x) for x in trg_data.split()]
                 if len(_trg_toks) > self.max_trg_length:
@@ -455,9 +460,10 @@ class DataManager(object):
         structs = []
         with open(input_file, 'r') as f:
             for line in f:
-                src_struct = self.parse_struct(line).map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+                src_struct = self.parse_struct(line, clip=self.max_src_length)
+                #src_struct.set_clip_length(self.max_src_length)
+                src_struct = src_struct.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
                 src_struct.maybe_add_eos(ac.EOS_ID)
-                src_struct.set_clip_length(self.max_src_length)
                 toks = src_struct.flatten()
                 data.append(toks)
                 data_lengths.append(len(toks))
@@ -469,6 +475,9 @@ class DataManager(object):
         data = numpy.array(data)[sorted_idxs]
         structs = numpy.array(structs)[sorted_idxs]
 
+        src_train_toks, trg_train_toks = self.read_tok_count() # TODO: maybe use read_tok_count(mode=ac.VALIDATING)?
+        est_src_trg_ratio = src_train_toks / trg_train_toks
+
         device = ut.get_device()
         batch_size = self.batch_size // self.beam_size
         s_idx = 0
@@ -477,7 +486,8 @@ class DataManager(object):
             max_in_batch = data_lengths[s_idx]
             while e_idx < len(data):
                 max_in_batch = max(max_in_batch, data_lengths[e_idx])
-                count = (e_idx - s_idx + 1) * (max_in_batch + min(max_in_batch, self.max_trg_length))
+                est_trg_toks = round(max_in_batch / est_src_trg_ratio)
+                count = (e_idx - s_idx + 1) * (max_in_batch + min(est_trg_toks, self.max_trg_length))
                 if count > batch_size:
                     break
                 else:
@@ -502,10 +512,16 @@ class DataManager(object):
 
         return u' '.join(words)
 
-    def get_trans(self, ret):
-        probs = ret['probs'].detach().cpu().numpy().reshape([-1])
-        scores = ret['scores'].detach().cpu().numpy().reshape([-1])
-        symbols = ret['symbols'].detach().cpu().numpy()
+    def detach_outputs(self, rets):
+        for ret in rets:
+            yield ret['probs'].detach().cpu().numpy().reshape([-1]), \
+                ret['scores'].detach().cpu().numpy().reshape([-1]), \
+                ret['symbols'].detach().cpu().numpy()
+
+    def get_trans(self, probs, scores, symbols):
+        #probs = ret['probs'].detach().cpu().numpy().reshape([-1])
+        #scores = ret['scores'].detach().cpu().numpy().reshape([-1])
+        #symbols = ret['symbols'].detach().cpu().numpy()
         sorted_rows = numpy.argsort(scores)[::-1]
         best_trans = None
         beam_trans = []
@@ -540,19 +556,20 @@ class DataManager(object):
         
         with torch.no_grad():
             logger.info('Start translating {}'.format(input_file))
-            start = time.time()
+            start = last = time.time()
+            notify_every = 1000
             count = 0
             for src_toks, original_idxs, src_structs in self.get_trans_input(input_file):
-                rets = model.beam_decode(src_toks, src_structs)
+                rets = self.detach_outputs(model.beam_decode(src_toks, src_structs))
             
                 for i, ret in enumerate(rets):
-                    best_trans, beam_trans = self.get_trans(ret)
-                    all_best_trans[original_idxs[i]] = best_trans
-                    all_beam_trans[original_idxs[i]] = beam_trans
-        
+                    i2 = original_idxs[i]
+                    all_best_trans[i2], all_beam_trans[i2] = self.get_trans(*ret)
                     count += 1
-                    if count % 1000 == 0:
-                        logger.info('  Line {:>{},} / {:,}, avg {:.4f} sec/line'.format(count, num_sents_digits, num_sents, (time.time() - start) / count))
+                    if count % notify_every == 0:
+                        now = time.time()
+                        logger.info('  Line {:>{},} / {:,}, {:.4f} sec/line'.format(count, num_sents_digits, num_sents, (time.time() - last) / notify_every))
+                        last = now
         
         model.train()
         
@@ -564,21 +581,26 @@ class DataManager(object):
         
     def translate_line(self, model, line):
         "Translates a single line of text, with no file I/O"
-        struct = self.parse_struct(line).map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
-        struct.set_clip_length(self.max_src_length)
+        struct = self.parse_struct(line, clip=self.max_src_length)
+        #struct.set_clip_length(self.max_src_length)
+        struct = struct.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+        struct.maybe_add_eos(ac.EOS)
         toks = torch.tensor(struct.flatten()).type(torch.long).to(ut.get_device()).unsqueeze(0)
-        return self.translate_batch(model, toks, [struct])[0]
+        trans, = self.translate_batch(model, toks, [struct])
+        return trans
 
     def translate_batch(self, model, toks, structs):
-        return [self.get_trans(x)[0] for x in model.beam_decode(toks, structs)]
+        for x in self.detach_outputs(model.beam_decode(toks, structs)):
+            yield self.get_trans(*x)[0]
 
     def read_tok_count(self, mode=ac.TRAINING):
         fp = self.tok_count_files[mode]
-        count = -1
+        src, trg = -1, -1
         try:
             with open(fp, 'r') as fh:
-                count = int(fh.read())
+                src, trg = fh.read().strip().split()
+                src, trg = int(src), int(trg)
         except:
             self.logger.error('Error reading token count from {}'.format(fp))
         finally:
-            return count
+            return src, trg

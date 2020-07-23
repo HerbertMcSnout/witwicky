@@ -58,7 +58,7 @@ class Trainer(object):
         self.epoch_time = 0. # total exec time for whole epoch, sounds like that tabloid
 
         # Estimated number of batches per epoch
-        self.est_batches = self.data_manager.read_tok_count() // self.config['batch_size']
+        self.est_batches = sum(self.data_manager.read_tok_count()) // self.config['batch_size']
         self.logger.info('Guessing around {:,} batches per epoch'.format(self.est_batches))
         
         # get model
@@ -160,9 +160,9 @@ class Trainer(object):
         self.epoch_time += time.time() - start
 
         if self.total_batches % self.log_freq == 0:
-            log_train_loss = sum(x.item() for x in self.log_train_loss)
-            log_nll_loss = sum(x.item() for x in self.log_nll_loss)
-            log_train_weights = sum(x.item() for x in self.log_train_weights)
+            log_train_loss = sum(x for x in self.log_train_loss).item()
+            log_nll_loss = sum(x for x in self.log_nll_loss).item()
+            log_train_weights = sum(x for x in self.log_train_weights).item()
 
             self.epoch_loss += log_train_loss
             self.epoch_nll_loss += log_nll_loss

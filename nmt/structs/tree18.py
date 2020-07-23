@@ -16,8 +16,8 @@ class Tree(tree_utils.Tree):
     u = self.fold_up_tree(f_up)
     return d.zip(u).map(lambda x: sum(x) * (2**-0.5))
 
-def parse(fun_str):
-  return tree_utils.parse(fun_str, cls=Tree)
+def parse(fun_str, clip=None):
+  return tree_utils.parse(fun_str, cls=Tree, clip=clip)
 
 def get_params(config):
   embed_dim = config['embed_dim']

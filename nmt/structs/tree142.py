@@ -36,8 +36,8 @@ class Tree(tree_utils.Tree):
     pe = pe.map(f_mult)
     return pe
 
-def parse(fun_str):
-  return tree_utils.parse(fun_str, cls=Tree)
+def parse(fun_str, clip=None):
+  return tree_utils.parse(fun_str, cls=Tree, clip=clip)
 
 def get_params(config):
   embed_dim = config['embed_dim']
