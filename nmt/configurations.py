@@ -35,8 +35,8 @@ base_config = dict(
     model_name = 'model_name',
     
     ### Locations of files
-    save_to = './nmt/saved_models/{model_name}',
-    data_dir = './nmt/data/{model_name}',
+    save_to = 'nmt/saved_models/{model_name}',
+    data_dir = 'nmt/data/{model_name}',
     log_file = '{save_to}/DEBUG.log',
 
     # Source and target languages
@@ -161,43 +161,43 @@ fun2com_base = adapt(
 
 fun2com22 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree22,
 )
 
 fun2com21 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree21,
 )
 
 fun2com20 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree20,
 )
 
 fun2com19 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree19,
 )
 
 fun2com18 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree18,
 )
 
 fun2com17 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree,
 )
 
 fun2com173 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree173,
 )
 
@@ -208,91 +208,91 @@ fun2com17_all = adapt(
 
 fun2com172_all = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com17_all',
+    data_dir = 'nmt/data/fun2com17_all',
     struct = struct.tree172,
 )
 
 fun2com16 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree2,
 )
 
 fun2com15 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree15,
 )
 
 fun2com14 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree14,
 )
 
 fun2com142 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree142,
 )
 
 fun2com143 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree143,
 )
 
 fun2com144 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree144,
 )
 
 fun2com1442 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree1442,
 )
 
 fun2com1443 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree1443,
 )
 
 fun2com1444 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree1444,
 )
 
 fun2comM = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.treem,
 )
 
 fun2com1444i = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree1444i,
 )
 
 fun2com1444o = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree1444o,
 )
 
 fun2com1445 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree1445,
 )
 
 fun2com145 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree144,
     embed_dim = 256,
     ff_dim = 256 * 4,
@@ -300,7 +300,7 @@ fun2com145 = adapt(
 
 fun2com146 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree144,
     embed_dim = 128,
     ff_dim = 128 * 4,
@@ -308,7 +308,7 @@ fun2com146 = adapt(
 
 fun2com147 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree144,
     embed_dim = 64,
     ff_dim = 64 * 4,
@@ -316,7 +316,7 @@ fun2com147 = adapt(
 
 fun2com148 = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree144,
     embed_dim = 32,
     ff_dim = 32 * 4,
@@ -324,7 +324,7 @@ fun2com148 = adapt(
 
 fun2com_3d = adapt(
     fun2com_base,
-    data_dir = './nmt/data/fun2com',
+    data_dir = 'nmt/data/fun2com',
     struct = struct.tree14_3d,
     embed_dim = 64,
     ff_dim = 64 * 4,
@@ -402,11 +402,11 @@ java2doc_base = adapt(
     second_base,
     src_lang = 'java',
     trg_lang = 'doc',
-    save_to = './nmt/java2doc_models/{model_name}',
+    save_to = 'nmt/java2doc_models/{model_name}',
     joint_vocab_size = 32000,
 )
 
-java2doc_tree_base = adapt(java2doc_base, data_dir = './nmt/data/java2doc')
+java2doc_tree_base = adapt(java2doc_base, data_dir = 'nmt/data/java2doc')
 
 java2doc14 = adapt(java2doc_tree_base, struct = struct.tree1444)
 java2doc15 = adapt(java2doc_tree_base, struct = struct.tree14442)
@@ -426,12 +426,12 @@ py2doc_base = adapt(
     second_base,
     src_lang = 'py',
     trg_lang = 'doc',
-    save_to = './nmt/py2doc_models/{model_name}',
+    save_to = 'nmt/py2doc_models/{model_name}',
     joint_vocab_size = 32000,
 )
 
-py2doc_tree_base = adapt(py2doc_base, data_dir = './nmt/data/py2doc')
-py2doc2_tree_base = adapt(py2doc_base, data_dir = './nmt/data/py2doc2')
+py2doc_tree_base = adapt(py2doc_base, data_dir = 'nmt/data/py2doc')
+py2doc2_tree_base = adapt(py2doc_base, data_dir = 'nmt/data/py2doc2')
 
 py2doc14 = adapt(py2doc2_tree_base, struct = struct.tree1444, grad_clamp = 100.0)
 py2doc15 = adapt(py2doc2_tree_base, struct = struct.tree14442, grad_clamp = 100.0)
