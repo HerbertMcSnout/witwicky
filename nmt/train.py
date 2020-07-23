@@ -80,10 +80,10 @@ class Trainer(object):
         
         self.optimizer = torch.optim.Adam(params, lr=self.lr, betas=(self.config['beta1'], self.config['beta2']), eps=self.config['epsilon'])
 
-        # Set up debug_stats
-        self.debug_path = join(self.config['save_to'], 'debug_stats.pth')
-        torch.save({}, self.debug_path)
-        self.initial_debug_stats = deepcopy(self.model.debug_stats)
+        ## Set up debug_stats
+        #self.debug_path = join(self.config['save_to'], 'debug_stats.pth')
+        #torch.save({}, self.debug_path)
+        #self.initial_debug_stats = deepcopy(self.model.debug_stats)
 
     def report_epoch(self, epoch, batches):
 
@@ -113,11 +113,11 @@ class Trainer(object):
 
         self.logger.info('    smooth, true perp: {:.2f}, {:.2f}'.format(float(train_smooth_perp), float(train_true_perp)))
 
-        # Save debug_stats
-        debug_stats = torch.load(self.debug_path)
-        debug_stats[epoch] = self.model.debug_stats
-        torch.save(debug_stats, self.debug_path)
-        self.model.debug_stats = deepcopy(self.initial_debug_stats)
+        ## Save debug_stats
+        #debug_stats = torch.load(self.debug_path)
+        #debug_stats[epoch] = self.model.debug_stats
+        #torch.save(debug_stats, self.debug_path)
+        #self.model.debug_stats = deepcopy(self.initial_debug_stats)
 
     def run_log(self, batch, epoch, batch_data):
       #with torch.autograd.detect_anomaly(): # throws exception when any forward computation produces nan

@@ -81,8 +81,8 @@ class Model(nn.Module):
         # see https://pytorch.org/docs/stable/optim.html#per-parameter-options
         self.parameter_attrs = {}
 
-        # Debugging
-        self.debug_stats = {'loss':[], 'reg':[]}
+        ## Debugging
+        #self.debug_stats = {'loss':[], 'reg':[]}
 
     def init_model(self):
         num_enc_layers = self.config['num_enc_layers']
@@ -177,8 +177,8 @@ class Model(nn.Module):
         else:
             loss = nll_loss
         
-        self.debug_stats['loss'].append(loss.detach().item())
-        self.debug_stats['reg'].append(float(reg_penalty))
+        #self.debug_stats['loss'].append(loss.detach().item())
+        #self.debug_stats['reg'].append(float(reg_penalty))
         loss += reg_penalty
 
         return {
