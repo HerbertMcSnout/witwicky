@@ -6,9 +6,10 @@ parser.add_argument('--mode', choices=['train', 'translate', 'extract', 'interac
 parser.add_argument('--proto', type=str, required=True,
                     help='Training config function defined in configurations.py')
 parser.add_argument('--num-preload', type=int, default=1000,
-                    help="""Number of train samples prefetched to memory
-Small is slower but too big might make training data
-less randomized.""")
+                    help="""
+                         Number of train samples prefetched to memory
+                         Small is slower but too big might make training data
+                         less randomized.""")
 parser.add_argument('--input-file', type=str, 
                     help='Input file if mode == translate')
 parser.add_argument('--model-file', type=str, required=False,
