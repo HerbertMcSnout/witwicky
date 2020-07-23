@@ -12,7 +12,7 @@ for fn in os.listdir(cd):
 
 """
 Each struct is a module with               type
-- a 'parse' function                       str -> Struct implementation
+- a 'parse' function                       str, clip=int? -> Struct implementation (with size clipped to clip, if given)
 - a 'get_params' function                  config -> {name1: torch.Tensor(*), ...}
 - (optional) a get_reg_penalty function    torch.Tensor(batch_size, max_len, embed_dim) -> torch.Tensor()
 """
