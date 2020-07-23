@@ -379,32 +379,61 @@ fun2com_seq_all2 = adapt(
 )
 
 
-
-
 #######################################################################
 
-java2doc_base = adapt(
+second_base = adapt(
     base_config,
-    src_lang = 'java',
-    trg_lang = 'doc',
-    save_to = './nmt/java2doc_models/{model_name}',
     max_src_length = 1000,
     max_epochs = 200,
     early_stop_patience = 20,
     validate_freq = 1,
+    length_model = ac.LINEAR_LENGTH_MODEL,
     length_alpha = 0.2,
     dropout = 0.2,
     lr = 1e-4,
     restore_segments = False,
 )
 
+
+#######################################################################
+
+java2doc_base = adapt(
+    second_base,
+    src_lang = 'java',
+    trg_lang = 'doc',
+    save_to = './nmt/java2doc_models/{model_name}',
+    joint_vocab_size = 32000,
+)
+
 java2doc_tree_base = adapt(java2doc_base, data_dir = './nmt/data/java2doc')
 
 java2doc14 = adapt(java2doc_tree_base, struct = struct.tree1444)
-java2docm = adapt(java2doc_tree_base, struct = struct.treem)
-java2docm2 = adapt(java2doc_tree_base, struct = struct.treem2)
+java2doc15 = adapt(java2doc_tree_base, struct = struct.tree14442)
 java2doc17 = adapt(java2doc_tree_base, struct = struct.tree)
+java2doc18 = adapt(java2doc_tree_base, struct = struct.tree172)
 java2doc_seq = adapt(java2doc_base, struct = struct.sequence)
+java2doc_rare = adapt(java2doc_base, struct = struct.sequence)
+java2doc_raw2 = adapt(java2doc_base, struct = struct.sequence)
 java2doc_raw = adapt(java2doc_base, struct = struct.sequence)
 
-java2doc_bpe = adapt(java2doc_base, struct = struct.treebpe, joint_vocab_size = 16000)
+
+
+
+#######################################################################
+
+py2doc_base = adapt(
+    second_base,
+    src_lang = 'py',
+    trg_lang = 'doc',
+    save_to = './nmt/py2doc_models/{model_name}',
+    joint_vocab_size = 32000,
+)
+
+py2doc_tree_base = adapt(py2doc_base, data_dir = './nmt/data/py2doc')
+
+py2doc14 = adapt(py2doc_tree_base, struct = struct.tree1444)
+py2doc15 = adapt(py2doc_tree_base, struct = struct.tree14442)
+py2doc17 = adapt(py2doc_tree_base, struct = struct.tree)
+py2doc18 = adapt(py2doc_tree_base, struct = struct.tree172)
+py2doc_seq = adapt(py2doc_base, struct = struct.sequence)
+py2doc_rare = adapt(py2doc_base, struct = struct.sequence)
