@@ -114,6 +114,7 @@ base_config = dict(
 
     # Gradient clipping
     grad_clip = 1.0, # if no clip, just set it to some big value like 1e9
+    grad_clamp = 0, # if not 0, clamp gradients to [-grad_clamp, +grad_clamp]. This happens *before* gradient clipping.
 
     ### Validation/stopping options
 
@@ -430,9 +431,10 @@ py2doc_base = adapt(
 )
 
 py2doc_tree_base = adapt(py2doc_base, data_dir = './nmt/data/py2doc')
+py2doc2_tree_base = adapt(py2doc_base, data_dir = './nmt/data/py2doc2')
 
-py2doc14 = adapt(py2doc_tree_base, struct = struct.tree1444)
-py2doc15 = adapt(py2doc_tree_base, struct = struct.tree14442)
+py2doc14 = adapt(py2doc2_tree_base, struct = struct.tree1444, grad_clamp = 100.0)
+py2doc15 = adapt(py2doc2_tree_base, struct = struct.tree14442, grad_clamp = 100.0)
 py2doc17 = adapt(py2doc_tree_base, struct = struct.tree)
 py2doc18 = adapt(py2doc_tree_base, struct = struct.tree172)
 py2doc_seq = adapt(py2doc_base, struct = struct.sequence)

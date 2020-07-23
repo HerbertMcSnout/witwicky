@@ -141,8 +141,10 @@ class Trainer(object):
 
         opt_loss.backward()
         # clip gradient
+        if self.config['grad_clamp']:
+            torch.nn.utils.clip_grad_value_(self.model.parameters(), self.config['grad_clamp'])
         grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config['grad_clip']).detach()
-
+        
         # update
         self.adjust_lr()
         self.optimizer.step()
