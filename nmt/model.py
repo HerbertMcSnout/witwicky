@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from layers import Encoder, Decoder
 import nmt.all_constants as ac
 import nmt.utils as ut
-#import nmt.tree as tr
 
 
 class Model(nn.Module):
@@ -80,10 +79,7 @@ class Model(nn.Module):
         
         # dict where keys are data_ptrs to dicts of parameter options
         # see https://pytorch.org/docs/stable/optim.html#per-parameter-options
-        self.parameter_attrs = {
-            #self.src_embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']},
-            #self.trg_embed_scale.data_ptr():{'lr':self.config['embed_scale_lr']}
-        }
+        self.parameter_attrs = {}
 
         # Debugging
         self.debug_stats = {'loss':[], 'reg':[]}
@@ -148,16 +144,12 @@ class Model(nn.Module):
         pos_embeds = self.get_pos_embedding(max_len, structs)
         pe_scale = self.src_pos_embed_scale if structs is not None else self.trg_pos_embed_scale
         reg_penalty = 0.0
-        if calc_reg: # Penalize pos embeddings with (pre-scaled) norms other than 1:
-            #norms = pos_embeds.norm(dim=-1) + (toks == ac.PAD_ID) # set all padding values to 1 so they get no penalty
-            #reg_penalty = self.struct.get_reg_penalty(norms).sum(dim=[0,1]) * self.config['pos_norm_penalty']
+        if calc_reg:
             reg_penalty = self.struct.get_reg_penalty(pos_embeds, toks != ac.PAD_ID) * self.config['pos_norm_penalty']
         return word_embeds + pos_embeds * pe_scale, reg_penalty
 
     def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
-        #decoder_mask = torch.triu(torch.ones((trg_toks.size()[-1], trg_toks.size()[-1]), dtype=torch.bool, device=ut.get_device()), diagonal=1)
-        #decoder_mask = decoder_mask.unsqueeze(0).unsqueeze(1)
         decoder_mask = self.get_decoder_mask(trg_toks.size()[-1])
 
         encoder_inputs, reg_penalty = self.get_input(src_toks, src_structs, calc_reg=hasattr(self.struct, "get_reg_penalty"))
