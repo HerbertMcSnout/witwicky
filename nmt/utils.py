@@ -1,6 +1,5 @@
-import os, os.path
+import os
 import logging
-
 import numpy
 import torch
 import random
@@ -8,6 +7,10 @@ import random
 import nmt.all_constants as ac
 
 random.seed(ac.SEED)
+numpy.random.seed(ac.SEED)
+torch.manual_seed(ac.SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(ac.SEED)
 
 
 def ensure_dirs_exists(filepath):
@@ -41,6 +44,38 @@ def get_logger(logfile='./DEBUG.log'):
         logger.addHandler(debug_handler)
 
     return logger
+
+def format_table_row(cells, column_widths=None, alignments=None):
+    column_widths = column_widths or [len(cell) for cell in cells]
+    alignments = alignments or ['left'] * len(cells)
+    def pad(cell, width, align):
+        pads = ' ' * (width - len(cell))
+        if align == 'left': return pads + cell
+        elif align == 'right': return cell + pads
+        elif align == 'center': return pads[0::2] + cell + pads[1::2]
+        else: return cell
+    return '  '.join(pad(c, w, a) for c, w, a in zip(cell, columns_widths, alignments))
+
+def reorder(xs, indices):
+    'Reorders the elements in xs according to indices'
+    if isinstance(xs, numpy.ndarray) or torch.is_tensor(xs):
+        return xs[indices]
+    else:
+        return [xs[i] for i in indices]
+
+def shuffle_indices(iter_or_int):
+    'Returns a numpy.ndarray of randomly shuffled indices corresponding to iter_or_int'
+    if not isinstance(iter_or_int, int):
+        iter_or_int = len(iter_or_int)
+    indices = numpy.arange(iter_or_int)
+    numpy.random.shuffle(indices)
+    return indices
+
+def shuffle_parallel(*arrays):
+    'Shuffles arrays in parallel'
+    arrays = list(arrays)
+    randomized_indices = shuffle_indices(len(arrays[0]))
+    return tuple(reorder(array, randomized_indices) for array in arrays)
 
 
 def shuffle_file(input_file):
