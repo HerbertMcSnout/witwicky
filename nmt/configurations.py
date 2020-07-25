@@ -417,6 +417,13 @@ java2doc_rare = adapt(java2doc_base, struct = struct.sequence)
 java2doc_raw2 = adapt(java2doc_base, struct = struct.sequence)
 java2doc_raw = adapt(java2doc_base, struct = struct.sequence)
 
+java2doc_bpe = adapt(java2doc_base, struct = struct.treebpe, joint_vocab_size = 0)
+java2doc_sbpe = adapt(java2doc_bpe, struct = struct.sequence)
+java2doc_bpe_16000 = adapt(java2doc_bpe)
+java2doc_bpe_32000 = adapt(java2doc_bpe)
+java2doc_sbpe_16000 = adapt(java2doc_sbpe)
+java2doc_sbpe_32000 = adapt(java2doc_sbpe)
+
 
 
 
@@ -435,7 +442,16 @@ py2doc2_tree_base = adapt(py2doc_base, data_dir = 'nmt/data/py2doc2')
 
 py2doc14 = adapt(py2doc2_tree_base, struct = struct.tree1444, grad_clamp = 100.0)
 py2doc15 = adapt(py2doc2_tree_base, struct = struct.tree14442, grad_clamp = 100.0)
+py2doc16 = adapt(py2doc2_tree_base, struct = struct.tree1445, grad_clamp = 100.0)
 py2doc17 = adapt(py2doc_tree_base, struct = struct.tree)
 py2doc18 = adapt(py2doc_tree_base, struct = struct.tree172)
 py2doc_seq = adapt(py2doc_base, struct = struct.sequence)
 py2doc_rare = adapt(py2doc_base, struct = struct.sequence)
+py2doc_rare2 = adapt(py2doc_base, struct = struct.sequence, data_dir = 'nmt/data/py2doc_rare2')
+
+py2doc_bpe = adapt(py2doc_base, struct = struct.treebpe, joint_vocab_size = 0)
+py2doc_sbpe = adapt(py2doc_bpe, struct = struct.sequence)
+py2doc_bpe_16000 = adapt(py2doc_bpe)
+py2doc_bpe_32000 = adapt(py2doc_bpe)
+py2doc_sbpe_16000 = adapt(py2doc_sbpe)
+py2doc_sbpe_32000 = adapt(py2doc_sbpe)
