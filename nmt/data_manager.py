@@ -1,13 +1,12 @@
 import time
 import os
 from os.path import join, exists, basename
-#from os.path import exists
 from itertools import islice
 from collections import Counter
 import numpy
 import torch
 import shutil
-from io import StringIO
+import io
 
 import nmt.utils as ut
 import nmt.all_constants as ac
@@ -82,11 +81,20 @@ class DataManager(object):
         # training, so copy data_dir/train.ids to save_to/train.ids
         # so we can shuffle it without modifying it in self.data_dir
         shutil.copy(self.ids_files[ac.TRAINING], train_ids_file)
-        #os.popen('cp {} {}'.format(self.ids_files[ac.TRAINING], train_ids_file))
         
         self.ids_files[ac.TRAINING] = train_ids_file
 
 
+    def parse_line(self, line, is_src, max_len=None, to_ids=False):
+        if is_src:
+            s = self.parse_struct(line, clip=(max_len or self.max_src_length))
+            if to_ids: s = s.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+            return s
+        else:
+            max_len = max_len or self.max_trg_length
+            s = line.strip().split(maxsplit=max_len)[:max_len]
+            if to_ids: s = [self.trg_vocab.get(w, ac.UNK_ID) for w in s]
+            return s
 
 
     ############## Vocab Functions ##############
@@ -138,10 +146,9 @@ class DataManager(object):
                     count += 1
                     if count % 10000 == 0:
                         self.logger.info('    processing line {}'.format(count))
-                    src_line_parsed = self.parse_struct(src_line, clip=self.max_src_length)
-                    #src_line_parsed.set_clip_length(self.max_src_length)
+                    src_line_parsed = self.parse_line(src_line, True)
                     src_line_words = src_line_parsed.flatten()
-                    trg_line_words = trg_line.strip().split()
+                    trg_line_words = self.parse_line(trg_line, False, max_len=(self.max_trg_length - 1))
                     src_vocab.update(src_line_words)
                     trg_vocab.update(trg_line_words)
 
@@ -282,19 +289,14 @@ class DataManager(object):
                 open(joint_file, 'w') as tokens_f:
 
             for src_line, trg_line in zip(src_f, trg_f):
-                src_prsd = self.parse_struct(src_line, clip=self.max_src_length)
-                #src_prsd.set_clip_length(self.max_src_length)
-                trg_toks = trg_line.strip().split()
+                src_prsd = self.parse_line(src_line, True, to_ids=True)
+                trg_ids = [ac.BOS_ID] + self.parse_line(trg_line, False, max_len=(self.max_trg_length - 1), to_ids=True)
 
-                if 0 < src_prsd.size() and 0 < len(trg_toks):
+                if 0 < src_prsd.size() and 1 < len(trg_ids):
                     num_lines += 1
                     if num_lines % 10000 == 0:
                         self.logger.info('    converting line {}'.format(num_lines))
-                    src_prsd = src_prsd.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
-                    src_prsd.maybe_add_eos(ac.EOS_ID)
-
                     src_ids = src_prsd.flatten()
-                    trg_ids = [ac.BOS_ID] + [self.trg_vocab.get(w, ac.UNK_ID) for w in trg_toks]
                     src_tok_count += len(src_ids)
                     trg_tok_count += len(trg_ids)
                     data = u'{}|||{}\n'.format(str(src_prsd), u' '.join(map(str, trg_ids)))
@@ -302,6 +304,7 @@ class DataManager(object):
 
         with open(joint_tok_count, 'w') as f:
             f.write('{} {}\n'.format(str(src_tok_count), str(trg_tok_count)))
+        
 
 
 
@@ -313,10 +316,11 @@ class DataManager(object):
         drop_mask = numpy.logical_and(drop_mask, data != ac.PAD_ID)
         data[drop_mask] = ac.UNK_ID
 
-    def _prepare_one_batch(self, b_src_input, b_src_seq_length, b_src_structs, b_trg_input, b_trg_seq_length):
+    def _prepare_one_batch(self, b_src_input, b_src_seq_length, b_src_structs, b_trg_input, b_trg_seq_length, with_trg=True):
+
         batch_size = len(b_src_input)
         max_src_length = max(b_src_seq_length)
-        max_trg_length = max(b_trg_seq_length)
+        max_trg_length = max(b_trg_seq_length) if with_trg else 0
 
         src_input_batch = numpy.zeros([batch_size, max_src_length], dtype=numpy.int32)
         trg_input_batch = numpy.zeros([batch_size, max_trg_length], dtype=numpy.int32)
@@ -324,67 +328,85 @@ class DataManager(object):
 
         for i in range(batch_size):
             src_input_batch[i] = list(b_src_input[i]) + (max_src_length - b_src_seq_length[i]) * [ac.PAD_ID]
-            trg_input_batch[i] = list(b_trg_input[i]) + (max_trg_length - b_trg_seq_length[i]) * [ac.PAD_ID]
-            trg_target_batch[i] = list(b_trg_input[i][1:]) + [ac.EOS_ID] + (max_trg_length - b_trg_seq_length[i]) * [ac.PAD_ID]
+            if with_trg:
+                trg_input_batch[i] = list(b_trg_input[i]) + (max_trg_length - b_trg_seq_length[i]) * [ac.PAD_ID]
+                trg_target_batch[i] = list(b_trg_input[i][1:]) + [ac.EOS_ID] + (max_trg_length - b_trg_seq_length[i]) * [ac.PAD_ID]
+            else:
+                trg_input_batch[i] = []
+                trg_target_batch[i] = []
 
         return src_input_batch, b_src_structs, trg_input_batch, trg_target_batch
 
-    def prepare_batches(self, src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths, batch_size, mode=ac.TRAINING):
-        if not src_inputs.size:
-            return [], [], []
+    def prepare_batches(self, src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths, mode=ac.TRAINING, with_trg=True):
 
         # Sorting by src lengths
         # https://www.aclweb.org/anthology/W17-3203
-        sorted_idxs = numpy.argsort(src_seq_lengths if self.batch_sort_src else trg_seq_lengths)
+        sorted_idxs = numpy.argsort(src_seq_lengths if self.batch_sort_src or not trg_inputs else trg_seq_lengths)
         src_inputs = src_inputs[sorted_idxs]
         src_seq_lengths = src_seq_lengths[sorted_idxs]
         src_structs = src_structs[sorted_idxs]
-        trg_inputs = trg_inputs[sorted_idxs]
-        trg_seq_lengths = trg_seq_lengths[sorted_idxs]
+        trg_inputs = trg_inputs[sorted_idxs] if with_trg else []
+        trg_seq_lengths = trg_seq_lengths[sorted_idxs] if with_trg else []
 
         src_input_batches = []
         src_structs_batches = []
         trg_input_batches = []
         trg_target_batches = []
+        idxs_batches = []
+
+        est_src_trg_ratio = (1, 1) if with_trg else self.read_tok_count()
+        est_src_trg_ratio = est_src_trg_ratio[0] / sum(est_src_trg_ratio)
 
         s_idx = 0
         while s_idx < len(src_inputs):
             e_idx = s_idx + 1
             max_src_in_batch = src_seq_lengths[s_idx]
-            max_trg_in_batch = trg_seq_lengths[s_idx]
+            max_trg_in_batch = with_trg and trg_seq_lengths[s_idx]
             while e_idx < len(src_inputs):
                 max_src_in_batch = max(max_src_in_batch, src_seq_lengths[e_idx])
-                max_trg_in_batch = max(max_trg_in_batch, trg_seq_lengths[e_idx])
-                count = (e_idx - s_idx + 1) * (max_src_in_batch + max_trg_in_batch) #max(max_src_in_batch, max_trg_in_batch)
-                if count > batch_size:
-                    break
-                else:
-                    e_idx += 1
+                if with_trg: max_trg_in_batch = max(max_trg_in_batch, trg_seq_lengths[e_idx])
+                else: max_trg_in_batch = round(max_src_in_batch * est_src_trg_ratio)
+                count = (e_idx - s_idx + 1) * (max_src_in_batch + max_trg_in_batch)
+                if count > self.batch_size: break
+                else: e_idx += 1
 
-            src_input_batch, src_structs_batch, trg_input_batch, trg_target_batch = self._prepare_one_batch(
+            idxs_batch = sorted_idxs[s_idx:e_idx]
+            batch_values = self._prepare_one_batch(
                 src_inputs[s_idx:e_idx],
                 src_seq_lengths[s_idx:e_idx],
                 src_structs[s_idx:e_idx],
                 trg_inputs[s_idx:e_idx],
-                trg_seq_lengths[s_idx:e_idx])
+                trg_seq_lengths[s_idx:e_idx],
+                with_trg=with_trg)
+            
+            if mode == ac.TRAINING:
+                batch_values = ut.shuffle_parallel(*batch_values)
+
+            src_input_batch, src_structs_batch, trg_input_batch, trg_target_batch = batch_values
 
             if mode == ac.TRAINING:
                 self.replace_with_unk(src_input_batch)
-                self.replace_with_unk(trg_input_batch)
+                if with_trg: self.replace_with_unk(trg_input_batch)
 
             # Make sure only the structure of src is used
             # (some toks may have been replaced with UNK)
             src_structs_batch = [struct.forget() for struct in src_structs_batch]
             
             s_idx = e_idx
+            idxs_batches.append(idxs_batch)
             src_input_batches.append(src_input_batch)
             src_structs_batches.append(src_structs_batch)
             trg_input_batches.append(trg_input_batch)
             trg_target_batches.append(trg_target_batch)
 
-        return src_input_batches, src_structs_batches, trg_input_batches, trg_target_batches
+        batches = idxs_batches, src_input_batches, src_structs_batches, trg_input_batches, trg_target_batches
+        
+        if mode == ac.TRAINING:
+            batches = ut.shuffle_parallel(*batches)
 
-    def process_n_batches(self, n_batches_string_list):
+        return batches
+
+    def process_n_batches(self, n_batches_string_list, to_ids=False, with_trg=True):
         src_inputs = []
         src_seq_lengths = []
         src_structs = []
@@ -394,34 +416,48 @@ class DataManager(object):
         for line in n_batches_string_list:
             data = line.strip()
             if data:
-                src_data, trg_data = data.split('|||')
-                _src_struct = self.parse_struct(src_data, clip=self.max_src_length)
-                #_src_struct.set_clip_length(self.max_src_length)
-                _src_struct = _src_struct.map(int)
+                _src_data, _trg_data = data.split('|||') if with_trg else [data, None]
+                _src_struct = self.parse_line(_src_data, True, to_ids=to_ids)
+                if not to_ids: _src_struct = _src_struct.map(int)
                 _src_toks = _src_struct.flatten()
-                _trg_toks = [int(x) for x in trg_data.split()]
-                if len(_trg_toks) > self.max_trg_length:
-                    _trg_toks = _trg_toks[:self.max_trg_length]
-
                 _src_len = len(_src_toks)
-                _trg_len = len(_trg_toks)
-
                 src_inputs.append(_src_toks)
                 src_seq_lengths.append(_src_len)
                 src_structs.append(_src_struct)
+
+                if with_trg:
+                    _trg_toks = self.parse_line(_trg_data, False, to_ids=to_ids)
+                    if not to_ids: _trg_toks = [int(x) for x in _trg_toks]
+                else:
+                    _trg_toks = []
+                _trg_len = len(_trg_toks)
                 trg_inputs.append(_trg_toks)
                 trg_seq_lengths.append(_trg_len)
 
         # convert to numpy array for sorting & reindexing
         src_inputs = numpy.array(src_inputs)
         src_seq_lengths = numpy.array(src_seq_lengths)
-        trg_inputs = numpy.array(trg_inputs)
-        trg_seq_lengths = numpy.array(trg_seq_lengths)
         src_structs = numpy.array(src_structs)
+        trg_inputs = numpy.array(trg_inputs) if trg_inputs else None
+        trg_seq_lengths = numpy.array(trg_seq_lengths) if trg_seq_lengths else None
 
         return src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths
 
-    def get_batch(self, mode=ac.TRAINING, num_preload=1000, alternate_batch_size=None):
+    def read_batches(self, read_handler, mode=ac.TRAINING, num_preload=1000, to_ids=False, with_trg=True):
+        device = ut.get_device()
+        while True:
+            next_n_lines = list(islice(read_handler, num_preload))
+            if not next_n_lines: break
+            src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths = self.process_n_batches(next_n_lines, to_ids=to_ids, with_trg=with_trg)
+            batches = self.prepare_batches(src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths, mode=mode, with_trg=with_trg)
+            for original_idxs, src_inputs, src_structs, trg_inputs, trg_target in zip(*batches):
+                yield (original_idxs,
+                       torch.from_numpy(src_inputs).type(torch.long).to(device),
+                       src_structs,
+                       torch.from_numpy(trg_inputs).type(torch.long).to(device),
+                       torch.from_numpy(trg_target).type(torch.long).to(device))
+
+    def get_batch(self, mode=ac.TRAINING, num_preload=1000):
         ids_file = self.ids_files[mode]
         if mode == ac.TRAINING:
             # Shuffle training dataset
@@ -429,99 +465,23 @@ class DataManager(object):
             ut.shuffle_file(ids_file)
             self.logger.info('Shuffling {} took {}'.format(ids_file, ut.format_time(time.time() - start)))
 
-        batch_size = self.batch_size if alternate_batch_size is None else alternate_batch_size        
-        device = ut.get_device()
         with open(ids_file, 'r') as f:
-            while True:
-                next_n_lines = list(islice(f, num_preload))
-                if not next_n_lines:
-                    break
-
-                src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths = self.process_n_batches(next_n_lines)
-                batches = self.prepare_batches(src_inputs, src_seq_lengths, src_structs, trg_inputs, trg_seq_lengths, batch_size, mode=mode)
-                for src_inputs, src_structs, trg_inputs, trg_target in zip(*batches):
-                    yield (torch.from_numpy(src_inputs).type(torch.long).to(device),
-                           src_structs,
-                           torch.from_numpy(trg_inputs).type(torch.long).to(device),
-                           torch.from_numpy(trg_target).type(torch.long).to(device))
-
-    def get_trans_input(self, input_file):
-        """Read lines from input_file and convert them to minibatches.
-
-        The size of each minibatch is batch_size//beam_size.
-
-        Return: A generator over (src_index, original_idxs) pairs,
-        where src_index[i,j] is the jth word of sentence i, and
-        original_idxs[i] is the ith sentence's (0-based) line number
-        in the file.
-        """
-        data = []
-        data_lengths = []
-        structs = []
-        with open(input_file, 'r') as f:
-            for line in f:
-                src_struct = self.parse_struct(line, clip=self.max_src_length)
-                #src_struct.set_clip_length(self.max_src_length)
-                src_struct = src_struct.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
-                src_struct.maybe_add_eos(ac.EOS_ID)
-                toks = src_struct.flatten()
-                data.append(toks)
-                data_lengths.append(len(toks))
-                structs.append(src_struct)
-
-        data_lengths = numpy.array(data_lengths)
-        sorted_idxs = numpy.argsort(data_lengths)
-        data_lengths = data_lengths[sorted_idxs]
-        data = numpy.array(data)[sorted_idxs]
-        structs = numpy.array(structs)[sorted_idxs]
-
-        src_train_toks, trg_train_toks = self.read_tok_count() # TODO: maybe use read_tok_count(mode=ac.VALIDATING)?
-        est_src_trg_ratio = src_train_toks / trg_train_toks
-
-        device = ut.get_device()
-        batch_size = self.batch_size // self.beam_size
-        s_idx = 0
-        while s_idx < len(data):
-            e_idx = s_idx + 1
-            max_in_batch = data_lengths[s_idx]
-            while e_idx < len(data):
-                max_in_batch = max(max_in_batch, data_lengths[e_idx])
-                est_trg_toks = round(max_in_batch / est_src_trg_ratio)
-                count = (e_idx - s_idx + 1) * (max_in_batch + min(est_trg_toks, self.max_trg_length))
-                if count > batch_size:
-                    break
-                else:
-                    e_idx += 1
-
-            src_inputs = torch.nn.utils.rnn.pad_sequence(
-                [torch.tensor(x) for x in data[s_idx:e_idx]],
-                padding_value=ac.PAD_ID,
-                batch_first=True).type(torch.long).to(device)
-            original_idxs = sorted_idxs[s_idx:e_idx]
-            batch_structs = structs[s_idx:e_idx]
-            s_idx = e_idx
-            yield src_inputs, original_idxs, batch_structs
-
+            yield from self.read_batches(f, mode, num_preload, to_ids=False, with_trg=True)
 
     def _ids_to_trans(self, trans_ids):
         words = []
         for idx in trans_ids:
-            if idx == ac.EOS_ID:
-                break
+            if idx == ac.EOS_ID: break
             words.append(self.trg_ivocab[idx])
-
         return u' '.join(words)
 
     def detach_outputs(self, rets):
         for ret in rets:
-            yield ret['probs'].detach().cpu().numpy().reshape([-1]), \
-                ret['scores'].detach().cpu().numpy().reshape([-1]), \
-                ret['symbols'].detach().cpu().numpy()
+            yield (ret['probs'].detach().cpu().numpy().reshape([-1]),
+                   ret['scores'].detach().cpu().numpy().reshape([-1]),
+                   ret['symbols'].detach().cpu().numpy())
 
     def get_trans(self, probs, scores, symbols):
-        #probs = ret['probs'].detach().cpu().numpy().reshape([-1])
-        #scores = ret['scores'].detach().cpu().numpy().reshape([-1])
-        #symbols = ret['symbols'].detach().cpu().numpy()
         sorted_rows = numpy.argsort(scores)[::-1]
         best_trans = None
         beam_trans = []
@@ -532,59 +492,60 @@ class DataManager(object):
                 best_trans = trans_out
         return best_trans, u'\n'.join(beam_trans)
 
-    def translate(self, model, input_file, output_dir, logger):
+    def translate(self, model, input_file_or_stream, best_output_stream, beam_output_stream, mode=ac.VALIDATING, num_preload=1000, to_ids=False):
         model.eval()
 
-        if isinstance(output_dir, str):
-            output_file = join(output_dir, basename(input_file))
-            best_trans_file = output_file + '.best_trans'
-            beam_trans_file = output_file + '.beam_trans'
-        else:
-            best_trans_file, beam_trans_file = output_dir
+        input_file = not isinstance(input_file_or_stream, io.IOBase) and input_file_or_stream
+        input_stream = open(input_file_or_stream, 'r') if input_file else input_file_or_stream
         
-        open(best_trans_file, 'w').close()
-        open(beam_trans_file, 'w').close()
-        
-        num_sents = 0
-        with open(input_file, 'r') as f:
-            for line in f:
-                if line.strip():
-                    num_sents += 1
-        num_sents_digits = (4 * ut.get_num_digits(num_sents) - 1) // 3 # factor in thousands-separator
-        all_best_trans = [''] * num_sents
-        all_beam_trans = [''] * num_sents
+        if input_file:
+            with open(input_file, 'r') as f:
+                num_sents = sum(bool(line.strip()) for line in f)
+            num_sents_digits = (4 * ut.get_num_digits(num_sents) - 1) // 3 # factor in thousands-separator
         
         with torch.no_grad():
-            logger.info('Start translating {}'.format(input_file))
-            start = last = time.time()
-            notify_every = 1000
+            if input_file:
+                self.logger.info('Start translating {}'.format(input_file))
+                start = last = time.time()
+                notify_every = 1000
             count = 0
-            for src_toks, original_idxs, src_structs in self.get_trans_input(input_file):
+            best_trans_cache = [None] * num_preload
+            beam_trans_cache = [None] * num_preload
+            for idxs, src_toks, src_structs, _, _ in self.read_batches(input_stream, mode, num_preload, to_ids, with_trg=False):
                 rets = self.detach_outputs(model.beam_decode(src_toks, src_structs))
-            
                 for i, ret in enumerate(rets):
-                    i2 = original_idxs[i]
-                    all_best_trans[i2], all_beam_trans[i2] = self.get_trans(*ret)
+                    i2 = idxs[i]
+                    best, beam = self.get_trans(*ret)
+                    if best_output_stream: best_trans_cache[i2] = best
+                    if beam_output_stream: beam_trans_cache[i2] = beam
                     count += 1
-                    if count % notify_every == 0:
+                    if count % num_preload == 0:
+                        if best_output_stream:
+                            best_output_stream.write('\n'.join(best_trans_cache) + '\n')
+                            best_trans_cache = [None] * num_preload
+                        if beam_output_stream:
+                            beam_output_stream.write('\n\n'.join(beam_trans_cache) + '\n\n')
+                            beam_trans_cache = [None] * num_preload
+                    if input_file and count % notify_every == 0:
                         now = time.time()
-                        logger.info('  Line {:>{},} / {:,}, {:.4f} sec/line'.format(count, num_sents_digits, num_sents, (time.time() - last) / notify_every))
+                        self.logger.info('  Line {:>{},} / {:,}, {:.4f} sec/line'.format(count, num_sents_digits, num_sents, (time.time() - last) / notify_every))
                         last = now
-        
+
+            remaining = (count - 1) % num_preload
+            if best_output_stream:
+                best_output_stream.write('\n'.join(best_trans_cache[:remaining]))
+            if beam_output_stream:
+                beam_output_stream.write('\n\n'.join(beam_trans_cache[:remaining]))
+
+        if input_file:
+            input_stream.close()
+            self.logger.info('Finished translating {}, took {}'.format(input_file, ut.format_time(time.time() - start)))
         model.train()
-        
-        with open(best_trans_file, 'w') as ftrans, open(beam_trans_file, 'w') as btrans:
-            ftrans.write('\n'.join(all_best_trans))
-            btrans.write('\n\n'.join(all_beam_trans))
-            
-        logger.info('Finished translating {}, took {}'.format(input_file, ut.format_time(time.time() - start)))
         
     def translate_line(self, model, line):
         "Translates a single line of text, with no file I/O"
-        struct = self.parse_struct(line, clip=self.max_src_length)
-        #struct.set_clip_length(self.max_src_length)
+        struct = self.parse_line(line, True)
         struct = struct.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
-        struct.maybe_add_eos(ac.EOS)
         toks = torch.tensor(struct.flatten()).type(torch.long).to(ut.get_device()).unsqueeze(0)
         trans, = self.translate_batch(model, toks, [struct])
         return trans

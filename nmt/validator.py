@@ -3,8 +3,6 @@ import re
 import time
 import shutil
 from subprocess import Popen, PIPE
-from os.path import join
-from os.path import exists
 
 import numpy
 import torch
@@ -24,18 +22,18 @@ class Validator(object):
         self.val_by_bleu = config['val_by_bleu']
         self.save_to = config['save_to']
 
-        self.get_cpkt_path = lambda score: join(self.save_to, '{}-{}.pth'.format(config['model_name'], score))
+        self.get_cpkt_path = lambda score: os.path.join(self.save_to, '{}-{}.pth'.format(config['model_name'], score))
         self.n_best = config['n_best']
 
         scriptdir = os.path.dirname(os.path.abspath(__file__))
         self.bleu_script = '{}/../scripts/multi-bleu.perl'.format(scriptdir)
-        assert exists(self.bleu_script)
+        assert os.path.exists(self.bleu_script)
 
-        if not exists(self.save_to):
+        if not os.path.exists(self.save_to):
             os.makedirs(self.save_to)
 
-        self.val_trans_out = join(self.save_to, 'val_trans.txt')
-        self.val_beam_out = join(self.save_to, 'val_beam_trans.txt')
+        self.val_trans_out = os.path.join(self.save_to, 'val_trans.txt')
+        self.val_beam_out = os.path.join(self.save_to, 'val_beam_trans.txt')
 
         self.write_val_trans = config['write_val_trans']
 
@@ -46,23 +44,23 @@ class Validator(object):
         if self.restore_segments:
             self.dev_ref = self.remove_bpe(self.dev_ref)
 
-        self.perp_curve_path = join(self.save_to, 'dev_perps.npy')
-        self.best_perps_path = join(self.save_to, 'best_perp_scores.npy')
+        self.perp_curve_path = os.path.join(self.save_to, 'dev_perps.npy')
+        self.best_perps_path = os.path.join(self.save_to, 'best_perp_scores.npy')
         self.perp_curve = numpy.array([], dtype=numpy.float32)
         self.best_perps = numpy.array([], dtype=numpy.float32)
-        if exists(self.perp_curve_path):
+        if os.path.exists(self.perp_curve_path):
             self.perp_curve = numpy.load(self.perp_curve_path)
-        if exists(self.best_perps_path):
+        if os.path.exists(self.best_perps_path):
             self.best_perps = numpy.load(self.best_perps_path)
 
         if self.val_by_bleu:
-            self.bleu_curve_path = join(self.save_to, 'bleu_scores.npy')
-            self.best_bleus_path = join(self.save_to, 'best_bleu_scores.npy')
+            self.bleu_curve_path = os.path.join(self.save_to, 'bleu_scores.npy')
+            self.best_bleus_path = os.path.join(self.save_to, 'best_bleu_scores.npy')
             self.bleu_curve = numpy.array([], dtype=numpy.float32)
             self.best_bleus = numpy.array([], dtype=numpy.float32)
-            if exists(self.bleu_curve_path):
+            if os.path.exists(self.bleu_curve_path):
                 self.bleu_curve = numpy.load(self.bleu_curve_path)
-            if exists(self.best_bleus_path):
+            if os.path.exists(self.best_bleus_path):
                 self.best_bleus = numpy.load(self.best_bleus_path)
 
     def evaluate_perp(self, model):
@@ -73,7 +71,7 @@ class Validator(object):
         total_weight = []
 
         with torch.no_grad():
-            for src_toks, src_structs, trg_toks, targets in self.data_manager.get_batch(mode=ac.VALIDATING):
+            for _, src_toks, src_structs, trg_toks, targets in self.data_manager.get_batch(mode=ac.VALIDATING):
                 # get loss
                 ret = model(src_toks, src_structs, trg_toks, targets)
                 total_loss.append(ret['nll_loss'].detach())
@@ -102,45 +100,28 @@ class Validator(object):
     def evaluate_bleu(self, model):
         model.eval()
 
-        val_trans_out = self.val_trans_out
-        val_beam_out = self.val_beam_out
-        ref_file = self.dev_ref
-
-        if self.restore_segments: # using bpe
-            val_trans_out = val_trans_out + '.bpe'
-            val_beam_out = val_beam_out + '.bpe'
-
         start = time.time()
         src_file = self.data_manager.data_files[ac.VALIDATING][self.data_manager.src_lang]
-        self.data_manager.translate(model, src_file, (val_trans_out, val_beam_out), self.logger)
+        best_out, beam_out = self.translate(model, src_file, to_ids=True)
 
-        # Remove BPE
-        if self.restore_segments:
-            val_trans_out = self.remove_bpe(val_trans_out, self.val_trans_out)
-            val_beam_out = self.remove_bpe(val_beam_out, self.val_beam_out)
-
-        multibleu_cmd = ['perl', self.bleu_script, ref_file, '<', val_trans_out]
-        p = Popen(' '.join(multibleu_cmd), shell=True, stdout=PIPE)
+        p = Popen(f'perl {self.bleu_script} {self.dev_ref} < {best_out}', shell=True, stdout=PIPE)
         output, _ = p.communicate()
         output = output.decode('utf-8').strip('\n')
         out_parse = re.match(r'BLEU = [-.0-9]+', output)
         self.logger.info(output)
 
-        bleu = float('-inf')
         if out_parse is None:
-            msg = '\n    Error extracting BLEU score, out_parse is None'
-            msg += '\n    It is highly likely that your model just produces garbage.'
-            msg += '\n    Be patient yo, it will get better.'
-            self.logger.info(msg)
+            self.logger.info('Error extracting BLEU score: out_parse is None')
+            bleu = float('-inf')
         else:
             bleu = float(out_parse.group()[6:])
 
         if self.write_val_trans:
-            best_file = "{}-{:.2f}".format(val_trans_out, bleu)
-            shutil.copyfile(val_trans_out, best_file)
+            best_file = "{}-{:.2f}".format(best_out, bleu)
+            shutil.copyfile(best_out, best_file)
 
-            beam_file = "{}-{:.2f}".format(val_beam_out, bleu)
-            shutil.copyfile(val_beam_out, beam_file)
+            beam_file = "{}-{:.2f}".format(beam_out, bleu)
+            shutil.copyfile(beam_out, beam_file)
 
         # add summaries
         self.bleu_curve = numpy.append(self.bleu_curve, bleu)
@@ -191,7 +172,7 @@ class Validator(object):
             # Delete the right checkpoint
             cpkt_path = self.get_cpkt_path(worst)
 
-            if exists(cpkt_path):
+            if os.path.exists(cpkt_path):
                 os.remove(cpkt_path)
 
         if save_please:
@@ -210,12 +191,23 @@ class Validator(object):
         self.maybe_save(model)
 
     def remove_bpe(self, infile, outfile=None):
-        if not outfile:
-            outfile = infile + '.nobpe'
-
+        outfile = outfile or infile + '.nobpe'
         open(outfile, 'w').close()
         Popen("sed -r 's/(@@ )|(@@ ?$)//g' < {} > {}".format(infile, outfile), shell=True, stdout=PIPE).communicate()
         return outfile
 
-    def translate(self, model, input_file):
-        self.data_manager.translate(model, input_file, self.save_to, self.logger)
+    def translate(self, model, input_file, mode=ac.VALIDATING, to_ids=False):
+        bpe_suffix = '.bpe' if self.restore_segments else ''
+        base_fp = os.path.join(self.save_to, os.path.basename(input_file))
+        best_fp_base = base_fp + '.best_trans'
+        beam_fp_base = base_fp + '.beam_trans'
+        best_fp = best_fp_base + bpe_suffix
+        beam_fp = beam_fp_base + bpe_suffix
+        open(best_fp, 'w').close()
+        open(beam_fp, 'w').close()
+        with open(best_fp, 'a') as best_stream, open(beam_fp, 'a') as beam_stream:
+            self.data_manager.translate(model, input_file, best_stream, beam_stream, mode=mode, num_preload=100000, to_ids=to_ids)
+        if self.restore_segments:
+            self.remove_bpe(best_fp, best_fp_base)
+            self.remove_bpe(beam_fp, beam_fp_base)
+        return best_fp_base, beam_fp_base

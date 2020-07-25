@@ -1,8 +1,6 @@
 import time
+import os
 import numpy
-from os.path import join
-from os.path import exists
-
 import torch
 
 import nmt.all_constants as ac
@@ -11,15 +9,6 @@ from nmt.model import Model
 from nmt.data_manager import DataManager
 import nmt.configurations as configurations
 from nmt.validator import Validator
-
-from copy import deepcopy
-
-if torch.cuda.is_available():
-    torch.cuda.manual_seed(ac.SEED)
-else:
-    torch.manual_seed(ac.SEED)
-
-numpy.random.seed(ac.SEED)
 
 
 class Trainer(object):
@@ -62,7 +51,8 @@ class Trainer(object):
         self.logger.info('Guessing around {:,} batches per epoch'.format(self.est_batches))
         
         # get model
-        self.model = Model(self.config).to(ut.get_device())
+        device = ut.get_device()
+        self.model = Model(self.config).to(device)
 
         param_count = sum([numpy.prod(p.size()) for p in self.model.parameters()])
         self.logger.info('Model has {:,} parameters'.format(param_count))
@@ -79,11 +69,6 @@ class Trainer(object):
             params.append(d)
         
         self.optimizer = torch.optim.Adam(params, lr=self.lr, betas=(self.config['beta1'], self.config['beta2']), eps=self.config['epsilon'])
-
-        ## Set up debug_stats
-        #self.debug_path = join(self.config['save_to'], 'debug_stats.pth')
-        #torch.save({}, self.debug_path)
-        #self.initial_debug_stats = deepcopy(self.model.debug_stats)
 
     def report_epoch(self, epoch, batches):
 
@@ -113,16 +98,24 @@ class Trainer(object):
 
         self.logger.info('    smooth, true perp: {:.2f}, {:.2f}'.format(float(train_smooth_perp), float(train_true_perp)))
 
-        ## Save debug_stats
-        #debug_stats = torch.load(self.debug_path)
-        #debug_stats[epoch] = self.model.debug_stats
-        #torch.save(debug_stats, self.debug_path)
-        #self.model.debug_stats = deepcopy(self.initial_debug_stats)
+
+    def clip_grad_values(self):
+        """
+        Adapted from https://pytorch.org/docs/stable/_modules/torch/nn/utils/clip_grad.html#clip_grad_value_
+        This is the same as torch.nn.utils.clip_grad_value_, except is also sets nan gradients to 0.0
+        """
+        parameters = self.model.parameters()
+        clip_value = float(self.config['grad_clamp'])
+        if isinstance(parameters, torch.Tensor):
+            parameters = [parameters]
+        for p in filter(lambda p: p.grad is not None, parameters):
+            p.grad.data.clamp_(min=-clip_value, max=clip_value)
+            p.grad.data[torch.isnan(p.grad.data)] = 0.0
 
     def run_log(self, batch, epoch, batch_data):
       #with torch.autograd.detect_anomaly(): # throws exception when any forward computation produces nan
         start = time.time()
-        src_toks, src_structs, trg_toks, targets = batch_data
+        _, src_toks, src_structs, trg_toks, targets = batch_data
 
         # zero grad
         self.optimizer.zero_grad()
@@ -141,8 +134,7 @@ class Trainer(object):
 
         opt_loss.backward()
         # clip gradient
-        if self.config['grad_clamp']:
-            torch.nn.utils.clip_grad_value_(self.model.parameters(), self.config['grad_clamp'])
+        if self.config['grad_clamp']: self.clip_grad_values()
         grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config['grad_clip']).detach()
         
         # update
@@ -238,6 +230,10 @@ class Trainer(object):
 
     def train(self):
         self.model.train()
+        stop_early = False
+        log_early_stop = lambda: self.logger.info('No improvement for last {} {}; stopping early!'.\
+                                                  format(self.config['early_stop_patience'] * self.validate_freq,
+                                                         'epochs' if self.config['val_by_bleu'] else 'batches'))
         for epoch in range(1, self.config['max_epochs'] + 1):
             batch = 0
             for batch_data in self.data_manager.get_batch(mode=ac.TRAINING, num_preload=self.num_preload):
@@ -249,18 +245,21 @@ class Trainer(object):
                 batch += 1
                 self.run_log(batch, epoch, batch_data)
                 if not self.config['val_per_epoch']:
-                    self.maybe_validate()
-
+                    stop_early = self.maybe_validate()
+                    if stop_early:
+                        log_early_stop()
+                        break
+            if stop_early:
+                break
             self.report_epoch(epoch, batch)
             if self.config['val_per_epoch'] and epoch % self.validate_freq == 0:
-                self.maybe_validate(just_validate=True)
-            
-            if self.is_patience_exhausted(self.config['early_stop_patience'] // self.validate_freq):
-                self.logger.info('No improvement for last {} epochs; stopping early!'.format(self.config['early_stop_patience'] * self.validate_freq))
-                break
+                stop_early = self.maybe_validate(just_validate=True)
+                if stop_early:
+                    log_early_stop()
+                    break
 
-        # validate 1 last time
-        if not self.config['val_by_bleu']:
+        if not self.config['val_by_bleu'] and not stop_early:
+            # validate 1 last time
             self.maybe_validate(just_validate=True)
 
         self.logger.info('Training finished')
@@ -268,23 +267,23 @@ class Trainer(object):
         self.logger.info(', '.join(['{:.2f}'.format(x) for x in self.train_smooth_perps]))
         self.logger.info('Train true perps:')
         self.logger.info(', '.join(['{:.2f}'.format(x) for x in self.train_true_perps]))
-        numpy.save(join(self.config['save_to'], 'train_smooth_perps.npy'), self.train_smooth_perps)
-        numpy.save(join(self.config['save_to'], 'train_true_perps.npy'), self.train_true_perps)
+        numpy.save(os.path.join(self.config['save_to'], 'train_smooth_perps.npy'), self.train_smooth_perps)
+        numpy.save(os.path.join(self.config['save_to'], 'train_true_perps.npy'), self.train_true_perps)
 
         self.logger.info('Save final checkpoint')
         self.save_checkpoint()
 
-        # Evaluate on test
+        # Evaluate test
         test_file = self.data_manager.data_files[ac.TESTING][self.data_manager.src_lang]
-        if exists(test_file):
+        if os.path.exists(test_file):
             self.logger.info('Evaluate test')
             self.restart_to_best_checkpoint()
-            self.validator.translate(self.model, test_file)
+            self.validator.translate(self.model, test_file, mode=ac.TESTING, to_ids=True)
             self.logger.info('Translate dev set')
-            self.validator.translate(self.model, self.data_manager.data_files[ac.VALIDATING][self.data_manager.src_lang])
+            self.validator.translate(self.model, self.data_manager.data_files[ac.VALIDATING][self.data_manager.src_lang], to_ids=True)
 
     def save_checkpoint(self):
-        cpkt_path = join(self.config['save_to'], '{}.pth'.format(self.config['model_name']))
+        cpkt_path = os.path.join(self.config['save_to'], '{}.pth'.format(self.config['model_name']))
         torch.save(self.model.state_dict(), cpkt_path)
 
     def restart_to_best_checkpoint(self):
@@ -299,10 +298,9 @@ class Trainer(object):
         self.model.load_state_dict(torch.load(best_cpkt_path))
 
     def is_patience_exhausted(self, patience):
-        val_bleu = self.config['val_by_bleu']
-        curve = self.validator.bleu_curve if val_bleu else self.validator.perp_curve
-        minmax = min if val_bleu else max
-        return patience and len(curve) > patience and (curve[-1] < minmax(curve[-1-patience:-1])) == val_bleu
+        curve = self.validator.bleu_curve if self.config['val_by_bleu'] else self.validator.perp_curve
+        best = max if self.config['val_by_bleu'] else min
+        return patience and len(curve) > patience and curve[-1-patience] == best(curve[-1-patience:])
 
     def maybe_validate(self, just_validate=False):
         if self.total_batches % self.validate_freq == 0 or just_validate:
@@ -317,7 +315,7 @@ class Trainer(object):
                or (self.config['warmup_style'] == ac.UPFLAT_WARMUP and step >= warmup_steps) \
                and self.config['lr_decay'] > 0:
 
-                if self.is_patience_exhausted(self.config['lr_decay_patience'] // self.validate_freq):
+                if self.is_patience_exhausted(self.config['lr_decay_patience']):
                     if self.config['val_by_bleu']:
                         metric = 'bleu'
                         scores = self.validator.bleu_curve
@@ -333,3 +331,4 @@ class Trainer(object):
                         self.lr = self.lr * self.config['lr_decay']
                         for p in self.optimizer.param_groups:
                             p['lr'] = self.lr
+        return self.is_patience_exhausted(self.config['early_stop_patience'])

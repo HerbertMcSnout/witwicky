@@ -1,8 +1,7 @@
 import os
 import time
-
+import sys
 import numpy
-
 import torch
 
 import nmt.all_constants as ac
@@ -17,18 +16,46 @@ class Translator(object):
         super(Translator, self).__init__()
         self.config = configurations.get_config(args.proto, getattr(configurations, args.proto), args.config_overrides)
         self.logger = ut.get_logger(self.config['log_file'])
+        self.num_preload = args.num_preload
 
-        self.input_file = args.input_file
         self.model_file = args.model_file
-
         if self.model_file is None:
             self.model_file = os.path.join(self.config['save_to'], '{}.pth'.format(self.config['model_name']))
 
-        if self.input_file is None or not os.path.exists(self.input_file) or not os.path.exists(self.model_file):
-            raise ValueError('Input file or model file does not exist')
+        self.input_file = args.input_file
+        if not os.path.exists(self.input_file):
+            raise ValueError('Input file does not exist: {}'.format(self.input_file))
+        if not os.path.exists(self.model_file):
+            raise ValueError('Model file does not exist: {}'.format(self.model_file))
+
+        if self.input_file:
+            save_fp = os.path.join(self.config['save_to'], os.path.basename(self.input_file))
+            self.best_output_fp = save_fp + '.best_trans'
+            self.beam_output_fp = save_fp + '.beam_trans'
+            open(self.best_output_fp, 'w').close()
+            open(self.beam_output_fp, 'w').close()
+        else:
+            self.best_output_fp = self.beam_output_fp = None
 
         self.data_manager = DataManager(self.config)
+        self.model = Model(self.config).to(ut.get_device())
+        self.logger.info('Restore model from {}'.format(self.model_file))
+        self.model.load_state_dict(torch.load(self.model_file))
         self.translate()
+
+    def translate(self):
+        best_stream = open(self.best_output_fp, 'a') if self.best_output_fp else sys.stdout
+        beam_stream = open(self.beam_output_fp, 'a') if self.beam_output_fp else None
+        self.data_manager.translate(self.model,
+                                    self.input_file or sys.stdin,
+                                    best_stream,
+                                    beam_stream,
+                                    mode=ac.TESTING,
+                                    to_ids=True,
+                                    num_preload=self.num_preload)
+        if self.best_output_fp: best_stream.close()
+        if self.beam_output_fp: beam_stream.close()
+
 
     def plot_head_map(self, mma, target_labels, target_ids, source_labels, source_ids, filename):
         """https://github.com/EdinburghNLP/nematus/blob/master/utils/plot_heatmap.py
@@ -71,9 +98,3 @@ class Translator(object):
         plt.tight_layout()
         plt.savefig(filename)
         plt.close('all')
-
-    def translate(self):
-        model = Model(self.config).to(ut.get_device())
-        self.logger.info('Restore model from {}'.format(self.model_file))
-        model.load_state_dict(torch.load(self.model_file))
-        self.data_manager.translate(model, self.input_file, self.config['save_to'], self.logger)
