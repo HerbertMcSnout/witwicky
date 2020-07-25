@@ -457,7 +457,7 @@ class DataManager(object):
                        torch.from_numpy(trg_inputs).type(torch.long).to(device),
                        torch.from_numpy(trg_target).type(torch.long).to(device))
 
-    def get_batch(self, mode=ac.TRAINING, num_preload=1000):
+    def get_batches(self, mode=ac.TRAINING, num_preload=1000):
         ids_file = self.ids_files[mode]
         if mode == ac.TRAINING:
             # Shuffle training dataset
@@ -542,17 +542,17 @@ class DataManager(object):
             self.logger.info('Finished translating {}, took {}'.format(input_file, ut.format_time(time.time() - start)))
         model.train()
         
-    def translate_line(self, model, line):
-        "Translates a single line of text, with no file I/O"
-        struct = self.parse_line(line, True)
-        struct = struct.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
-        toks = torch.tensor(struct.flatten()).type(torch.long).to(ut.get_device()).unsqueeze(0)
-        trans, = self.translate_batch(model, toks, [struct])
-        return trans
-
-    def translate_batch(self, model, toks, structs):
-        for x in self.detach_outputs(model.beam_decode(toks, structs)):
-            yield self.get_trans(*x)[0]
+    #def translate_line(self, model, line):
+    #    "Translates a single line of text, with no file I/O"
+    #    struct = self.parse_line(line, True)
+    #    struct = struct.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+    #    toks = torch.tensor(struct.flatten()).type(torch.long).to(ut.get_device()).unsqueeze(0)
+    #    trans, = self.translate_batch(model, toks, [struct])
+    #    return trans
+    #
+    #def translate_batch(self, model, toks, structs):
+    #    for x in self.detach_outputs(model.beam_decode(toks, structs)):
+    #        yield self.get_trans(*x)[0]
 
     def read_tok_count(self, mode=ac.TRAINING):
         fp = self.tok_count_files[mode]

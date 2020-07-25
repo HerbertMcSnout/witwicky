@@ -236,7 +236,7 @@ class Trainer(object):
                                                          'epochs' if self.config['val_by_bleu'] else 'batches'))
         for epoch in range(1, self.config['max_epochs'] + 1):
             batch = 0
-            for batch_data in self.data_manager.get_batch(mode=ac.TRAINING, num_preload=self.num_preload):
+            for batch_data in self.data_manager.get_batches(mode=ac.TRAINING, num_preload=self.num_preload):
                 if batch == 0:
                     self.logger.info('Begin epoch {}'.format(epoch))
                     epoch_str = ' ' * max(0, ut.get_num_digits(self.config['max_epochs']) - 5) + 'epoch'
