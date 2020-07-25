@@ -4,7 +4,6 @@ from __future__ import division
 from nmt.train import Trainer
 from nmt.translate import Translator
 from nmt.extractor import Extractor
-from nmt.interactive import InteractiveTranslator
 
 from nmt.args import parser
 
@@ -17,5 +16,3 @@ if __name__ == '__main__':
         translator = Translator(args)
     elif args.mode == 'extract':
         extractor = Extractor(args)
-    elif args.mode == 'interactive':
-        InteractiveTranslator(args)
