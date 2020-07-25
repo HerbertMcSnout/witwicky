@@ -71,7 +71,7 @@ class Validator(object):
         total_weight = []
 
         with torch.no_grad():
-            for _, src_toks, src_structs, trg_toks, targets in self.data_manager.get_batch(mode=ac.VALIDATING):
+            for _, src_toks, src_structs, trg_toks, targets in self.data_manager.get_batches(mode=ac.VALIDATING):
                 # get loss
                 ret = model(src_toks, src_structs, trg_toks, targets)
                 total_loss.append(ret['nll_loss'].detach())
