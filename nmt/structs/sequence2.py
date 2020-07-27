@@ -30,8 +30,8 @@ class SequenceStruct(Struct):
   def maybe_add_eos(self, EOS_ID):
     self.data.append(EOS_ID)
 
-def parse(s):
-  return SequenceStruct(s.strip().split())
+def parse(s, clip=None):
+  return SequenceStruct(s.strip().split(maxsplit=(clip or -1))[slice(clip)])
 
 def get_params(config):
   if config['learned_pos']:
