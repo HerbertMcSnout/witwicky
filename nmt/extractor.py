@@ -26,7 +26,7 @@ class Extractor(object):
             raise ValueError('Empty var list')
 
         if self.model_file is None or not os.path.exists(self.model_file):
-            raise ValueError('Input file or model file does not exist')
+            raise FileNotFoundError(self.model_file)
 
         if not os.path.exists(save_to):
             os.makedirs(save_to)

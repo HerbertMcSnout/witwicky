@@ -242,7 +242,7 @@ class DataManager(object):
         self.logger.info('Initialize {} vocab from {}'.format(lang, vocab_file))
 
         if not exists(vocab_file):
-            raise ValueError('    Vocab file {} not found'.format(vocab_file))
+            raise FileNotFoundError(vocab_file)
 
         counter = 0 # fall back to old vocab format "word freq\n"
         vocab, ivocab, word2freq = {}, {}, {}

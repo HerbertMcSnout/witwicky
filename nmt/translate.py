@@ -23,10 +23,10 @@ class Translator(object):
             self.model_file = os.path.join(self.config['save_to'], '{}.pth'.format(self.config['model_name']))
 
         self.input_file = args.input_file
-        if not os.path.exists(self.input_file):
-            raise ValueError('Input file does not exist: {}'.format(self.input_file))
+        if self.input_file is not None and not os.path.exists(self.input_file):
+            raise FileNotFoundError('Input file does not exist: {}'.format(self.input_file))
         if not os.path.exists(self.model_file):
-            raise ValueError('Model file does not exist: {}'.format(self.model_file))
+            raise FileNotFoundError('Model file does not exist: {}'.format(self.model_file))
 
         if self.input_file:
             save_fp = os.path.join(self.config['save_to'], os.path.basename(self.input_file))
@@ -37,10 +37,11 @@ class Translator(object):
         else:
             self.best_output_fp = self.beam_output_fp = None
 
+        device = ut.get_device()
         self.data_manager = DataManager(self.config)
-        self.model = Model(self.config).to(ut.get_device())
+        self.model = Model(self.config).to(device)
         self.logger.info('Restore model from {}'.format(self.model_file))
-        self.model.load_state_dict(torch.load(self.model_file))
+        self.model.load_state_dict(torch.load(self.model_file, map_location=device))
         self.translate()
 
     def translate(self):
