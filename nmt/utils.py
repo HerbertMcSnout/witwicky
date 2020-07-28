@@ -86,15 +86,6 @@ def shuffle_file(input_file):
         for _, line in data:
             fh.write(line)
 
-
-def get_validation_frequency(train_length_file, val_frequency, batch_size):
-    with open(train_length_file) as f:
-        line = f.readline().strip()
-        num_train_toks = int(line)
-
-    return int(num_train_toks * val_frequency / batch_size)
-
-
 def format_time(secs):
     "Formats secs as a nice, human-readable time (in hrs, mins, secs, ms when significant)"
     secs_exact = secs
