@@ -47,7 +47,12 @@ class Trainer(object):
         self.epoch_time = 0. # total exec time for whole epoch, sounds like that tabloid
 
         # Estimated number of batches per epoch
-        self.est_batches = sum(self.data_manager.read_tok_count()) // self.config['batch_size']
+        #self.est_batches = sum(self.data_manager.read_tok_count()) // self.config['batch_size']
+        self.est_batches = self.data_manager.read_tok_count()[0] // self.config['batch_size']
+        # Since the size of every batch is <= batch_size, and can't perfectly fill each batch,
+        # this is an underestimate of the true number of batches. Anecdotally, this seems to
+        # be about 80% of the true number of batches, so we multiply by 5/4
+        self.est_batches = 5 * self.est_batches // 4
         self.logger.info('Guessing around {:,} batches per epoch'.format(self.est_batches))
         
         # get model
@@ -187,7 +192,7 @@ class Trainer(object):
                      f'{batch:{batch_len}}',
                      f'{est_percent:3}%',
                      f'{remaining:>9}',
-                     f'{acc_speed_word:#7.4g}',
+                     f'{acc_speed_word:#10.4g}',
                      f'{acc_speed_time:#6.4g}s',
                      f'{avg_smooth_perp:#11.4g}',
                      f'{avg_true_perp:#9.4g}',
@@ -241,7 +246,7 @@ class Trainer(object):
                     self.logger.info('Begin epoch {}'.format(epoch))
                     epoch_str = ' ' * max(0, ut.get_num_digits(self.config['max_epochs']) - 5) + 'epoch'
                     batch_str = ' ' * max(0, ut.get_num_digits(self.est_batches) - 5) + 'batch'
-                    self.logger.info('  '.join([epoch_str, batch_str, 'est%', 'remaining', 'trg w/s', 's/batch', 'smooth perp', 'true perp', 'grad norm']))
+                    self.logger.info('  '.join([epoch_str, batch_str, 'est%', 'remaining', 'trg word/s', 's/batch', 'smooth perp', 'true perp', 'grad norm']))
                 batch += 1
                 self.run_log(batch, epoch, batch_data)
                 if not self.config['val_per_epoch']:
@@ -297,10 +302,14 @@ class Trainer(object):
         self.logger.info('Restore best cpkt from {}'.format(best_cpkt_path))
         self.model.load_state_dict(torch.load(best_cpkt_path))
 
-    def is_patience_exhausted(self, patience):
+    def is_patience_exhausted(self, patience, if_worst=False):
+        '''
+        if_worst=False (default) -> check if last patience epochs have failed to improve dev score
+        if_worst=True            -> check if last epoch was WORSE than the patience epochs before it
+        '''
         curve = self.validator.bleu_curve if self.config['val_by_bleu'] else self.validator.perp_curve
-        best = max if self.config['val_by_bleu'] else min
-        return patience and len(curve) > patience and curve[-1-patience] == best(curve[-1-patience:])
+        best_worse = max if self.config['val_by_bleu'] is not if_worst else min
+        return patience and len(curve) > patience and curve[-1 if if_worst else -1-patience] == best_worse(curve[-1-patience:])
 
     def maybe_validate(self, just_validate=False):
         if self.total_batches % self.validate_freq == 0 or just_validate:
@@ -315,7 +324,7 @@ class Trainer(object):
                or (self.config['warmup_style'] == ac.UPFLAT_WARMUP and step >= warmup_steps) \
                and self.config['lr_decay'] > 0:
 
-                if self.is_patience_exhausted(self.config['lr_decay_patience']):
+                if self.is_patience_exhausted(self.config['lr_decay_patience'], if_worst=True):
                     if self.config['val_by_bleu']:
                         metric = 'bleu'
                         scores = self.validator.bleu_curve
