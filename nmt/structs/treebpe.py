@@ -24,7 +24,7 @@ class Tree(tree_utils.Tree):
     r = self.r.map(f) if self.r else None
     return self.new(v, l, r)
 
-  def _flatten(self):
+  def flatten(self):
     stack = [self]
     acc = []
     while stack:

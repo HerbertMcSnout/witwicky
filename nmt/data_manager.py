@@ -86,15 +86,18 @@ class DataManager(object):
 
 
     def parse_line(self, line, is_src, max_len=None, to_ids=False):
+        max_lang_len = self.max_src_length if is_src else self.max_trg_length
+        max_len = (max_len or max_lang_len) - bool(to_ids) # append EOS if to_ids, so -1 to max len
         if is_src:
-            s = self.parse_struct(line, clip=(max_len or self.max_src_length))
-            if to_ids: s = s.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
-            return s
+            s = self.parse_struct(line, clip=max_len)
+            if to_ids:
+                s = s.map(lambda w: self.src_vocab.get(w, ac.UNK_ID))
+                s.maybe_add_eos(ac.EOS_ID)
         else:
-            max_len = max_len or self.max_trg_length
             s = line.strip().split(maxsplit=max_len)[:max_len]
-            if to_ids: s = [self.trg_vocab.get(w, ac.UNK_ID) for w in s]
-            return s
+            if to_ids:
+                s = [ac.BOS_ID] + [self.trg_vocab.get(w, ac.UNK_ID) for w in s]
+        return s
 
 
     ############## Vocab Functions ##############
@@ -148,7 +151,7 @@ class DataManager(object):
                         self.logger.info('    processing line {}'.format(count))
                     src_line_parsed = self.parse_line(src_line, True)
                     src_line_words = src_line_parsed.flatten()
-                    trg_line_words = self.parse_line(trg_line, False, max_len=(self.max_trg_length - 1))
+                    trg_line_words = self.parse_line(trg_line, False)
                     src_vocab.update(src_line_words)
                     trg_vocab.update(trg_line_words)
 
@@ -290,7 +293,7 @@ class DataManager(object):
 
             for src_line, trg_line in zip(src_f, trg_f):
                 src_prsd = self.parse_line(src_line, True, to_ids=True)
-                trg_ids = [ac.BOS_ID] + self.parse_line(trg_line, False, max_len=(self.max_trg_length - 1), to_ids=True)
+                trg_ids = self.parse_line(trg_line, False, to_ids=True)
 
                 if 0 < src_prsd.size() and 1 < len(trg_ids):
                     num_lines += 1
@@ -366,7 +369,7 @@ class DataManager(object):
                 max_src_in_batch = max(max_src_in_batch, src_seq_lengths[e_idx])
                 if with_trg: max_trg_in_batch = max(max_trg_in_batch, trg_seq_lengths[e_idx])
                 else: max_trg_in_batch = round(max_src_in_batch * est_src_trg_ratio)
-                count = (e_idx - s_idx + 1) * (max_src_in_batch + max_trg_in_batch)
+                count = (e_idx - s_idx + 1) * max_src_in_batch #(max_src_in_batch + max_trg_in_batch)
                 if count > self.batch_size: break
                 else: e_idx += 1
 
@@ -378,10 +381,6 @@ class DataManager(object):
                 trg_inputs[s_idx:e_idx],
                 trg_seq_lengths[s_idx:e_idx],
                 with_trg=with_trg)
-            
-            if mode == ac.TRAINING:
-                batch_values = ut.shuffle_parallel(*batch_values)
-
             src_input_batch, src_structs_batch, trg_input_batch, trg_target_batch = batch_values
 
             if mode == ac.TRAINING:

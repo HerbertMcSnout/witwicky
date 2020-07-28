@@ -8,9 +8,9 @@ class SequenceStruct(Struct):
     self.data = data
 
   def __str__(self):
-    return " ".join([str(x) for x in self.data])
+    return ' '.join([str(x) for x in self.data])
 
-  def _flatten(self):
+  def flatten(self):
     return self.data
 
   def map(self, f):
@@ -33,9 +33,10 @@ def parse(s, clip=None):
 def get_params(config):
   if config['learned_pos']:
     embed_dim = config['embed_dim']
-    max_len = config['max_train_length']
+    # TODO: if you ever switch to using a struct for trg, make sure to somehow use max_trg_length here
+    max_len = config['max_src_length']
     pos_seq = torch.empty(max_len, embed_dim, dtype=get_float_type())
     torch.nn.init.normal_(pos_seq, mean=0, std=embed_dim ** -0.5)
-    return {"pos_seq":pos_seq}
+    return {'pos_seq':pos_seq}
   else:
     return {}
