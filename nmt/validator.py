@@ -117,10 +117,10 @@ class Validator(object):
             bleu = float(out_parse.group()[6:])
 
         if self.write_val_trans:
-            best_file = "{}-{:.2f}".format(best_out, bleu)
+            best_file = '{}-{:.2f}'.format(best_out, bleu)
             shutil.copyfile(best_out, best_file)
 
-            beam_file = "{}-{:.2f}".format(beam_out, bleu)
+            beam_file = '{}-{:.2f}'.format(beam_out, bleu)
             shutil.copyfile(beam_out, beam_file)
 
         # add summaries
@@ -165,7 +165,7 @@ class Validator(object):
             worst = scores[remove_idx]
             scores_sorted = numpy.sort(scores)
             if not asc: scores_sorted = scores_sorted[::-1]
-            self.logger.info('Current best {} scores: {}'.format(metric, ', '.join(["{:.2f}".format(float(x)) for x in scores_sorted])))
+            self.logger.info('Current best {} scores: {}'.format(metric, ', '.join(['{:.2f}'.format(float(x)) for x in scores_sorted])))
             self.logger.info('Delete {:.2f}, use {:.2f} instead'.format(float(worst), float(score)))
             scores = numpy.delete(scores, remove_idx)
 
@@ -179,7 +179,7 @@ class Validator(object):
             scores = numpy.append(scores, score)
             cpkt_path = self.get_cpkt_path(score)
             torch.save(model.state_dict(), cpkt_path)
-            self.logger.info('Best {} scores so far: {}'.format(metric, ', '.join(["{:.2f}".format(float(x)) for x in numpy.sort(scores)])))
+            self.logger.info('Best {} scores so far: {}'.format(metric, ', '.join(['{:.2f}'.format(float(x)) for x in numpy.sort(scores)])))
 
         numpy.save(path, scores)
         if self.val_by_bleu: self.best_bleus = scores
@@ -192,8 +192,8 @@ class Validator(object):
 
     def remove_bpe(self, infile, outfile=None):
         outfile = outfile or infile + '.nobpe'
-        open(outfile, 'w').close()
-        Popen("sed -r 's/(@@ )|(@@ ?$)//g' < {} > {}".format(infile, outfile), shell=True, stdout=PIPE).communicate()
+        #open(outfile, 'w').close()
+        Popen(f'sed -r \'s/(@@ )|(@@ ?$)//g\' < {infile} > {outfile}', shell=True, stdout=PIPE).communicate()
         return outfile
 
     def translate(self, model, input_file, mode=ac.VALIDATING, to_ids=False):
