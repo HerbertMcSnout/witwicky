@@ -27,7 +27,8 @@ class Validator(object):
 
         scriptdir = os.path.dirname(os.path.abspath(__file__))
         self.bleu_script = '{}/../scripts/multi-bleu.perl'.format(scriptdir)
-        assert os.path.exists(self.bleu_script)
+        if not os.path.exists(self.bleu_script):
+            raise FileNotFoundError(self.bleu_script)
 
         if not os.path.exists(self.save_to):
             os.makedirs(self.save_to)
