@@ -8,12 +8,25 @@ import nmt.structs as struct
 '''You can add your own configuration variable to this file and select
 it using `--proto variable_name`.'''
 
-def adapt(base, **kwargs):
-    'Returns a copy of base (dict), after updating it with kwargs'
-    new = base.copy()
-    for k in kwargs: assert k in base, 'Unknown config option "{}"'.format(k)
-    new.update(kwargs)
-    return new
+class Config(dict):
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def copy(self):
+        return self.__class__(**self)
+    
+    def adapt(self, **kwargs):
+        for k in kwargs:
+            if k not in self:
+                raise KeyError(k)
+        return self.__class__(**{k:v for k,v in list(self.items()) + list(kwargs.items())})
+
+    def compute(self):
+        computed = self.__class__()
+        for k, v in self.items():
+            computed[k] = v.format(**computed) if isinstance(v, str) else v
+        return computed
 
 def get_config(name, opts, overrides=None):
     '''
@@ -24,14 +37,15 @@ def get_config(name, opts, overrides=None):
     '''
     overrides = eval(overrides or '{}', globals())
     overrides['model_name'] = name
-    config = {}
-    opts = adapt(opts, **overrides)
-    for k, v in opts.items():
-        config[k] = v.format(**config) if isinstance(v, str) else v
-    return config
+    return opts.adapt(**overrides).compute()
+#    config = {}
+#    opts = opts.adapt(**overrides)
+#    for k, v in opts.items():
+#        config[k] = v.format(**config) if isinstance(v, str) else v
+#    return config
 
 
-base_config = dict(
+base_config = Config(
     model_name = 'model_name',
     
     ### Locations of files
@@ -110,7 +124,7 @@ base_config = dict(
     start_lr = 1e-8,
     min_lr = 1e-5,
     lr_decay_patience = 3, # if no improvements for this many epochs, anneal learning rate
-    early_stop_patience = 10, # if no improvements for this many epochs, stop early
+    early_stop_patience = 20, # if no improvements for this many epochs, stop early
 
     # Gradient clipping
     grad_clip = 1.0, # if no clip, just set it to some big value like 1e9
@@ -122,6 +136,7 @@ base_config = dict(
     validate_freq = 1, # eval every [this many] epochs
     val_per_epoch = True, # if this true, we eval after every [validate_freq] epochs, otherwise by num of batches
     val_by_bleu = True,
+    write_val_trans = False,
 
     # Undo BPE segmentation when validating
     restore_segments = True,
@@ -145,11 +160,9 @@ base_config = dict(
 
     ### Decoding options
     beam_size = 4,
-    write_val_trans = False,
 )
 
-fun2com_base = adapt(
-    base_config,
+fun2com_base = base_config.adapt(
     src_lang = 'fun',
     trg_lang = 'com',
     max_epochs = 30,
@@ -159,231 +172,171 @@ fun2com_base = adapt(
     warmup_style = ac.ORG_WARMUP,
 )
 
-fun2com22 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com_tree_base = fun2com_base.adapt(data_dir = 'nmt/data/fun2com')
+
+fun2com22 = fun2com_tree_base.adapt(
     struct = struct.tree22,
 )
 
-fun2com21 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com21 = fun2com_tree_base.adapt(
     struct = struct.tree21,
 )
 
-fun2com20 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com20 = fun2com_tree_base.adapt(
     struct = struct.tree20,
 )
 
-fun2com19 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com19 = fun2com_tree_base.adapt(
     struct = struct.tree19,
 )
 
-fun2com18 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com18 = fun2com_tree_base.adapt(
     struct = struct.tree18,
 )
 
-fun2com17 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com17 = fun2com_tree_base.adapt(
     struct = struct.tree,
 )
 
-fun2com173 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com173 = fun2com_tree_base.adapt(
     struct = struct.tree173,
 )
 
-fun2com17_all = adapt(
-    fun2com_base,
+fun2com17_all = fun2com_base.adapt(
     struct = struct.tree,
 )
 
-fun2com172_all = adapt(
-    fun2com_base,
+fun2com172_all = fun2com_base.adapt(
     data_dir = 'nmt/data/fun2com17_all',
     struct = struct.tree172,
 )
 
-fun2com16 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com16 = fun2com_tree_base.adapt(
     struct = struct.tree2,
 )
 
-fun2com15 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com15 = fun2com_tree_base.adapt(
     struct = struct.tree15,
 )
 
-fun2com14 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com14 = fun2com_tree_base.adapt(
     struct = struct.tree14,
 )
 
-fun2com142 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com142 = fun2com_tree_base.adapt(
     struct = struct.tree142,
 )
 
-fun2com143 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com143 = fun2com_tree_base.adapt(
     struct = struct.tree143,
 )
 
-fun2com144 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com144 = fun2com_tree_base.adapt(
     struct = struct.tree144,
 )
 
-fun2com1442 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com1442 = fun2com_tree_base.adapt(
     struct = struct.tree1442,
 )
 
-fun2com1443 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com1443 = fun2com_tree_base.adapt(
     struct = struct.tree1443,
 )
 
-fun2com1444 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com1444 = fun2com_tree_base.adapt(
     struct = struct.tree1444,
 )
 
-fun2comM = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2comM = fun2com_tree_base.adapt(
     struct = struct.treem,
 )
 
-fun2com1444i = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com1444i = fun2com_tree_base.adapt(
     struct = struct.tree1444i,
 )
 
-fun2com1444o = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com1444o = fun2com_tree_base.adapt(
     struct = struct.tree1444o,
 )
 
-fun2com1445 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com1445 = fun2com_tree_base.adapt(
     struct = struct.tree1445,
 )
 
-fun2com145 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com145 = fun2com_tree_base.adapt(
     struct = struct.tree144,
     embed_dim = 256,
     ff_dim = 256 * 4,
 )
 
-fun2com146 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com146 = fun2com_tree_base.adapt(
     struct = struct.tree144,
     embed_dim = 128,
     ff_dim = 128 * 4,
 )
 
-fun2com147 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com147 = fun2com_tree_base.adapt(
     struct = struct.tree144,
     embed_dim = 64,
     ff_dim = 64 * 4,
 )
 
-fun2com148 = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com148 = fun2com_tree_base.adapt(
     struct = struct.tree144,
     embed_dim = 32,
     ff_dim = 32 * 4,
 )
 
-fun2com_3d = adapt(
-    fun2com_base,
-    data_dir = 'nmt/data/fun2com',
+fun2com_3d = fun2com_tree_base.adapt(
     struct = struct.tree14_3d,
     embed_dim = 64,
     ff_dim = 64 * 4,
 )
 
-fun2com_seq = adapt(
-    fun2com_base,
+fun2com_seq = fun2com_base.adapt(
     struct = struct.sequence,
 )
 
-fun2com_seq2 = adapt(
-    fun2com_base,
+fun2com_seq2 = fun2com_base.adapt(
     struct = struct.sequence2,
 )
 
-fun2com_rdr = adapt(
-    fun2com_base,
+fun2com_rdr = fun2com_base.adapt(
     struct = struct.sequence,
 )
 
-fun2com_src = adapt(
-    fun2com_base,
+fun2com_src = fun2com_base.adapt(
     struct = struct.sequence,
 )
 
-fun2com_sbt = adapt(
-    fun2com_base,
+fun2com_sbt = fun2com_base.adapt(
     max_src_length = 2000,
     struct = struct.sequence,
 )
 
 #fun2com172 = dict(list(fun2com17.items()) + list(dict(learn_pos_scale = True, separate_embed_scales = True).items()))
 
-fun2com_all = adapt(
-    fun2com_base,
+fun2com_all = fun2com_base.adapt(
     max_src_length = 2000,
     struct = struct.sequence,
 )
 
-fun2com_rdr_all = adapt(
-    fun2com_base,
+fun2com_rdr_all = fun2com_base.adapt(
     struct = struct.sequence,
 )
 
-fun2com_seq_all = adapt(
-    fun2com_base,
+fun2com_seq_all = fun2com_base.adapt(
     struct = struct.sequence,
 )
 
-fun2com_seq_all2 = adapt(
-    fun2com_base,
+fun2com_seq_all2 = fun2com_base.adapt(
     struct = struct.sequence2,
 )
 
 
 #######################################################################
 
-second_base = adapt(
-    base_config,
+second_base = base_config.adapt(
     max_src_length = 1000,
     max_epochs = 200,
     early_stop_patience = 20,
@@ -398,60 +351,66 @@ second_base = adapt(
 
 #######################################################################
 
-java2doc_base = adapt(
-    second_base,
+java2doc_base = second_base.adapt(
     src_lang = 'java',
     trg_lang = 'doc',
     save_to = 'nmt/java2doc_models/{model_name}',
     joint_vocab_size = 32000,
 )
 
-java2doc_tree_base = adapt(java2doc_base, data_dir = 'nmt/data/java2doc')
+java2doc_tree_base = java2doc_base.adapt(data_dir = 'nmt/data/java2doc')
 
-java2doc14 = adapt(java2doc_tree_base, struct = struct.tree1444)
-java2doc15 = adapt(java2doc_tree_base, struct = struct.tree14442)
-java2doc17 = adapt(java2doc_tree_base, struct = struct.tree)
-java2doc18 = adapt(java2doc_tree_base, struct = struct.tree172)
-java2doc_seq = adapt(java2doc_base, struct = struct.sequence)
-java2doc_rare = adapt(java2doc_base, struct = struct.sequence)
-java2doc_raw2 = adapt(java2doc_base, struct = struct.sequence)
-java2doc_raw = adapt(java2doc_base, struct = struct.sequence)
+java2doc14 = java2doc_tree_base.adapt(struct = struct.tree1444)
+java2doc15 = java2doc_tree_base.adapt(struct = struct.tree14442)
+java2doc17 = java2doc_tree_base.adapt(struct = struct.tree)
+java2doc18 = java2doc_tree_base.adapt(struct = struct.tree172)
+java2doc_seq = java2doc_base.adapt(struct = struct.sequence)
+java2doc_rare = java2doc_base.adapt(struct = struct.sequence)
+java2doc_raw2 = java2doc_base.adapt(struct = struct.sequence)
+java2doc_raw = java2doc_base.adapt(struct = struct.sequence)
 
-java2doc_bpe = adapt(java2doc_base, struct = struct.treebpe, joint_vocab_size = 0)
-java2doc_sbpe = adapt(java2doc_bpe, struct = struct.sequence)
-java2doc_bpe_16000 = adapt(java2doc_bpe)
-java2doc_bpe_32000 = adapt(java2doc_bpe)
-java2doc_sbpe_16000 = adapt(java2doc_sbpe)
-java2doc_sbpe_32000 = adapt(java2doc_sbpe)
+java2doc_bpe = java2doc_base.adapt(struct = struct.tree, joint_vocab_size = 0)
+java2doc_sbpe = java2doc_bpe.adapt(struct = struct.sequence)
+java2doc_bpe_16000 = java2doc_bpe.adapt()
+java2doc_bpe_32000 = java2doc_bpe.adapt()
+java2doc_sbpe_16000 = java2doc_sbpe.adapt()
+java2doc_sbpe_32000 = java2doc_sbpe.adapt()
 
 
 
 
 #######################################################################
 
-py2doc_base = adapt(
-    second_base,
+py2doc_base = second_base.adapt(
     src_lang = 'py',
     trg_lang = 'doc',
     save_to = 'nmt/py2doc_models/{model_name}',
     joint_vocab_size = 32000,
 )
 
-py2doc_tree_base = adapt(py2doc_base, data_dir = 'nmt/data/py2doc')
-py2doc2_tree_base = adapt(py2doc_base, data_dir = 'nmt/data/py2doc2')
+py2doc_tree_base = py2doc_base.adapt(data_dir = 'nmt/data/py2doc')
+py2doc2_tree_base = py2doc_base.adapt(data_dir = 'nmt/data/py2doc2')
 
-py2doc14 = adapt(py2doc2_tree_base, struct = struct.tree1444, grad_clamp = 100.0)
-py2doc15 = adapt(py2doc2_tree_base, struct = struct.tree14442, grad_clamp = 100.0)
-py2doc16 = adapt(py2doc2_tree_base, struct = struct.tree1445, grad_clamp = 100.0)
-py2doc17 = adapt(py2doc_tree_base, struct = struct.tree)
-py2doc18 = adapt(py2doc_tree_base, struct = struct.tree172)
-py2doc_seq = adapt(py2doc_base, struct = struct.sequence)
-py2doc_rare = adapt(py2doc_base, struct = struct.sequence)
-py2doc_rare2 = adapt(py2doc_base, struct = struct.sequence, data_dir = 'nmt/data/py2doc_rare2')
+py2doc14 = py2doc2_tree_base.adapt(struct = struct.tree1444, grad_clamp = 100.0)
+py2doc15 = py2doc2_tree_base.adapt(struct = struct.tree14442, grad_clamp = 100.0)
+py2doc16 = py2doc2_tree_base.adapt(struct = struct.tree1445, grad_clamp = 100.0)
+py2doc17 = py2doc_tree_base.adapt(struct = struct.tree)
+py2doc18 = py2doc2_tree_base.adapt(struct = struct.tree172, grad_clamp = 100.0)
+py2doc17f = py2doc2_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0)
+py2doc_seq = py2doc_base.adapt(struct = struct.sequence)
+py2doc_rare = py2doc_base.adapt(struct = struct.sequence)
+py2doc_rare2 = py2doc_base.adapt(struct = struct.sequence, data_dir = 'nmt/data/py2doc_rare2')
 
-py2doc_bpe = adapt(py2doc_base, struct = struct.treebpe, joint_vocab_size = 0)
-py2doc_sbpe = adapt(py2doc_bpe, struct = struct.sequence)
-py2doc_bpe_16000 = adapt(py2doc_bpe)
-py2doc_bpe_32000 = adapt(py2doc_bpe)
-py2doc_sbpe_16000 = adapt(py2doc_sbpe)
-py2doc_sbpe_32000 = adapt(py2doc_sbpe)
+py2doc_bpe = py2doc_base.adapt(struct = struct.tree, joint_vocab_size = 0, grad_clamp = 100.0)
+py2doc_sbpe = py2doc_bpe.adapt(struct = struct.sequence)
+py2doc_bpe_16000 = py2doc_bpe.adapt()
+py2doc_bpe_32000 = py2doc_bpe.adapt()
+py2doc_sbpe_16000 = py2doc_sbpe.adapt()
+py2doc_sbpe_32000 = py2doc_sbpe.adapt()
+
+
+
+##########################
+
+en2vi = base_config.adapt(src_lang = 'en', trg_lang = 'vi')
+en2vi2 = base_config.adapt(src_lang = 'en', trg_lang = 'vi', struct = struct.sequence2)
