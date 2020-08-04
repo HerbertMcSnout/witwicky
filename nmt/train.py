@@ -47,8 +47,8 @@ class Trainer(object):
         self.epoch_time = 0. # total exec time for whole epoch, sounds like that tabloid
 
         # Estimated number of batches per epoch
-        #self.est_batches = sum(self.data_manager.read_tok_count()) // self.config['batch_size']
-        self.est_batches = self.data_manager.read_tok_count()[0] // self.config['batch_size']
+        self.est_batches = sum(self.data_manager.read_tok_count()) // self.config['batch_size']
+        ###self.est_batches = self.data_manager.read_tok_count()[0] // self.config['batch_size']
         # Since the size of every batch is <= batch_size, and can't perfectly fill each batch,
         # this is an underestimate of the true number of batches. Anecdotally, this seems to
         # be about 80% of the true number of batches, so we multiply by 5/4
@@ -159,21 +159,31 @@ class Trainer(object):
         self.epoch_time += time.time() - start
 
         if self.total_batches % self.log_freq == 0:
-            log_train_loss = sum(x for x in self.log_train_loss).item()
-            log_nll_loss = sum(x for x in self.log_nll_loss).item()
-            log_train_weights = sum(x for x in self.log_train_weights).item()
-
-            self.epoch_loss += log_train_loss
-            self.epoch_nll_loss += log_nll_loss
-            self.epoch_weights += log_train_weights
             
-            acc_speed_word = self.epoch_weights / self.epoch_time
-            acc_speed_time = self.epoch_time / batch
-
+            log_train_loss = torch.tensor(0.0)
+            log_nll_loss = torch.tensor(0.0)
+            log_train_weights = torch.tensor(0.0)
+            log_all_weights = torch.tensor(0.0)
+            for smooth, nll, weight in zip(self.log_train_loss, self.log_nll_loss, self.log_train_weights):
+                if not self.config['grad_clamp'] or (torch.isfinite(smooth) and torch.isfinite(nll)):
+                    log_train_loss += smooth
+                    log_nll_loss += nll
+                    log_train_weights += weight
+                log_all_weights += weight
+            #log_train_loss = sum(x for x in self.log_train_loss).item()
+            #log_nll_loss = sum(x for x in self.log_nll_loss).item()
+            #log_train_weights = sum(x for x in self.log_train_weights).item()
             avg_smooth_perp = log_train_loss / log_train_weights
             avg_smooth_perp = numpy.exp(avg_smooth_perp) if avg_smooth_perp < 300 else float('inf')
             avg_true_perp = log_nll_loss / log_train_weights
             avg_true_perp = numpy.exp(avg_true_perp) if avg_true_perp < 300 else float('inf')
+
+            self.epoch_loss += log_train_loss
+            self.epoch_nll_loss += log_nll_loss
+            self.epoch_weights += log_all_weights
+            
+            acc_speed_word = self.epoch_weights / self.epoch_time
+            acc_speed_time = self.epoch_time / batch
 
             avg_grad_norm = sum(self.log_grad_norms) / len(self.log_grad_norms)
             #median_grad_norm = sorted(self.log_grad_norms)[len(self.log_grad_norms)//2]
