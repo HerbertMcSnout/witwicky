@@ -13,6 +13,17 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed(ac.SEED)
 
 
+def get_mode_name(mode):
+    if mode == ac.TRAINING:
+        return 'train'
+    elif mode == ac.VALIDATING:
+        return 'dev'
+    elif mode == ac.TESTING:
+        return 'test'
+    else:
+        raise ValueError('mode must be one of TRAINING, VALIDATING, or TESTING')
+
+
 def ensure_dirs_exists(filepath):
     "Creates the directories containing filepath, if it does not yet exist. Returns if the path already existed."
     parent = os.path.dirname(filepath)
@@ -100,38 +111,43 @@ def format_time(secs):
     elif mins_exact >= 1: return f"{mins}:{secs_rounded:02}"
     else: return f"{secs}.{ms_rounded:03}s"
 
+def process_mask(mask):
+    mask[ac.PAD_ID] = 0
+    mask[ac.BOS_ID] = 0
+    return torch.from_numpy(mask).type(torch.bool).to(get_device())
 
-def get_vocab_masks(config, src_vocab_size, trg_vocab_size):
-    "Computes and returns [src_vocab_mask, trg_vocab_mask]"
-    masks = []
-    device = get_device()
-    for vocab_size, lang in [(src_vocab_size, config['src_lang']), (trg_vocab_size, config['trg_lang'])]:
-        if config['tie_mode'] == ac.ALL_TIED:
-            mask = numpy.load(os.path.join(config['data_dir'], 'joint_vocab_mask.{}.npy'.format(lang)))
-        else:
-            mask = numpy.ones([vocab_size], numpy.float32)
+#def get_vocab_masks(config, src_vocab_size, trg_vocab_size):
+#    "Computes and returns [src_vocab_mask, trg_vocab_mask]"
+#    masks = []
+#    device = get_device()
+#    for vocab_size, lang in [(src_vocab_size, config['src_lang']), (trg_vocab_size, config['trg_lang'])]:
+#        if config['tie_mode'] == ac.ALL_TIED:
+#            mask = numpy.load(os.path.join(config['data_dir'], 'joint_vocab_mask.{}.npy'.format(lang)))
+#        else:
+#            mask = numpy.ones([vocab_size], numpy.float32)
+#
+#        mask[ac.PAD_ID] = 0.
+#        mask[ac.BOS_ID] = 0.
+#        masks.append(torch.from_numpy(mask).type(torch.bool).to(device)) # bool for torch versions >= 1.2.0; uint8 for versions < 1.2.0
+#
+#    return masks
+#
+#
+#def get_vocab_sizes(config):
+#    "Returns sizes of src_vocab, trg_vocab"
+#    def _get_vocab_size(vocab_file):
+#        vocab_size = 0
+#        with open(vocab_file) as f:
+#            for line in f:
+#                if line.strip():
+#                    vocab_size += 1
+#        return vocab_size
+#
+#    src_vocab_file = os.path.join(config['data_dir'], 'vocab-{}.{}'.format(config['src_vocab_size'], config['src_lang']))
+#    trg_vocab_file = os.path.join(config['data_dir'], 'vocab-{}.{}'.format(config['trg_vocab_size'], config['trg_lang']))
+#
+#    return _get_vocab_size(src_vocab_file), _get_vocab_size(trg_vocab_file)
 
-        mask[ac.PAD_ID] = 0.
-        mask[ac.BOS_ID] = 0.
-        masks.append(torch.from_numpy(mask).type(torch.bool).to(device)) # bool for torch versions >= 1.2.0; uint8 for versions < 1.2.0
-
-    return masks
-
-
-def get_vocab_sizes(config):
-    "Returns sizes of src_vocab, trg_vocab"
-    def _get_vocab_size(vocab_file):
-        vocab_size = 0
-        with open(vocab_file) as f:
-            for line in f:
-                if line.strip():
-                    vocab_size += 1
-        return vocab_size
-
-    src_vocab_file = os.path.join(config['data_dir'], 'vocab-{}.{}'.format(config['src_vocab_size'], config['src_lang']))
-    trg_vocab_file = os.path.join(config['data_dir'], 'vocab-{}.{}'.format(config['trg_vocab_size'], config['trg_lang']))
-
-    return _get_vocab_size(src_vocab_file), _get_vocab_size(trg_vocab_file)
 
 position_encoding_cached = None
 position_encoding_len_cached = None

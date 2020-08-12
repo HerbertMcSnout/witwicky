@@ -6,7 +6,6 @@ import torch
 import nmt.all_constants as ac
 import nmt.utils as ut
 from nmt.model import Model
-from nmt.data_manager import DataManager
 import nmt.configurations as configurations
 from nmt.validator import Validator
 
@@ -17,22 +16,12 @@ class Trainer(object):
         super(Trainer, self).__init__()
         self.config = configurations.get_config(args.proto, getattr(configurations, args.proto), args.config_overrides)
         self.num_preload = args.num_preload
+        self.lr = self.config['lr']
 
         self.logger = ut.get_logger(self.config['log_file'])
 
-        self.lr = self.config['lr']
-
         self.train_smooth_perps = []
         self.train_true_perps = []
-
-        self.data_manager = DataManager(self.config)
-        self.validator = Validator(self.config, self.data_manager)
-
-        self.validate_freq = self.config['validate_freq']
-        if self.validate_freq == 1:
-            self.logger.info('Evaluate every {}'.format('epoch' if self.config['val_per_epoch'] else 'batch'))
-        else:
-            self.logger.info('Evaluate every {:,} {}'.format(self.validate_freq, 'epochs' if self.config['val_per_epoch'] else 'batches'))
 
         # For logging
         self.log_freq = 100  # log train stat every this-many batches
@@ -45,19 +34,26 @@ class Trainer(object):
         self.epoch_nll_loss = 0. # total train loss for whole epoch
         self.epoch_weights = 0. # total train weights (# target words) for whole epoch
         self.epoch_time = 0. # total exec time for whole epoch, sounds like that tabloid
+        
+        # get model
+        device = ut.get_device()
+        self.model = Model(self.config).to(device)
+        self.validator = Validator(self.config, self.model)
+
+        self.validate_freq = self.config['validate_freq']
+        if self.validate_freq == 1:
+            self.logger.info('Evaluate every {}'.format('epoch' if self.config['val_per_epoch'] else 'batch'))
+        else:
+            self.logger.info('Evaluate every {:,} {}'.format(self.validate_freq, 'epochs' if self.config['val_per_epoch'] else 'batches'))
 
         # Estimated number of batches per epoch
-        self.est_batches = sum(self.data_manager.read_tok_count()) // self.config['batch_size']
-        ###self.est_batches = self.data_manager.read_tok_count()[0] // self.config['batch_size']
+        self.est_batches = sum(self.model.data_manager.training_tok_counts) // self.config['batch_size']
         # Since the size of every batch is <= batch_size, and can't perfectly fill each batch,
         # this is an underestimate of the true number of batches. Anecdotally, this seems to
         # be about 80% of the true number of batches, so we multiply by 5/4
         self.est_batches = 5 * self.est_batches // 4
         self.logger.info('Guessing around {:,} batches per epoch'.format(self.est_batches))
-        
-        # get model
-        device = ut.get_device()
-        self.model = Model(self.config).to(device)
+
 
         param_count = sum([numpy.prod(p.size()) for p in self.model.parameters()])
         self.logger.info('Model has {:,} parameters'.format(param_count))
@@ -251,7 +247,7 @@ class Trainer(object):
                                                          'epochs' if self.config['val_by_bleu'] else 'batches'))
         for epoch in range(1, self.config['max_epochs'] + 1):
             batch = 0
-            for batch_data in self.data_manager.get_batches(mode=ac.TRAINING, num_preload=self.num_preload):
+            for batch_data in self.model.data_manager.get_batches(mode=ac.TRAINING, num_preload=self.num_preload):
                 if batch == 0:
                     self.logger.info('Begin epoch {}'.format(epoch))
                     epoch_str = ' ' * max(0, ut.get_num_digits(self.config['max_epochs']) - 5) + 'epoch'
@@ -285,21 +281,18 @@ class Trainer(object):
         numpy.save(os.path.join(self.config['save_to'], 'train_smooth_perps.npy'), self.train_smooth_perps)
         numpy.save(os.path.join(self.config['save_to'], 'train_true_perps.npy'), self.train_true_perps)
 
-        self.logger.info('Save final checkpoint')
-        self.save_checkpoint()
+        self.model.save()
 
         # Evaluate test
-        test_file = self.data_manager.data_files[ac.TESTING][self.data_manager.src_lang]
+        test_file = self.model.data_manager.data_files[ac.TESTING][self.model.data_manager.src_lang]
+        dev_file = self.model.data_manager.data_files[ac.VALIDATING][self.model.data_manager.src_lang]
         if os.path.exists(test_file):
             self.logger.info('Evaluate test')
             self.restart_to_best_checkpoint()
-            self.validator.translate(self.model, test_file, mode=ac.TESTING, to_ids=True)
+            self.model.save()
+            self.validator.translate(test_file, to_ids=True)
             self.logger.info('Translate dev set')
-            self.validator.translate(self.model, self.data_manager.data_files[ac.VALIDATING][self.data_manager.src_lang], to_ids=True)
-
-    def save_checkpoint(self):
-        cpkt_path = os.path.join(self.config['save_to'], '{}.pth'.format(self.config['model_name']))
-        torch.save(self.model.state_dict(), cpkt_path)
+            self.validator.translate(dev_file, to_ids=True)
 
     def restart_to_best_checkpoint(self):
         if self.config['val_by_bleu']:
@@ -323,8 +316,8 @@ class Trainer(object):
 
     def maybe_validate(self, just_validate=False):
         if self.total_batches % self.validate_freq == 0 or just_validate:
-            self.save_checkpoint()
-            self.validator.validate_and_save(self.model)
+            self.model.save()
+            self.validator.validate_and_save()
 
             # if doing annealing
             step = self.total_batches + 1.0

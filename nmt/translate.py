@@ -37,23 +37,18 @@ class Translator(object):
         else:
             self.best_output_fp = self.beam_output_fp = None
 
-        device = ut.get_device()
-        self.data_manager = DataManager(self.config)
-        self.model = Model(self.config).to(device)
         self.logger.info('Restore model from {}'.format(self.model_file))
-        self.model.load_state_dict(torch.load(self.model_file, map_location=device))
+        self.model = Model(self.config, load_from=self.model_file).to(device)
         self.translate()
 
     def translate(self):
         best_stream = open(self.best_output_fp, 'a') if self.best_output_fp else sys.stdout
         beam_stream = open(self.beam_output_fp, 'a') if self.beam_output_fp else None
-        self.data_manager.translate(self.model,
-                                    self.input_file or sys.stdin,
-                                    best_stream,
-                                    beam_stream,
-                                    mode=ac.TESTING,
-                                    to_ids=True,
-                                    num_preload=self.num_preload)
+        self.model.translate(self.input_file or sys.stdin,
+                             best_stream,
+                             beam_stream,
+                             to_ids=True,
+                             num_preload=self.num_preload)
         if self.best_output_fp: best_stream.close()
         if self.beam_output_fp: beam_stream.close()
 

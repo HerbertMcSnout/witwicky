@@ -33,8 +33,8 @@ class Extractor(object):
 
         self.logger.info('Extracting these vars: {}'.format(', '.join(var_list)))
 
-        model = Model(config)
-        model.load_state_dict(torch.load(self.model_file))
+        model = Model(config, load_from=self.model_file)
+        #model.load_state_dict(torch.load(self.model_file))
         var_values = operator.attrgetter(*var_list)(model)
 
         if len(var_list) == 1:

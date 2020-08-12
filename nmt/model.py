@@ -1,3 +1,4 @@
+import os
 import torch
 from torch import nn
 from torch.nn import Parameter
@@ -5,16 +6,32 @@ import torch.nn.functional as F
 from layers import Encoder, Decoder
 import nmt.all_constants as ac
 import nmt.utils as ut
+from nmt.data_manager import DataManager
 
 
 class Model(nn.Module):
     """Model"""
-    def __init__(self, config):
+    def __init__(self, config, load_from=None):
         super(Model, self).__init__()
         self.config = config
+        self.struct = self.config['struct']
+        self.decoder_mask = None
 
-        self.init_embeddings()
-        self.init_model()
+        self.data_manager = DataManager(config, init_vocab=(not load_from))
+        if load_from:
+            self.load_state_dict(torch.load(load_from, map_location=ut.get_device()))
+        else:
+            self.init_embeddings()
+            self.init_model()
+
+        params = [(name, Parameter(x)) for name, x in self.struct.get_params(self.config).items()]
+        self.struct_params = [x for _, x in params]
+        for name, x in params:
+            self.register_parameter(name, x)
+
+        # dict where keys are data_ptrs to dicts of parameter options
+        # see https://pytorch.org/docs/stable/optim.html#per-parameter-options
+        self.parameter_attrs = {}
 
     def init_embeddings(self):
         embed_dim = self.config['embed_dim']
@@ -34,18 +51,16 @@ class Model(nn.Module):
             self.pos_embedding_trg = Parameter(torch.empty(max_trg_len, embed_dim, dtype=torch.float, device=device))
             nn.init.normal_(self.pos_embedding_trg, mean=0, std=embed_dim ** -0.5)
 
-        self.struct = self.config['struct']
-        params = [(name, Parameter(x)) for name, x in self.struct.get_params(self.config).items()]
-        self.struct_params = [x for _, x in params]
-        for name, x in params:
-            self.register_parameter(name, x)
-
         # get word embeddings
         # TODO: src_vocab_mask is assigned but never used (?)
-        src_vocab_size, trg_vocab_size = ut.get_vocab_sizes(self.config)
-        self.src_vocab_mask, self.trg_vocab_mask = ut.get_vocab_masks(self.config, src_vocab_size, trg_vocab_size)
-        if tie_mode == ac.ALL_TIED:
-            src_vocab_size = trg_vocab_size = self.trg_vocab_mask.shape[0]
+        #src_vocab_size, trg_vocab_size = ut.get_vocab_sizes(self.config)
+        #self.src_vocab_mask, self.trg_vocab_mask = ut.get_vocab_masks(self.config, src_vocab_size, trg_vocab_size)
+        #if tie_mode == ac.ALL_TIED:
+        #    src_vocab_size = trg_vocab_size = self.trg_vocab_mask.shape[0]
+        self.src_vocab_mask = self.data_manager.vocab_masks[self.data_manager.src_lang]
+        self.trg_vocab_mask = self.data_manager.vocab_masks[self.data_manager.trg_lang]
+        src_vocab_size = self.src_vocab_mask.shape[0]
+        trg_vocab_size = self.trg_vocab_mask.shape[0]
 
         self.out_bias = Parameter(torch.empty(trg_vocab_size, dtype=torch.float, device=device))
         nn.init.constant_(self.out_bias, 0.)
@@ -76,11 +91,6 @@ class Model(nn.Module):
             nn.init.uniform_(self.src_embedding.weight, a=-d, b=d)
             nn.init.uniform_(self.trg_embedding.weight, a=-d, b=d)
 
-        
-        # dict where keys are data_ptrs to dicts of parameter options
-        # see https://pytorch.org/docs/stable/optim.html#per-parameter-options
-        self.parameter_attrs = {}
-
     def init_model(self):
         num_enc_layers = self.config['num_enc_layers']
         num_enc_heads = self.config['num_enc_heads']
@@ -104,8 +114,6 @@ class Model(nn.Module):
                     init_func(p)
                 else:
                     nn.init.constant_(p, 0.)
-        
-        self.decoder_mask = None
 
     def get_decoder_mask(self, size):
         if self.decoder_mask is None or self.decoder_mask.size()[-1] < size:
@@ -226,3 +234,21 @@ class Model(nn.Module):
             raise ValueError("invalid length_model '{}'".format(self.config['length_model']))
 
         return self.decoder.beam_decode(encoder_outputs, encoder_mask, get_trg_inp, logprob, length_model, ac.BOS_ID, ac.EOS_ID, max_lengths, beam_size=self.config['beam_size'])
+
+    def load_state_dict(self, loaded_dict):
+        print(loaded_dict.keys())
+        state_dict = loaded_dict['model']
+        vocabs = loaded_dict['data_manager']
+        super().load_state_dict(state_dict)
+        self.data_manager.load_state_dict(vocabs, tok_counts)
+
+    def save(self, fp=None):
+        fp = fp or os.path.join(self.config['save_to'], '{}.pth'.format(self.config['model_name']))
+        cpkt = {
+            'model':self.state_dict(),
+            'data_manager':self.data_manager.state_dict(),
+        }
+        torch.save(cpkt, fp)
+
+    def translate(self, input_file_or_stream, best_output_stream, beam_output_stream, num_preload=ac.DEFAULT_NUM_PRELOAD, to_ids=False):
+        return self.data_manager.translate(self, input_file_or_stream, best_output_stream, beam_output_stream, num_preload=num_preload, to_ids=to_ids)
