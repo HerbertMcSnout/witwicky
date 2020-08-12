@@ -34,5 +34,9 @@ NO_LENGTH_MODEL = 0
 LINEAR_LENGTH_MODEL = 1
 GNMT_LENGTH_MODEL = 2
 
-#SEED = 147
 SEED = 151
+
+# Default number of lines to read in,
+# before computing batches from them
+DEFAULT_NUM_PRELOAD = 1000
+DEFAULT_VALIDATION_NUM_PRELOAD = 100000
