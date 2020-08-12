@@ -1,12 +1,13 @@
 import sys
 import argparse
+import nmt.all_constants as ac
 
 parser = argparse.ArgumentParser()
 #parser.add_argument('--mode', choices=['train', 'translate', 'extract', 'interactive'], default='train')
 parser.add_argument('--mode', choices=['train', 'translate', 'extract'], default='train')
 parser.add_argument('--proto', type=str, required=True,
                     help='Training config defined in configurations.py')
-parser.add_argument('--num-preload', type=int, default=1000,
+parser.add_argument('--num-preload', type=int, default=ac.DEFAULT_NUM_PRELOAD,
                     help="""
                          Number of samples prefetched to memory.
                          Small is slower but too big might make data
