@@ -236,7 +236,6 @@ class Model(nn.Module):
         return self.decoder.beam_decode(encoder_outputs, encoder_mask, get_trg_inp, logprob, length_model, ac.BOS_ID, ac.EOS_ID, max_lengths, beam_size=self.config['beam_size'])
 
     def load_state_dict(self, loaded_dict):
-        print(loaded_dict.keys())
         state_dict = loaded_dict['model']
         vocabs = loaded_dict['data_manager']
         super().load_state_dict(state_dict)
