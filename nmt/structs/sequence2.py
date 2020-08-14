@@ -19,12 +19,11 @@ class SequenceStruct(Struct):
   def set_clip_length(self, clip):
     self.data = self.data[:clip]
 
-  def get_pos_embedding(self, embed_dim, params):
+  def get_pos_embedding(self, embed_dim, pos_seq=None):
     size = self.size()
-    if len(params) == 0:
+    if pos_seq is None:
       return SequenceStruct(get_position_encoding(embed_dim, size) * ((embed_dim / 2) ** -0.5))
     else:
-      pos_seq, = params
       return SequenceStruct(pos_seq[:size, :])
 
   def maybe_add_eos(self, EOS_ID):

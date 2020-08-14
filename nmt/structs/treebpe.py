@@ -72,8 +72,7 @@ class Tree(tree_utils.Tree):
     r = self.r.fold_down_tree(f, f(self.v, root, False)) if self.r else None
     return self.new([root for _ in self.v], l, r)
 
-  def get_pos_embedding(self, embed_dim, params):
-    mu_l, mu_r, lam = params
+  def get_pos_embedding(self, embed_dim, mu_l, mu_r, lam):
     def f(_, p, is_left): return (mu_l if is_left else mu_r) @ p
     return self.fold_down_tree(f, lam)
 

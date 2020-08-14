@@ -7,8 +7,7 @@ def normalize(x):
 
 class Tree(tree_utils.Tree):
   
-  def get_pos_embedding(self, embed_dim, params):
-    mu_l_in, mu_r_in, mu_l_out, mu_r_out, lam_root, lam_leaf_l, lam_leaf_r = params
+  def get_pos_embedding(self, embed_dim, mu_l_in, mu_r_in, mu_l_out, mu_r_out, lam_root, lam_leaf_l, lam_leaf_r)
 
     def f_in(_, l, r):
       l2 = (mu_l_in @ l) if l is not None else lam_leaf_l

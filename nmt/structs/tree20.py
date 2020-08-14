@@ -4,8 +4,7 @@ import nmt.structs.tree_utils as tree_utils
 
 class Tree(tree_utils.Tree):
 
-  def get_pos_embedding(self, embed_dim, params):
-    mu_l, mu_r, lam, lam_l, lam_r = params
+  def get_pos_embedding(self, embed_dim, mu_l, mu_r, lam, lam_l, lam_r):
     step_scale = embed_dim ** 0.5
     def f_down(_, p, is_left):
       return (mu_l if is_left else mu_r) @ p

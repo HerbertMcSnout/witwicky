@@ -24,9 +24,8 @@ class Model(nn.Module):
             self.init_embeddings()
             self.init_model()
 
-        params = [(name, Parameter(x)) for name, x in self.struct.get_params(self.config).items()]
-        self.struct_params = [x for _, x in params]
-        for name, x in params:
+        self.struct_params = {name: Parameter(x) for name, x in self.struct.get_params(self.config).items()}
+        for name, x in params.items():
             self.register_parameter(name, x)
 
         # dict where keys are data_ptrs to dicts of parameter options
@@ -124,7 +123,7 @@ class Model(nn.Module):
 
     def get_pos_embedding_h(self, x):
         embed_dim = self.config['embed_dim']
-        pe = x.get_pos_embedding(embed_dim, self.struct_params).flatten()
+        pe = x.get_pos_embedding(embed_dim, **self.struct_params).flatten()
         return pe if torch.is_tensor(pe) else torch.stack(pe) # [bsz, embed_dim]
     
     def get_pos_embedding(self, max_len, structs=None):

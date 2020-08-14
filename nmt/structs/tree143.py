@@ -4,8 +4,7 @@ import nmt.structs.tree_utils as tree_utils
 
 class Tree(tree_utils.Tree):
   
-  def get_pos_embedding(self, embed_dim, params):
-    mu_l, mu_r, lam_leaf, lam_root, lam_leaf_l, lam_leaf_r = params
+  def get_pos_embedding(self, embed_dim, mu_l, mu_r, lam_leaf, lam_root, lam_leaf_l, lam_leaf_r):
     lam_lf_s = lam_leaf.sum()
     lam_lf = lam_leaf / lam_lf_s, lam_lf_s
     lam_rt_s = lam_root.sum()
