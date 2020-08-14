@@ -342,7 +342,7 @@ second_base = base_config.adapt(
     early_stop_patience = 0,
     validate_freq = 1,
     length_model = ac.LINEAR_LENGTH_MODEL,
-    length_alpha = 0.2,
+    length_alpha = 0.6,
     dropout = 0.2,
     lr = 1e-4,
     restore_segments = False,
@@ -356,19 +356,15 @@ java2doc_base = second_base.adapt(
     trg_lang = 'doc',
     save_to = 'nmt/java2doc_models/{model_name}',
     joint_vocab_size = 32000,
-    lr_decay = 0.8,
 )
 
 java2doc_tree_base = java2doc_base.adapt(data_dir = 'nmt/data/java2doc')
 
 java2doc14 = java2doc_tree_base.adapt(struct = struct.tree1444)
-java2doc15 = java2doc_tree_base.adapt(struct = struct.tree14442)
 java2doc17 = java2doc_tree_base.adapt(struct = struct.tree)
-java2doc17f = java2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, data_dir = 'nmt/data/java2doc2')
-java2doc18 = java2doc_tree_base.adapt(struct = struct.tree172)
+java2doc17f = java2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0)
 java2doc_seq = java2doc_base.adapt(struct = struct.sequence)
 java2doc_rare = java2doc_base.adapt(struct = struct.sequence)
-java2doc_raw2 = java2doc_base.adapt(struct = struct.sequence)
 java2doc_raw = java2doc_base.adapt(struct = struct.sequence)
 
 java2doc_bpe = java2doc_base.adapt(struct = struct.tree, joint_vocab_size = 0)
@@ -399,7 +395,6 @@ py2doc16 = py2doc2_tree_base.adapt(struct = struct.tree1445, grad_clamp = 100.0)
 py2doc17 = py2doc_tree_base.adapt(struct = struct.tree)
 py2doc18 = py2doc2_tree_base.adapt(struct = struct.tree172, grad_clamp = 100.0)
 py2doc17f = py2doc2_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0)
-py2doc17f2 = py2doc2_tree_base.adapt(struct = struct.tree17f, grad_clamp = 1.0)
 py2doc_seq = py2doc_base.adapt(struct = struct.sequence)
 py2doc_rare = py2doc_base.adapt(struct = struct.sequence)
 py2doc_rare2 = py2doc_base.adapt(struct = struct.sequence, data_dir = 'nmt/data/py2doc_rare2')
@@ -415,5 +410,5 @@ py2doc_sbpe_32000 = py2doc_sbpe.adapt()
 
 ##########################
 
-en2vi = base_config.adapt(src_lang = 'en', trg_lang = 'vi')
-en2vi2 = base_config.adapt(src_lang = 'en', trg_lang = 'vi', struct = struct.sequence2)
+en2vi = base_config.adapt(src_lang = 'en', trg_lang = 'vi', early_stop_patience = 0)
+en2vi2 = base_config.adapt(src_lang = 'en', trg_lang = 'vi', struct = struct.sequence2, early_stop_patience = 0)
