@@ -73,7 +73,7 @@ class DataManager(object):
             self.src_lang: os.path.join(self.save_to, 'vocab-{}.{}'.format(self.vocab_sizes[self.src_lang], self.src_lang)),
             self.trg_lang: os.path.join(self.save_to, 'vocab-{}.{}'.format(self.vocab_sizes[self.trg_lang], self.trg_lang))
         }
-        self.create_all_vocabs()
+        self.create_vocabs()
         self.parallel_data_to_token_ids(mode=ac.TRAINING)
         self.parallel_data_to_token_ids(mode=ac.VALIDATING)
         if os.path.exists(self.data_files[ac.TESTING][self.src_lang]) and os.path.exists(self.data_files[ac.TESTING][self.trg_lang]):
@@ -82,10 +82,10 @@ class DataManager(object):
         
 
 
-    def create_all_vocabs(self):
-        self.create_vocabs()
-        #self.src_vocab, self.src_ivocab, _ = self.init_vocab(self.src_lang)
-        #self.trg_vocab, self.trg_ivocab, _ = self.init_vocab(self.trg_lang)
+    #def create_all_vocabs(self):
+    #    self.create_vocabs()
+    #    #self.src_vocab, self.src_ivocab, _ = self.init_vocab(self.src_lang)
+    #    #self.trg_vocab, self.trg_ivocab, _ = self.init_vocab(self.trg_lang)
 
     def create_vocabs(self):
         #def _write_vocab_file(vocab_dict, max_vocab_size, vocab_file):
@@ -174,105 +174,105 @@ class DataManager(object):
             return mask
         
 
-    def create_joint_vocab2(self):
-        joint_vocab_file = os.path.join(self.save_to, 'joint_vocab.{}-{}'.format(self.src_lang, self.trg_lang))
-        subjoint_src_vocab_file = os.path.join(self.save_to, 'joint_vocab.{}'.format(self.src_lang))
-        subjoint_trg_vocab_file = os.path.join(self.save_to, 'joint_vocab.{}'.format(self.trg_lang))
-
-        # If all vocab files exist, return
-        if os.path.exists(joint_vocab_file) and os.path.exists(subjoint_src_vocab_file) and os.path.exists(subjoint_trg_vocab_file):
-            # Make sure to replace the vocab_files with the subjoint_vocab_files
-            self.vocab_files[self.src_lang] = subjoint_src_vocab_file
-            self.vocab_files[self.trg_lang] = subjoint_trg_vocab_file
-            self.logger.info('Joint vocab files already exist')
-            return
-
-        # Else, first combine the two word2freq from src + trg
-        _, _, src_word2freq = self.init_vocab(self.src_lang)
-        _, _, trg_word2freq = self.init_vocab(self.trg_lang)
-        for special_tok in ac._START_VOCAB:
-            del src_word2freq[special_tok]
-            del trg_word2freq[special_tok]
-
-        joint_word2freq = dict(Counter(src_word2freq) + Counter(trg_word2freq))
-
-        # Save the joint vocab files
-        joint_vocab_list = ac._START_VOCAB + sorted(joint_word2freq, key=joint_word2freq.get, reverse=True)
-        if self.vocab_sizes['joint'] != 0 and len(joint_vocab_list) > self.vocab_sizes['joint']:
-            self.logger.info('Cut off joint vocab size from {} to {}'.format(len(joint_vocab_list), self.vocab_sizes['joint']))
-            joint_vocab_list = joint_vocab_list[:self.vocab_sizes['joint']]
-
-        open(joint_vocab_file, 'w').close()
-        with open(joint_vocab_file, 'w') as fout:
-            for idx, w in enumerate(joint_vocab_list):
-                tok_freq = joint_word2freq.get(w, 0)
-                fout.write(u'{} {} {}\n'.format(w, idx, tok_freq))
-
-        joint_vocab, _, _ = self.init_vocab('', joint_vocab_file)
-        self.logger.info('Joint vocab has {} keys'.format(len(joint_vocab)))
-
-        if self.share_vocab:
-            for lang in [self.src_lang, self.trg_lang]:
-                self.vocab_files[lang] = joint_vocab_file
-                vocab_mask = numpy.ones([len(joint_vocab)], dtype=numpy.float32)
-                self.vocab_masks[lang] = vocab_mask
-                vocab_mask_file = os.path.join(self.save_to, 'joint_vocab_mask.{}.npy'.format(lang)) #
-                numpy.save(vocab_mask_file, vocab_mask) #
-
-            self.logger.info('Use the same vocab for both')
-            return
-
-        # Now generate the separate subjoint vocab, i.e. words that appear in both corresponding language's training
-        # data and joint vocab
-        # Also generate vocab mask
-        for lang, org_vocab, vocab_file in [(self.src_lang, src_word2freq, subjoint_src_vocab_file), (self.trg_lang, trg_word2freq, subjoint_trg_vocab_file)]:
-            new_vocab_list = ac._START_VOCAB[::] + [word for word in joint_vocab_list if word in org_vocab]
-
-            open(vocab_file, 'w').close()
-            with open(vocab_file, 'w') as fout:
-                for word in new_vocab_list:
-                    fout.write(u'{} {} {}\n'.format(word, joint_vocab[word], joint_word2freq.get(word, 0)))
-
-            self.vocab_files[lang] = vocab_file
-            vocab_mask = numpy.zeros([len(joint_vocab)], dtype=numpy.float32)
-            for word in new_vocab_list:
-                vocab_mask[joint_vocab[word]] = 1.0
-            self.vocab_masks[lang] = vocab_mask
-            vocab_mask_file = os.path.join(self.save_to, 'joint_vocab_mask.{}.npy'.format(lang)) #
-            numpy.save(vocab_mask_file, vocab_mask) #
-        return
-
-    def init_vocab(self, lang=None, fromfile=None):
-        if not lang and not fromfile:
-            raise ValueError('Must provide either src/trg lang or fromfile')
-        elif fromfile:
-            vocab_file = fromfile
-        else:
-            vocab_file = self.vocab_files[lang]
-
-        self.logger.info('Initialize {} vocab from {}'.format(lang, vocab_file))
-
-        if not os.path.exists(vocab_file):
-            raise FileNotFoundError(vocab_file)
-
-        counter = 0 # fall back to old vocab format 'word freq\n'
-        vocab, ivocab, word2freq = {}, {}, {}
-        with open(vocab_file, 'r') as f:
-            for line in f:
-                if line.strip():
-                    wif = line.strip().split()
-                    if not (2 <= len(wif) <= 3):
-                        raise ValueError('Something wrong with this vocab format')
-                    word = wif[0]
-                    idx = int(wif[1]) if len(wif) == 3 else counter
-                    freq = int(wif[-1])
-                    counter += 3 - len(wif)
-
-                    vocab[word] = idx
-                    ivocab[idx] = word
-                    word2freq[word] = freq
-
-        return vocab, ivocab, word2freq
+#    def create_joint_vocab2(self):
+#        joint_vocab_file = os.path.join(self.save_to, 'joint_vocab.{}-{}'.format(self.src_lang, self.trg_lang))
+#        subjoint_src_vocab_file = os.path.join(self.save_to, 'joint_vocab.{}'.format(self.src_lang))
+#        subjoint_trg_vocab_file = os.path.join(self.save_to, 'joint_vocab.{}'.format(self.trg_lang))
+#
+#        # If all vocab files exist, return
+#        if os.path.exists(joint_vocab_file) and os.path.exists(subjoint_src_vocab_file) and os.path.exists(subjoint_trg_vocab_file):
+#            # Make sure to replace the vocab_files with the subjoint_vocab_files
+#            self.vocab_files[self.src_lang] = subjoint_src_vocab_file
+#            self.vocab_files[self.trg_lang] = subjoint_trg_vocab_file
+#            self.logger.info('Joint vocab files already exist')
+#            return
+#
+#        # Else, first combine the two word2freq from src + trg
+#        _, _, src_word2freq = self.init_vocab(self.src_lang)
+#        _, _, trg_word2freq = self.init_vocab(self.trg_lang)
+#        for special_tok in ac._START_VOCAB:
+#            del src_word2freq[special_tok]
+#            del trg_word2freq[special_tok]
+#
+#        joint_word2freq = dict(Counter(src_word2freq) + Counter(trg_word2freq))
+#
+#        # Save the joint vocab files
+#        joint_vocab_list = ac._START_VOCAB + sorted(joint_word2freq, key=joint_word2freq.get, reverse=True)
+#        if self.vocab_sizes['joint'] != 0 and len(joint_vocab_list) > self.vocab_sizes['joint']:
+#            self.logger.info('Cut off joint vocab size from {} to {}'.format(len(joint_vocab_list), self.vocab_sizes['joint']))
+#            joint_vocab_list = joint_vocab_list[:self.vocab_sizes['joint']]
+#
+#        open(joint_vocab_file, 'w').close()
+#        with open(joint_vocab_file, 'w') as fout:
+#            for idx, w in enumerate(joint_vocab_list):
+#                tok_freq = joint_word2freq.get(w, 0)
+#                fout.write(u'{} {} {}\n'.format(w, idx, tok_freq))
+#
+#        joint_vocab, _, _ = self.init_vocab('', joint_vocab_file)
+#        self.logger.info('Joint vocab has {} keys'.format(len(joint_vocab)))
+#
+#        if self.share_vocab:
+#            for lang in [self.src_lang, self.trg_lang]:
+#                self.vocab_files[lang] = joint_vocab_file
+#                vocab_mask = numpy.ones([len(joint_vocab)], dtype=numpy.float32)
+#                self.vocab_masks[lang] = vocab_mask
+#                vocab_mask_file = os.path.join(self.save_to, 'joint_vocab_mask.{}.npy'.format(lang)) #
+#                numpy.save(vocab_mask_file, vocab_mask) #
+#
+#            self.logger.info('Use the same vocab for both')
+#            return
+#
+#        # Now generate the separate subjoint vocab, i.e. words that appear in both corresponding language's training
+#        # data and joint vocab
+#        # Also generate vocab mask
+#        for lang, org_vocab, vocab_file in [(self.src_lang, src_word2freq, subjoint_src_vocab_file), (self.trg_lang, trg_word2freq, subjoint_trg_vocab_file)]:
+#            new_vocab_list = ac._START_VOCAB[::] + [word for word in joint_vocab_list if word in org_vocab]
+#
+#            open(vocab_file, 'w').close()
+#            with open(vocab_file, 'w') as fout:
+#                for word in new_vocab_list:
+#                    fout.write(u'{} {} {}\n'.format(word, joint_vocab[word], joint_word2freq.get(word, 0)))
+#
+#            self.vocab_files[lang] = vocab_file
+#            vocab_mask = numpy.zeros([len(joint_vocab)], dtype=numpy.float32)
+#            for word in new_vocab_list:
+#                vocab_mask[joint_vocab[word]] = 1.0
+#            self.vocab_masks[lang] = vocab_mask
+#            vocab_mask_file = os.path.join(self.save_to, 'joint_vocab_mask.{}.npy'.format(lang)) #
+#            numpy.save(vocab_mask_file, vocab_mask) #
+#        return
+#
+#    def init_vocab(self, lang=None, fromfile=None):
+#        if not lang and not fromfile:
+#            raise ValueError('Must provide either src/trg lang or fromfile')
+#        elif fromfile:
+#            vocab_file = fromfile
+#        else:
+#            vocab_file = self.vocab_files[lang]
+#
+#        self.logger.info('Initialize {} vocab from {}'.format(lang, vocab_file))
+#
+#        if not os.path.exists(vocab_file):
+#            raise FileNotFoundError(vocab_file)
+#
+#        counter = 0 # fall back to old vocab format 'word freq\n'
+#        vocab, ivocab, word2freq = {}, {}, {}
+#        with open(vocab_file, 'r') as f:
+#            for line in f:
+#                if line.strip():
+#                    wif = line.strip().split()
+#                    if not (2 <= len(wif) <= 3):
+#                        raise ValueError('Something wrong with this vocab format')
+#                    word = wif[0]
+#                    idx = int(wif[1]) if len(wif) == 3 else counter
+#                    freq = int(wif[-1])
+#                    counter += 3 - len(wif)
+#
+#                    vocab[word] = idx
+#                    ivocab[idx] = word
+#                    word2freq[word] = freq
+#
+#        return vocab, ivocab, word2freq
 
     def parallel_data_to_token_ids(self, mode=ac.TRAINING):
         src_file = self.data_files[mode][self.src_lang]
@@ -361,7 +361,8 @@ class DataManager(object):
                 max_src_in_batch = max(max_src_in_batch, src_seq_lengths[e_idx])
                 if with_trg: max_trg_in_batch = max(max_trg_in_batch, trg_seq_lengths[e_idx])
                 else: max_trg_in_batch = round(max_src_in_batch * est_src_trg_ratio)
-                count = (e_idx - s_idx + 1) * (max_src_in_batch + max_trg_in_batch)
+                count = (e_idx - s_idx + 1) * max(max_src_in_batch, max_trg_in_batch)
+                #count = (e_idx - s_idx + 1) * (max_src_in_batch + max_trg_in_batch)
                 if count > self.batch_size: break
                 else: e_idx += 1
 
