@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from layers import Attention, PositionWiseFeedForward
+from nmt.sublayers import Attention, PositionWiseFeedForward
 
 
 class Encoder(nn.Module):

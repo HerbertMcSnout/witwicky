@@ -3,7 +3,7 @@ import torch
 from torch import nn
 from torch.nn import Parameter
 import torch.nn.functional as F
-from layers import Encoder, Decoder
+from nmt.encoders import Encoder, Decoder
 import nmt.all_constants as ac
 import nmt.utils as ut
 from nmt.data_manager import DataManager
