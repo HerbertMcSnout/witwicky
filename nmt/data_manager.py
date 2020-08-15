@@ -46,9 +46,6 @@ class DataManager(object):
             self.vocab_files = None
 
     ############## Vocab Functions ##############
-    # TODO: writing all these files is unnecessary now,
-    # as the vocab gets saved with the model
-    # (still need to save ids files, though...)
 
     def setup(self):
         def mk_path(mode, lang):
@@ -145,6 +142,7 @@ class DataManager(object):
                 joint_vocab = src_vocab + trg_vocab
                 size = self.vocab_sizes['joint'] or None
                 joint_vocab, joint_ivocab = self.clip_vocab(joint_vocab, size)
+                #self.write_vocab(joint_vocab, os.path.join(self.save_to, 'joint_vocab'))
                 self.src_vocab = joint_vocab
                 self.trg_vocab = joint_vocab
                 self.src_ivocab = joint_ivocab
@@ -156,13 +154,17 @@ class DataManager(object):
                 self.trg_vocab, self.trg_ivocab = self.clip_vocab(trg_vocab, self.vocab_sizes[self.trg_lang])
                 self.vocab_masks[self.src_lang] = ut.process_mask(numpy.ones([len(self.src_vocab)], dtype=numpy.float32))
                 self.vocab_masks[self.trg_lang] = ut.process_mask(numpy.ones([len(self.trg_vocab)], dtype=numpy.float32))
+
+    #def write_vocab(self, vocab, fp):
+    #    with open(fp, 'w') as fh:
+    #        for k, v in vocab.items():
+    #            fh.write(f'{k} {v}\n')
         
 
     def clip_vocab(self, vocab, size):
-        size = size and size - len(ac._START_VOCAB)
-        words = [(k, v) for k, v in vocab.most_common(size) if v]
-        clipped_vocab = Counter({k:0 for k in ac._START_VOCAB}) + Counter(dict(words))
-        return {k:v for v, (k, _) in enumerate(words)}, {v:k for v, (k, _) in enumerate(words)}
+        size = size - len(ac._START_VOCAB) if size else None
+        words = [k for k in ac._START_VOCAB] + [k for k, v in vocab.most_common(size) if v]
+        return {k:v for v, k in enumerate(words)}, words
 
     def get_mask(self, vocab, joint_vocab):
         if self.share_vocab:

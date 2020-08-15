@@ -78,6 +78,7 @@ base_config = Config(
 
     # Module
     struct = struct.sequence,
+    add_sinusoidal_pe_src = False,
 
     # Whether to learn target position encodings
     learned_pos = False,
@@ -129,6 +130,7 @@ base_config = Config(
     # Gradient clipping
     grad_clip = 1.0, # if no clip, just set it to some big value like 1e9
     grad_clamp = 0, # if not 0, clamp gradients to [-grad_clamp, +grad_clamp]. This happens *before* gradient clipping.
+    grad_clip_pe = 0, # if 0, clip position embedding params along with all others; otherwise, clip them separately to this value
 
     ### Validation/stopping options
 
@@ -174,32 +176,12 @@ fun2com_base = base_config.adapt(
 
 fun2com_tree_base = fun2com_base.adapt(data_dir = 'nmt/data/fun2com')
 
-fun2com22 = fun2com_tree_base.adapt(
-    struct = struct.tree22,
-)
-
-fun2com21 = fun2com_tree_base.adapt(
-    struct = struct.tree21,
-)
-
-fun2com20 = fun2com_tree_base.adapt(
-    struct = struct.tree20,
-)
-
-fun2com19 = fun2com_tree_base.adapt(
-    struct = struct.tree19,
-)
-
 fun2com18 = fun2com_tree_base.adapt(
     struct = struct.tree18,
 )
 
 fun2com17 = fun2com_tree_base.adapt(
     struct = struct.tree,
-)
-
-fun2com173 = fun2com_tree_base.adapt(
-    struct = struct.tree173,
 )
 
 fun2com17_all = fun2com_base.adapt(
@@ -245,18 +227,6 @@ fun2com1443 = fun2com_tree_base.adapt(
 
 fun2com1444 = fun2com_tree_base.adapt(
     struct = struct.tree1444,
-)
-
-fun2comM = fun2com_tree_base.adapt(
-    struct = struct.treem,
-)
-
-fun2com1444i = fun2com_tree_base.adapt(
-    struct = struct.tree1444i,
-)
-
-fun2com1444o = fun2com_tree_base.adapt(
-    struct = struct.tree1444o,
 )
 
 fun2com1445 = fun2com_tree_base.adapt(
@@ -363,6 +333,10 @@ java2doc_tree_base = java2doc_base.adapt(data_dir = 'nmt/data/java2doc')
 java2doc14 = java2doc_tree_base.adapt(struct = struct.tree1444)
 java2doc17 = java2doc_tree_base.adapt(struct = struct.tree)
 java2doc17f = java2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0)
+java2doc17s = java2doc17f.adapt(add_sinusoidal_pe_src = True)
+java2doc17g = java2doc17f.adapt(grad_clip_pe = 1.0)
+java2doc17e = java2doc17s.adapt(grad_clip_pe = 1.0)
+java2doc17e2 = java2doc17s.adapt(grad_clip_pe = 1.0)
 java2doc_seq = java2doc_base.adapt(struct = struct.sequence)
 java2doc_rare = java2doc_base.adapt(struct = struct.sequence)
 java2doc_raw = java2doc_base.adapt(struct = struct.sequence)
@@ -395,6 +369,7 @@ py2doc16 = py2doc2_tree_base.adapt(struct = struct.tree1445, grad_clamp = 100.0)
 py2doc17 = py2doc_tree_base.adapt(struct = struct.tree)
 py2doc18 = py2doc2_tree_base.adapt(struct = struct.tree172, grad_clamp = 100.0)
 py2doc17f = py2doc2_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0)
+py2doc17s = py2doc2_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0)
 py2doc_seq = py2doc_base.adapt(struct = struct.sequence)
 py2doc_rare = py2doc_base.adapt(struct = struct.sequence)
 py2doc_rare2 = py2doc_base.adapt(struct = struct.sequence, data_dir = 'nmt/data/py2doc_rare2')
@@ -412,3 +387,4 @@ py2doc_sbpe_32000 = py2doc_sbpe.adapt()
 
 en2vi = base_config.adapt(src_lang = 'en', trg_lang = 'vi', early_stop_patience = 0)
 en2vi2 = base_config.adapt(src_lang = 'en', trg_lang = 'vi', struct = struct.sequence2, early_stop_patience = 0)
+en2vi3 = base_config.adapt(src_lang = 'en', trg_lang = 'vi', struct = struct.trees, early_stop_patience = 0, data_dir = 'nmt/data/en2vi', grad_clamp = 100.0)

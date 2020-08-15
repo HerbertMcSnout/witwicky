@@ -113,6 +113,11 @@ class Trainer(object):
             p.grad.data.clamp_(min=-clip_value, max=clip_value)
             p.grad.data[torch.isnan(p.grad.data)] = 0.0
 
+    def get_params(self, pe=False):
+        for n, p in self.model.named_parameters():
+            if (n in self.model.struct_params) == pe:
+                yield p
+
     def run_log(self, batch, epoch, batch_data):
       #with torch.autograd.detect_anomaly(): # throws exception when any forward computation produces nan
         start = time.time()
@@ -136,6 +141,12 @@ class Trainer(object):
         opt_loss.backward()
         # clip gradient
         if self.config['grad_clamp']: self.clip_grad_values()
+        if self.config['grad_clip_pe']:
+            pms = list(self.get_params(True))
+            if pms: torch.nn.utils.clip_grad_norm_(pms, self.config['grad_clip_pe'])
+            pms = self.get_params()
+        else:
+            pms = self.model.parameters()
         grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config['grad_clip']).detach()
         
         # update

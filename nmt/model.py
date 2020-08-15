@@ -25,7 +25,7 @@ class Model(nn.Module):
             self.init_model()
 
         self.struct_params = {name: Parameter(x) for name, x in self.struct.get_params(self.config).items()}
-        for name, x in params.items():
+        for name, x in self.struct_params.items():
             self.register_parameter(name, x)
 
         # dict where keys are data_ptrs to dicts of parameter options
@@ -150,7 +150,8 @@ class Model(nn.Module):
         reg_penalty = 0.0
         if calc_reg:
             reg_penalty = self.struct.get_reg_penalty(pos_embeds, toks != ac.PAD_ID) * self.config['pos_norm_penalty']
-        return word_embeds + pos_embeds * pe_scale, reg_penalty
+        sinusoidal_pe = self.get_pos_embedding(max_len) if structs is not None and self.config['add_sinusoidal_pe_src'] else 0
+        return word_embeds + sinusoidal_pe + pos_embeds * pe_scale, reg_penalty
 
     def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
