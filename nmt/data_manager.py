@@ -15,13 +15,11 @@ class DataManager(object):
     def __init__(self, config, init_vocab=True):
         super(DataManager, self).__init__()
         self.logger = ut.get_logger(config['log_file'])
-
         self.src_lang = config['src_lang']
         self.trg_lang = config['trg_lang']
         self.data_dir = config['data_dir']
         self.save_to = config['save_to']
         self.batch_size = config['batch_size']
-        self.beam_size = config['beam_size']
         self.one_embedding = config['tie_mode'] == ac.ALL_TIED
         self.share_vocab = config['share_vocab']
         self.word_dropout = config['word_dropout']
@@ -80,9 +78,9 @@ class DataManager(object):
                 count += 1
                 if count % 10000 == 0:
                     self.logger.info('  processing line {}'.format(count))
-                src_line_parsed = self.parse_line(src_line, True)
+                src_line_parsed = self.parse_line(src_line, is_src=True)
                 src_line_words = src_line_parsed.flatten()
-                trg_line_words = self.parse_line(trg_line, False)
+                trg_line_words = self.parse_line(trg_line, is_src=False)
                 src_vocab.update(src_line_words)
                 trg_vocab.update(trg_line_words)
                 src_tok_count += len(src_line_words)
@@ -124,32 +122,28 @@ class DataManager(object):
     def parallel_data_to_token_ids(self, mode=ac.TRAINING):
         src_file = self.data_files[mode][self.src_lang]
         trg_file = self.data_files[mode][self.trg_lang]
-
         joint_file = self.ids_files[mode]
 
-        if os.path.exists(joint_file):
-            self.logger.info('{} data already converted to ids'.format(ut.get_mode_name(mode).capitalize()))
-        else:
-            self.logger.info('Converting {} data to ids'.format(ut.get_mode_name(mode)))
-            open(joint_file, 'w').close()
-            num_lines = 0
-            src_tok_count = 0
-            trg_tok_count = 0
-            with open(src_file, 'r') as src_f, \
-                    open(trg_file, 'r') as trg_f, \
-                    open(joint_file, 'w') as tokens_f:
-    
-                for src_line, trg_line in zip(src_f, trg_f):
-                    src_prsd = self.parse_line(src_line, True, to_ids=True)
-                    trg_ids = self.parse_line(trg_line, False, to_ids=True)
-    
-                    if 0 < src_prsd.size() and 1 < len(trg_ids):
-                        num_lines += 1
-                        if num_lines % 10000 == 0:
-                            self.logger.info('  converting line {}'.format(num_lines))
-                        src_ids = src_prsd.flatten()
-                        data = u'{}|||{}\n'.format(str(src_prsd), u' '.join(map(str, trg_ids)))
-                        tokens_f.write(data)
+        self.logger.info('Converting {} data to ids'.format(ut.get_mode_name(mode)))
+        open(joint_file, 'w').close()
+        num_lines = 0
+        src_tok_count = 0
+        trg_tok_count = 0
+        with open(src_file, 'r') as src_f, \
+             open(trg_file, 'r') as trg_f, \
+             open(joint_file, 'w') as tokens_f:
+
+            for src_line, trg_line in zip(src_f, trg_f):
+                src_prsd = self.parse_line(src_line, is_src=True, to_ids=True)
+                trg_ids = self.parse_line(trg_line, is_src=False, to_ids=True)
+
+                if 0 < src_prsd.size() and 1 < len(trg_ids):
+                    num_lines += 1
+                    if num_lines % 10000 == 0:
+                        self.logger.info('  converting line {}'.format(num_lines))
+                    src_ids = src_prsd.flatten()
+                    data = u'{}|||{}\n'.format(str(src_prsd), u' '.join(map(str, trg_ids)))
+                    tokens_f.write(data)
 
 
 
@@ -256,7 +250,7 @@ class DataManager(object):
             data = line.strip()
             if data:
                 _src_data, _trg_data = data.split('|||') if with_trg else [data, None]
-                _src_struct = self.parse_line(_src_data, True, to_ids=to_ids)
+                _src_struct = self.parse_line(_src_data, is_src=True, to_ids=to_ids)
                 if not to_ids: _src_struct = _src_struct.map(int)
                 _src_toks = _src_struct.flatten()
                 _src_len = len(_src_toks)
@@ -265,7 +259,7 @@ class DataManager(object):
                 src_structs.append(_src_struct)
 
                 if with_trg:
-                    _trg_toks = self.parse_line(_trg_data, False, to_ids=to_ids)
+                    _trg_toks = self.parse_line(_trg_data, is_src=False, to_ids=to_ids)
                     if not to_ids: _trg_toks = [int(x) for x in _trg_toks]
                 else:
                     _trg_toks = []
