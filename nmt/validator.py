@@ -1,4 +1,4 @@
-import os, os.path
+import os
 import re
 import time
 import shutil
@@ -23,11 +23,11 @@ class Validator(object):
         self.save_to = config['save_to']
         self.grad_clamp = bool(config['grad_clamp'])
 
-        self.get_cpkt_path = lambda score: os.path.join(self.save_to, '{}-{}.pth'.format(config['model_name'], score))
+        self.get_cpkt_path = lambda score: os.path.join(self.save_to, f'{config[\'model_name\']}-{score}.pth')
         self.n_best = config['n_best']
 
         scriptdir = os.path.dirname(os.path.abspath(__file__))
-        self.bleu_script = '{}/../scripts/multi-bleu.perl'.format(scriptdir)
+        self.bleu_script = f'{scriptdir}/../scripts/multi-bleu.perl'
         if not os.path.exists(self.bleu_script):
             raise FileNotFoundError(self.bleu_script)
 
@@ -44,7 +44,7 @@ class Validator(object):
         # or NIST bleu. I'll include it in the future
         self.dev_ref = self.model.data_manager.data_files[ac.VALIDATING][self.model.data_manager.trg_lang]
         if self.restore_segments:
-            self.dev_ref = self.remove_bpe(self.dev_ref, outfile=os.path.join(self.save_to, 'dev.{}.nobpe'.format(self.model.data_manager.trg_lang)))
+            self.dev_ref = self.remove_bpe(self.dev_ref, outfile=os.path.join(self.save_to, f'dev.{self.model.data_manager.trg_lang}.nobpe'))
 
         self.perp_curve_path = os.path.join(self.save_to, 'dev_perps.npy')
         self.best_perps_path = os.path.join(self.save_to, 'best_perp_scores.npy')
@@ -105,9 +105,9 @@ class Validator(object):
         numpy.save(self.perp_curve_path, self.perp_curve)
 
         self.model.train()
-        self.logger.info('smooth, true dev perp: {}, {}'.format(smooth_perp, perp))
-        if self.grad_clamp: self.logger.info('{} finite, {} infinite perp batches'.format(finite, infinite))
-        self.logger.info('Calculating dev perp took {}'.format(ut.format_time(time.time() - start_time)))
+        self.logger.info(f'smooth, true dev perp: {smooth_perp}, {perp}')
+        if self.grad_clamp: self.logger.info(f'{finite} finite, {infinite} infinite perp batches')
+        self.logger.info('Calculating dev perp took ' + ut.format_time(time.time() - start_time))
 
     def evaluate_bleu(self):
         self.model.eval()
@@ -129,10 +129,10 @@ class Validator(object):
             bleu = float(out_parse.group()[6:])
 
         if self.write_val_trans:
-            best_file = '{}-{:.2f}'.format(best_out, bleu)
+            best_file = f'{best_out}-{bleu:.2f}'
             shutil.copyfile(best_out, best_file)
 
-            beam_file = '{}-{:.2f}'.format(beam_out, bleu)
+            beam_file = f'{beam_out}-{bleu:.2f}'
             shutil.copyfile(beam_out, beam_file)
 
         # add summaries
@@ -177,13 +177,13 @@ class Validator(object):
             worst = scores[remove_idx]
             scores_sorted = numpy.sort(scores)
             if not asc: scores_sorted = scores_sorted[::-1]
-            self.logger.info('Current best {} scores: {}'.format(metric, ', '.join(['{:.2f}'.format(float(x)) for x in scores_sorted])))
-            self.logger.info('Delete {:.2f}, use {:.2f} instead'.format(float(worst), float(score)))
+            best_scores_str = ', '.join([f'{float(x):.2f}' for x in scores_sorted])
+            self.logger.info(f'Current best {metric} scores: {best_scores_str}')
+            self.logger.info(f'Delete {float(worst):.2f}, use {float(score):.2f} instead')
             scores = numpy.delete(scores, remove_idx)
 
-            # Delete the right checkpoint
+            # Delete the worst checkpoint
             cpkt_path = self.get_cpkt_path(worst)
-
             if os.path.exists(cpkt_path):
                 os.remove(cpkt_path)
 
@@ -191,8 +191,8 @@ class Validator(object):
             scores = numpy.append(scores, score)
             cpkt_path = self.get_cpkt_path(score)
             self.model.save(fp=cpkt_path)
-            #torch.save(self.model.state_dict(), cpkt_path)
-            self.logger.info('Best {} scores so far: {}'.format(metric, ', '.join(['{:.2f}'.format(float(x)) for x in numpy.sort(scores)])))
+            best_scores_str = ', '.join([f'{float(x):.2f}' for x in numpy.sort(scores)])
+            self.logger.info('Best {metric} scores so far: {best_scores_str}')
 
         numpy.save(path, scores)
         if self.val_by_bleu: self.best_bleus = scores
@@ -205,19 +205,25 @@ class Validator(object):
 
     def remove_bpe(self, infile, outfile=None):
         outfile = outfile or infile + '.nobpe'
-        #open(outfile, 'w').close()
         Popen(f'sed -r \'s/(@@ )|(@@ ?$)//g\' < {infile} > {outfile}', shell=True, stdout=PIPE).communicate()
         return outfile
 
     def translate(self, input_file, to_ids=False):
         bpe_suffix = '.bpe' if self.restore_segments else ''
-        base_fp = os.path.join(self.save_to, os.path.basename(input_file))
+
+        basename = os.path.basename(input_file)
+        basename = basename.rstrip(self.model.data_manager.src_lang) # remove '.src_lang' suffix
+        basename += '.' + self.model.data_manager.trg_lang # add '.trg_lang' suffix
+
+        base_fp = os.path.join(self.save_to, basename)
         best_fp_base = base_fp + '.best_trans'
         beam_fp_base = base_fp + '.beam_trans'
         best_fp = best_fp_base + bpe_suffix
         beam_fp = beam_fp_base + bpe_suffix
+
         open(best_fp, 'w').close()
         open(beam_fp, 'w').close()
+
         with open(best_fp, 'a') as best_stream, open(beam_fp, 'a') as beam_stream:
             self.model.translate(input_file,
                                  best_stream,
