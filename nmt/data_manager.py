@@ -51,8 +51,8 @@ class DataManager(object):
             for mode in [ac.TRAINING, ac.VALIDATING, ac.TESTING]
         }
         self.ids_files = {
-            mode: os.path.join(self.save_to, '{}.ids'.format(name))
-            for mode, name in [(ac.TRAINING, 'train'), (ac.VALIDATING, 'dev'), (ac.TESTING, 'test')]
+            mode: os.path.join(self.save_to, '{}.ids'.format(ut.get_mode_name(mode)))
+            for mode in [ac.TRAINING, ac.VALIDATING, ac.TESTING]
         }
         self.create_vocabs()
         self.parallel_data_to_token_ids(mode=ac.TRAINING)
