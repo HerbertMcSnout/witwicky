@@ -42,9 +42,9 @@ class Trainer(object):
 
         self.validate_freq = self.config['validate_freq']
         if self.validate_freq == 1:
-            self.logger.info('Evaluate every {}'.format('epoch' if self.config['val_per_epoch'] else 'batch'))
+            self.logger.info('Evaluate every ' + ('epoch' if self.config['val_per_epoch'] else 'batch'))
         else:
-            self.logger.info('Evaluate every {:,} {}'.format(self.validate_freq, 'epochs' if self.config['val_per_epoch'] else 'batches'))
+            self.logger.info(f'Evaluate every {self.validate_freq:,} ' + ('epochs' if self.config['val_per_epoch'] else 'batches'))
 
         # Estimated number of batches per epoch
         self.est_batches = max(self.model.data_manager.training_tok_counts) // self.config['batch_size']
@@ -52,11 +52,11 @@ class Trainer(object):
         # this is an underestimate of the true number of batches. Anecdotally, this seems to
         # be about 75% of the true number of batches, so we multiply by 4/3
         self.est_batches = 4 * self.est_batches // 3
-        self.logger.info('Guessing around {:,} batches per epoch'.format(self.est_batches))
+        self.logger.info(f'Guessing around {self.est_batches:,} batches per epoch')
 
 
         param_count = sum([numpy.prod(p.size()) for p in self.model.parameters()])
-        self.logger.info('Model has {:,} parameters'.format(param_count))
+        self.logger.info(f'Model has {param_count:,} parameters')
 
         # Set up parameter-specific options
         params = []
@@ -73,11 +73,11 @@ class Trainer(object):
 
     def report_epoch(self, epoch, batches):
 
-        self.logger.info('Finished epoch {}'.format(epoch))
-        self.logger.info('    Took {}'.format(ut.format_time(self.epoch_time)))
-        self.logger.info('    avg words/sec {:.2f}'.format(self.epoch_weights / self.epoch_time))
-        self.logger.info('    avg sec/batch {:.2f}'.format(self.epoch_time / batches))
-        self.logger.info('    {} batches'.format(batches))
+        self.logger.info(f'Finished epoch {epoch}')
+        self.logger.info(f'    Took {ut.format_time(self.epoch_time)}')
+        self.logger.info(f'    avg words/sec {self.epoch_weights / self.epoch_time:.2f}')
+        self.logger.info(f'    avg sec/batch {self.epoch_time / batches:.2f}')
+        self.logger.info(f'    {batches} batches')
 
         train_smooth_perp = self.epoch_loss / self.epoch_weights
         train_true_perp = self.epoch_nll_loss / self.epoch_weights
@@ -97,7 +97,7 @@ class Trainer(object):
         train_true_perp = numpy.exp(train_true_perp) if train_true_perp < 300 else float('inf')
         self.train_true_perps.append(train_true_perp)
 
-        self.logger.info('    smooth, true perp: {:.2f}, {:.2f}'.format(float(train_smooth_perp), float(train_true_perp)))
+        self.logger.info(f'    smooth, true perp: {float(train_smooth_perp):.2f}, {float(train_true_perp):.2f}'))
 
 
     def clip_grad_values(self):
@@ -253,14 +253,15 @@ class Trainer(object):
     def train(self):
         self.model.train()
         stop_early = False
-        log_early_stop = lambda: self.logger.info('No improvement for last {} {}; stopping early!'.\
-                                                  format(self.config['early_stop_patience'] * self.validate_freq,
-                                                         'epochs' if self.config['val_by_bleu'] else 'batches'))
+        
+        early_stop_msg_num = self.config['early_stop_patience'] * self.validate_freq
+        early_stop_msg_metric = 'epochs' if self.config['val_by_bleu'] else 'batches'
+        early_stop_msg = f'No improvement for last {early_stop_msg_num} {early_stop_msg_metric}; stopping early!'
         for epoch in range(1, self.config['max_epochs'] + 1):
             batch = 0
             for batch_data in self.model.data_manager.get_batches(mode=ac.TRAINING, num_preload=self.num_preload):
                 if batch == 0:
-                    self.logger.info('Begin epoch {}'.format(epoch))
+                    self.logger.info(f'Begin epoch {epoch}')
                     epoch_str = ' ' * max(0, ut.get_num_digits(self.config['max_epochs']) - 5) + 'epoch'
                     batch_str = ' ' * max(0, ut.get_num_digits(self.est_batches) - 5) + 'batch'
                     self.logger.info('  '.join([epoch_str, batch_str, 'est%', 'remaining', 'trg word/s', 's/batch', 'smooth perp', 'true perp', 'grad norm']))
@@ -269,7 +270,7 @@ class Trainer(object):
                 if not self.config['val_per_epoch']:
                     stop_early = self.maybe_validate()
                     if stop_early:
-                        log_early_stop()
+                        self.logger.info(early_stop_msg)
                         break
             if stop_early:
                 break
@@ -277,7 +278,7 @@ class Trainer(object):
             if self.config['val_per_epoch'] and epoch % self.validate_freq == 0:
                 stop_early = self.maybe_validate(just_validate=True)
                 if stop_early:
-                    log_early_stop()
+                    self.logger.info(early_stop_msg)
                     break
 
         if not self.config['val_by_bleu'] and not stop_early:
@@ -286,9 +287,9 @@ class Trainer(object):
 
         self.logger.info('Training finished')
         self.logger.info('Train smooth perps:')
-        self.logger.info(', '.join(['{:.2f}'.format(x) for x in self.train_smooth_perps]))
+        self.logger.info(', '.join([f'{x:.2f}' for x in self.train_smooth_perps]))
         self.logger.info('Train true perps:')
-        self.logger.info(', '.join(['{:.2f}'.format(x) for x in self.train_true_perps]))
+        self.logger.info(', '.join([f'{x:.2f}' for x in self.train_true_perps]))
         numpy.save(os.path.join(self.config['save_to'], 'train_smooth_perps.npy'), self.train_smooth_perps)
         numpy.save(os.path.join(self.config['save_to'], 'train_true_perps.npy'), self.train_true_perps)
 
@@ -313,7 +314,7 @@ class Trainer(object):
             best_perp = numpy.min(self.validator.best_perps)
             best_cpkt_path = self.validator.get_cpkt_path(best_perp)
 
-        self.logger.info('Restore best cpkt from {}'.format(best_cpkt_path))
+        self.logger.info(f'Restore best cpkt from {best_cpkt_path}')
         self.model.load_state_dict(torch.load(best_cpkt_path))
 
     def is_patience_exhausted(self, patience, if_worst=False):
@@ -347,10 +348,10 @@ class Trainer(object):
                         scores = self.validator.perp_curve
                     scores = ', '.join([str(x) for x in scores[-1 - self.config['lr_decay_patience']:]])
 
-                    self.logger.info('Past {} scores are {}'.format(metric, scores))
+                    self.logger.info(f'Past {metric} scores are {scores}')
                     # when don't use warmup, decay lr if dev not improve
                     if self.lr * self.config['lr_decay'] >= self.config['min_lr']:
-                        self.logger.info('Anneal the learning rate from {} to {}'.format(self.lr, self.lr * self.config['lr_decay']))
+                        self.logger.info(f'Anneal the learning rate from {self.lr} to {self.lr * self.config['lr_decay']}')
                         self.lr = self.lr * self.config['lr_decay']
                         for p in self.optimizer.param_groups:
                             p['lr'] = self.lr
