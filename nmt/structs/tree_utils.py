@@ -174,7 +174,7 @@ def init_tensor(*size):
   device = ut.get_device()
   if len(size) == 0:
     t = torch.tensor([1.], device=device)
-  if len(size) == 1:
+  elif len(size) == 1:
     t = torch.empty(*size, device=device)
     torch.nn.init.normal_(t, mean=0, std=size[0]**-0.5)
   elif len(size) == 2:

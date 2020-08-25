@@ -24,9 +24,12 @@ class Model(nn.Module):
             self.init_embeddings()
             self.init_model()
 
-        self.struct_params = {name: Parameter(x) for name, x in self.struct.get_params(self.config).items()}
-        for name, x in self.struct_params.items():
-            self.register_parameter(name, x)
+        self.struct_params = self.struct.get_params(self.config)
+        if self.config['learned_pos_src']:
+            self.struct_params = {name: Parameter(x) for name, x in self.struct_params.items()}
+            for name, x in self.struct_params.items():
+                if not name.endswith('__const__'):
+                    self.register_parameter(name, x)
 
         # dict where keys are data_ptrs to dicts of parameter options
         # see https://pytorch.org/docs/stable/optim.html#per-parameter-options
@@ -38,13 +41,11 @@ class Model(nn.Module):
         fix_norm = self.config['fix_norm']
         max_src_len = self.config['max_src_length']
         max_trg_len = self.config['max_trg_length']
-        learned_pos = self.config['learned_pos']
-        learn_pos_scale = self.config['learn_pos_scale']
 
         device = ut.get_device()
 
         # get trg positonal embedding
-        if not learned_pos:
+        if not self.config['learned_pos_trg']:
             self.pos_embedding_trg = ut.get_position_encoding(embed_dim, max_trg_len)
         else:
             self.pos_embedding_trg = Parameter(torch.empty(max_trg_len, embed_dim, dtype=torch.float, device=device))
@@ -75,7 +76,7 @@ class Model(nn.Module):
 
         self.src_pos_embed_scale = torch.tensor([(embed_dim / 2) ** 0.5], device=device)
         self.trg_pos_embed_scale = torch.tensor([1.], device=device) # trg pos embedding already returns vector of norm sqrt(embed_dim/2)
-        if learn_pos_scale:
+        if self.config['learn_pos_scale']:
             self.src_pos_embed_scale = Parameter(self.src_pos_embed_scale)
             self.trg_pos_embed_scale = Parameter(self.trg_pos_embed_scale)
 
@@ -239,7 +240,7 @@ class Model(nn.Module):
         state_dict = loaded_dict['model']
         vocabs = loaded_dict['data_manager']
         super().load_state_dict(state_dict)
-        self.data_manager.load_state_dict(vocabs, tok_counts)
+        self.data_manager.load_state_dict(vocabs)
 
     def save(self, fp=None):
         fp = fp or os.path.join(self.config['save_to'], '{}.pth'.format(self.config['model_name']))

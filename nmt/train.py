@@ -47,11 +47,11 @@ class Trainer(object):
             self.logger.info('Evaluate every {:,} {}'.format(self.validate_freq, 'epochs' if self.config['val_per_epoch'] else 'batches'))
 
         # Estimated number of batches per epoch
-        self.est_batches = sum(self.model.data_manager.training_tok_counts) // self.config['batch_size']
+        self.est_batches = max(self.model.data_manager.training_tok_counts) // self.config['batch_size']
         # Since the size of every batch is <= batch_size, and can't perfectly fill each batch,
         # this is an underestimate of the true number of batches. Anecdotally, this seems to
-        # be about 80% of the true number of batches, so we multiply by 5/4
-        self.est_batches = 5 * self.est_batches // 4
+        # be about 75% of the true number of batches, so we multiply by 4/3
+        self.est_batches = 4 * self.est_batches // 3
         self.logger.info('Guessing around {:,} batches per epoch'.format(self.est_batches))
 
 

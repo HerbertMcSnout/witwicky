@@ -30,12 +30,13 @@ def parse(s, clip=None):
   return SequenceStruct(s.strip().split(maxsplit=(clip or -1))[slice(clip)])
 
 def get_params(config):
-  if config['learned_pos']:
-    embed_dim = config['embed_dim']
-    # TODO: if you ever switch to using a struct for trg, make sure to somehow use max_trg_length here
-    max_len = config['max_src_length']
-    pos_seq = torch.empty(max_len, embed_dim, dtype=get_float_type())
-    torch.nn.init.normal_(pos_seq, mean=0, std=embed_dim ** -0.5)
-    return {'pos_seq':pos_seq}
-  else:
-    return {}
+  #if config['learned_pos']:
+  #  embed_dim = config['embed_dim']
+  #  # TODO: if you ever switch to using a struct for trg, make sure to somehow use max_trg_length here
+  #  max_len = config['max_src_length']
+  #  pos_seq = torch.empty(max_len, embed_dim, dtype=get_float_type())
+  #  torch.nn.init.normal_(pos_seq, mean=0, std=embed_dim ** -0.5)
+  #  return {'pos_seq':pos_seq}
+  #else:
+  #  return {}
+  return {}

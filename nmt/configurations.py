@@ -80,8 +80,9 @@ base_config = Config(
     struct = struct.sequence,
     add_sinusoidal_pe_src = False,
 
-    # Whether to learn target position encodings
-    learned_pos = False,
+    # Whether to learn position encodings
+    learned_pos_src = False,
+    learned_pos_trg = False,
 
     learn_pos_scale = False,
     separate_embed_scales = False,
@@ -167,6 +168,7 @@ base_config = Config(
 fun2com_base = base_config.adapt(
     src_lang = 'fun',
     trg_lang = 'com',
+    learned_pos_src = True,
     max_epochs = 30,
     batch_size = 3072,
     max_trg_length = 25,
@@ -307,6 +309,7 @@ fun2com_seq_all2 = fun2com_base.adapt(
 #######################################################################
 
 second_base = base_config.adapt(
+    learned_pos_src = True,
     max_src_length = 1000,
     max_epochs = 200,
     early_stop_patience = 0,
@@ -340,6 +343,15 @@ java2doc17e2 = java2doc17s.adapt(grad_clip_pe = 1.0)
 java2doc_seq = java2doc_base.adapt(struct = struct.sequence)
 java2doc_rare = java2doc_base.adapt(struct = struct.sequence)
 java2doc_raw = java2doc_base.adapt(struct = struct.sequence)
+
+java2doc_c = java2doc_tree_base.adapt(struct = struct.tree17c, grad_clamp = 100.0, batch_size = 3072)
+java2doc_ens = java2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True)
+java2doc_fix = java2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = True)
+java2doc_fix2 = java2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = False)
+java2doc_fsc = java2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True)
+java2doc_lsc = java2doc_tree_base.adapt(struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True, grad_clamp = 100.0)
+java2doc17v = java2doc_tree_base.adapt(struct = struct.tree17v, grad_clamp = 100.0)
+
 
 java2doc_bpe = java2doc_base.adapt(struct = struct.tree, joint_vocab_size = 0)
 java2doc_sbpe = java2doc_bpe.adapt(struct = struct.sequence)
@@ -385,6 +397,15 @@ py2doc_sbpe_32000 = py2doc_sbpe.adapt()
 
 ##########################
 
-en2vi = base_config.adapt(src_lang = 'en', trg_lang = 'vi', early_stop_patience = 0)
-en2vi2 = base_config.adapt(src_lang = 'en', trg_lang = 'vi', struct = struct.sequence2, early_stop_patience = 0)
-en2vi3 = base_config.adapt(src_lang = 'en', trg_lang = 'vi', struct = struct.trees, early_stop_patience = 0, data_dir = 'nmt/data/en2vi', grad_clamp = 100.0)
+en2vi_base = base_config.adapt(src_lang = 'en', trg_lang = 'vi', early_stop_patience = 0, learned_pos_src = True)
+en2vi = en2vi_base.adapt()
+en2vi2 = en2vi_base.adapt(data_dir = 'nmt/data/en2vi', struct = struct.sequence2)
+en2vi3 = en2vi_base.adapt(data_dir = 'nmt/data/en2vi', struct = struct.trees, grad_clamp = 100.0)
+en2vi_forward = en2vi3.adapt(struct = struct.treesf)
+en2vi_backward = en2vi3.adapt(struct = struct.treesb)
+en2vi_tree = en2vi_base.adapt(struct = struct.tree17f, grad_clamp = 100.0)
+en2vi17v = en2vi_base.adapt(struct = struct.tree17v, grad_clamp = 100.0)
+en2vi_c = en2vi_base.adapt(struct = struct.tree17c, grad_clamp = 100.0, data_dir = 'nmt/data/en2vi_tree', batch_size = 3072)
+en2vi_ens = en2vi_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True, data_dir = 'nmt/data/en2vi_tree')
+en2vi_seq = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree')
+en2vi_fix = en2vi_base.adapt(learned_pos_src = False, data_dir = 'nmt/data/en2vi_tree', struct = struct.tree17f, add_sinusoidal_pe_src = True)

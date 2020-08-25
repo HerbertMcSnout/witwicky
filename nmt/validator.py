@@ -44,7 +44,7 @@ class Validator(object):
         # or NIST bleu. I'll include it in the future
         self.dev_ref = self.model.data_manager.data_files[ac.VALIDATING][self.model.data_manager.trg_lang]
         if self.restore_segments:
-            self.dev_ref = self.remove_bpe(self.dev_ref)
+            self.dev_ref = self.remove_bpe(self.dev_ref, outfile=os.path.join(self.save_to, 'dev.{}.nobpe'.format(self.model.data_manager.trg_lang)))
 
         self.perp_curve_path = os.path.join(self.save_to, 'dev_perps.npy')
         self.best_perps_path = os.path.join(self.save_to, 'best_perp_scores.npy')
@@ -93,11 +93,11 @@ class Validator(object):
             else:
                 infinite += 1
 
-        perp = total_loss / total_weight
+        perp = total_loss / total_weight if total_weight else float('nan')
         perp = numpy.exp(perp) if perp < 300 else float('inf')
         perp = round(perp, ndigits=3)
 
-        smooth_perp = total_smooth_loss / total_weight
+        smooth_perp = total_smooth_loss / total_weight if total_weight else float('nan')
         smooth_perp = numpy.exp(smooth_perp) if smooth_perp < 300 else float('inf')
         smooth_perp = round(smooth_perp, ndigits=3)
 
