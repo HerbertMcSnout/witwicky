@@ -404,7 +404,7 @@ en2vi3 = en2vi_base.adapt(data_dir = 'nmt/data/en2vi', struct = struct.trees, gr
 en2vi_forward = en2vi3.adapt(struct = struct.treesf)
 en2vi_backward = en2vi3.adapt(struct = struct.treesb)
 en2vi_tree = en2vi_base.adapt(struct = struct.tree17f, grad_clamp = 100.0)
-en2vi17v = en2vi_base.adapt(struct = struct.tree17v, grad_clamp = 100.0)
+en2vi17v = en2vi_base.adapt(struct = struct.tree17v, grad_clamp = 100.0, data_dir='nmt/data/en2vi_tree')
 en2vi_c = en2vi_base.adapt(struct = struct.tree17c, grad_clamp = 100.0, data_dir = 'nmt/data/en2vi_tree', batch_size = 3072)
 en2vi_ens = en2vi_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True, data_dir = 'nmt/data/en2vi_tree')
 en2vi_seq = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree')
