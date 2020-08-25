@@ -46,12 +46,12 @@ class DataManager(object):
 
     def setup(self):
         self.data_files = {
-            mode: {lang: os.path.join(self.data_dir, '{}.{}'.format(ut.get_mode_name(mode), lang))
+            mode: {lang: os.path.join(self.data_dir, f'{ut.get_mode_name(mode)}.{lang}')
                    for lang in [self.src_lang, self.trg_lang]}
             for mode in [ac.TRAINING, ac.VALIDATING, ac.TESTING]
         }
         self.ids_files = {
-            mode: os.path.join(self.save_to, '{}.ids'.format(ut.get_mode_name(mode)))
+            mode: os.path.join(self.save_to, f'{ut.get_mode_name(mode)}.ids')
             for mode in [ac.TRAINING, ac.VALIDATING, ac.TESTING]
         }
         self.create_vocabs()
@@ -77,7 +77,7 @@ class DataManager(object):
             for src_line, trg_line in zip(src_f, trg_f):
                 count += 1
                 if count % 10000 == 0:
-                    self.logger.info('  processing line {}'.format(count))
+                    self.logger.info(f'  processing line {count}')
                 src_line_parsed = self.parse_line(src_line, is_src=True)
                 src_line_words = src_line_parsed.flatten()
                 trg_line_words = self.parse_line(trg_line, is_src=False)
@@ -124,7 +124,7 @@ class DataManager(object):
         trg_file = self.data_files[mode][self.trg_lang]
         joint_file = self.ids_files[mode]
 
-        self.logger.info('Converting {} data to ids'.format(ut.get_mode_name(mode)))
+        self.logger.info(f'Converting {ut.get_mode_name(mode)} data to ids')
         open(joint_file, 'w').close()
         num_lines = 0
         src_tok_count = 0
@@ -140,9 +140,9 @@ class DataManager(object):
                 if 0 < src_prsd.size() and 1 < len(trg_ids):
                     num_lines += 1
                     if num_lines % 10000 == 0:
-                        self.logger.info('  converting line {}'.format(num_lines))
+                        self.logger.info(f'  converting line {num_lines}')
                     src_ids = src_prsd.flatten()
-                    data = u'{}|||{}\n'.format(str(src_prsd), u' '.join(map(str, trg_ids)))
+                    data = str(src_prsd) + '|||' + ' '.join(map(str, trg_ids)) + '\n'
                     tokens_f.write(data)
 
 

@@ -232,7 +232,7 @@ class Model(nn.Module):
         elif self.config['length_model'] == ac.NO_LENGTH_MODEL:
             length_model = lambda t, p: p
         else:
-            raise ValueError("invalid length_model '{}'".format(self.config['length_model']))
+            raise ValueError(f'invalid length_model {self.config[\'length_model\']}')
 
         return self.decoder.beam_decode(encoder_outputs, encoder_mask, get_trg_inp, logprob, length_model, ac.BOS_ID, ac.EOS_ID, max_lengths, beam_size=self.config['beam_size'])
 
@@ -243,7 +243,7 @@ class Model(nn.Module):
         self.data_manager.load_state_dict(vocabs)
 
     def save(self, fp=None):
-        fp = fp or os.path.join(self.config['save_to'], '{}.pth'.format(self.config['model_name']))
+        fp = fp or os.path.join(self.config['save_to'], '{self.config[\'model_name\']}.pth')
         cpkt = {
             'model':self.state_dict(),
             'data_manager':self.data_manager.state_dict(),

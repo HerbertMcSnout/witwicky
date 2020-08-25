@@ -38,11 +38,7 @@ def get_config(name, opts, overrides=None):
     overrides = eval(overrides or '{}', globals())
     overrides['model_name'] = name
     return opts.adapt(**overrides).compute()
-#    config = {}
-#    opts = opts.adapt(**overrides)
-#    for k, v in opts.items():
-#        config[k] = v.format(**config) if isinstance(v, str) else v
-#    return config
+
 
 
 base_config = Config(

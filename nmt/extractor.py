@@ -31,7 +31,7 @@ class Extractor(object):
         if not os.path.exists(save_to):
             os.makedirs(save_to)
 
-        self.logger.info('Extracting these vars: {}'.format(', '.join(var_list)))
+        self.logger.info('Extracting these vars: ' + ', '.join(var_list))
 
         model = Model(config, load_from=self.model_file)
         #model.load_state_dict(torch.load(self.model_file))
