@@ -56,17 +56,6 @@ def get_logger(logfile='./DEBUG.log'):
 
     return logger
 
-def format_table_row(cells, column_widths=None, alignments=None):
-    column_widths = column_widths or [len(cell) for cell in cells]
-    alignments = alignments or ['left'] * len(cells)
-    def pad(cell, width, align):
-        pads = ' ' * (width - len(cell))
-        if align == 'left': return pads + cell
-        elif align == 'right': return cell + pads
-        elif align == 'center': return pads[0::2] + cell + pads[1::2]
-        else: return cell
-    return '  '.join(pad(c, w, a) for c, w, a in zip(cell, columns_widths, alignments))
-
 def reorder(xs, indices):
     'Reorders the elements in xs according to indices'
     if isinstance(xs, numpy.ndarray) or torch.is_tensor(xs):
@@ -115,38 +104,6 @@ def process_mask(mask):
     mask[ac.PAD_ID] = 0
     mask[ac.BOS_ID] = 0
     return torch.from_numpy(mask).type(torch.bool).to(get_device())
-
-#def get_vocab_masks(config, src_vocab_size, trg_vocab_size):
-#    "Computes and returns [src_vocab_mask, trg_vocab_mask]"
-#    masks = []
-#    device = get_device()
-#    for vocab_size, lang in [(src_vocab_size, config['src_lang']), (trg_vocab_size, config['trg_lang'])]:
-#        if config['tie_mode'] == ac.ALL_TIED:
-#            mask = numpy.load(os.path.join(config['data_dir'], 'joint_vocab_mask.{}.npy'.format(lang)))
-#        else:
-#            mask = numpy.ones([vocab_size], numpy.float32)
-#
-#        mask[ac.PAD_ID] = 0.
-#        mask[ac.BOS_ID] = 0.
-#        masks.append(torch.from_numpy(mask).type(torch.bool).to(device)) # bool for torch versions >= 1.2.0; uint8 for versions < 1.2.0
-#
-#    return masks
-#
-#
-#def get_vocab_sizes(config):
-#    "Returns sizes of src_vocab, trg_vocab"
-#    def _get_vocab_size(vocab_file):
-#        vocab_size = 0
-#        with open(vocab_file) as f:
-#            for line in f:
-#                if line.strip():
-#                    vocab_size += 1
-#        return vocab_size
-#
-#    src_vocab_file = os.path.join(config['data_dir'], 'vocab-{}.{}'.format(config['src_vocab_size'], config['src_lang']))
-#    trg_vocab_file = os.path.join(config['data_dir'], 'vocab-{}.{}'.format(config['trg_vocab_size'], config['trg_lang']))
-#
-#    return _get_vocab_size(src_vocab_file), _get_vocab_size(trg_vocab_file)
 
 
 position_encoding_cached = None
