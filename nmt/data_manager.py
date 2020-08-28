@@ -297,7 +297,8 @@ class DataManager(object):
             # Shuffle training dataset
             start = time.time()
             ut.shuffle_file(ids_file)
-            self.logger.info('Shuffling {} took {}'.format(ids_file, ut.format_time(time.time() - start)))
+            end = time.time()
+            self.logger.info(f'Shuffling {ids_file} took {ut.format_time(end - start)}')
 
         with open(ids_file, 'r') as f:
             yield from self.read_batches(f, is_training, num_preload, to_ids=False, with_trg=True)
@@ -321,7 +322,7 @@ class DataManager(object):
         beam_trans = []
         for i, r in enumerate(sorted_rows):
             trans_out = self._ids_to_trans(symbols[r])
-            beam_trans.append(u'{} {:.2f} {:.2f}'.format(trans_out, scores[r], probs[r]))
+            beam_trans.append(f'{trans_out} {scores[r]:.2f} {probs[r]:.2f}')
             if i == 0: # highest prob trans
                 best_trans = trans_out
         return best_trans, u'\n'.join(beam_trans)
@@ -339,7 +340,7 @@ class DataManager(object):
         
         with torch.no_grad():
             if input_file:
-                self.logger.info('Start translating {}'.format(input_file))
+                self.logger.info(f'Start translating {input_file}')
                 start = last = time.time()
                 notify_every = 1000
             count = 0
@@ -373,7 +374,8 @@ class DataManager(object):
 
         if input_file:
             input_stream.close()
-            self.logger.info('Finished translating {}, took {}'.format(input_file, ut.format_time(time.time() - start)))
+            end = time.time()
+            self.logger.info(f'Finished translating {input_file}, took {ut.format_time(end - start)}')
         model.train()
 
 

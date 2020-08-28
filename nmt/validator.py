@@ -18,12 +18,13 @@ class Validator(object):
         self.logger.info('Initializing validator')
 
         self.model = model
+        self.model_name = config['model_name']
         self.restore_segments = config['restore_segments']
         self.val_by_bleu = config['val_by_bleu']
         self.save_to = config['save_to']
         self.grad_clamp = bool(config['grad_clamp'])
 
-        self.get_cpkt_path = lambda score: os.path.join(self.save_to, f'{config[\'model_name\']}-{score}.pth')
+        self.get_cpkt_path = lambda score: os.path.join(self.save_to, f'{self.model_name}-{score}.pth')
         self.n_best = config['n_best']
 
         scriptdir = os.path.dirname(os.path.abspath(__file__))
@@ -192,7 +193,7 @@ class Validator(object):
             cpkt_path = self.get_cpkt_path(score)
             self.model.save(fp=cpkt_path)
             best_scores_str = ', '.join([f'{float(x):.2f}' for x in numpy.sort(scores)])
-            self.logger.info('Best {metric} scores so far: {best_scores_str}')
+            self.logger.info(f'Best {metric} scores so far: {best_scores_str}')
 
         numpy.save(path, scores)
         if self.val_by_bleu: self.best_bleus = scores

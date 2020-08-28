@@ -20,16 +20,21 @@ class Translator(object):
 
         self.model_file = args.model_file
         if self.model_file is None:
-            self.model_file = os.path.join(self.config['save_to'], f'{self.config[\'model_name\']}.pth')
+            self.model_file = os.path.join(self.config['save_to'], self.config['model_name'] + '.pth')
 
         self.input_file = args.input_file
         if self.input_file is not None and not os.path.exists(self.input_file):
             raise FileNotFoundError(f'Input file does not exist: {self.input_file}')
         if not os.path.exists(self.model_file):
             raise FileNotFoundError(f'Model file does not exist: {self.model_file}')
+        
+        self.logger.info(f'Restore model from {self.model_file}')
+        self.model = Model(self.config, load_from=self.model_file).to(ut.get_device())
 
         if self.input_file:
             save_fp = os.path.join(self.config['save_to'], os.path.basename(self.input_file))
+            save_fp = save_fp.rstrip(self.model.data_manager.src_lang)
+            save_fp = save_fp + self.model.data_manager.trg_lang
             self.best_output_fp = save_fp + '.best_trans'
             self.beam_output_fp = save_fp + '.beam_trans'
             open(self.best_output_fp, 'w').close()
@@ -37,8 +42,7 @@ class Translator(object):
         else:
             self.best_output_fp = self.beam_output_fp = None
 
-        self.logger.info(f'Restore model from {self.model_file}')
-        self.model = Model(self.config, load_from=self.model_file).to(device)
+        
         self.translate()
 
     def translate(self):

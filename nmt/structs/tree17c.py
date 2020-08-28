@@ -5,7 +5,9 @@ import nmt.structs.tree_utils as tree_utils
 class Tree(tree_utils.Tree):
 
   def get_pos_embedding(self, embed_dim, mu_l, mu_r, lam, mu_c):
-    def f(_, p, is_left): return mu_c * (mu_l if is_left else mu_r) @ p
+    cmu_l = mu_l * mu_c
+    cmu_r = mu_r * mu_c
+    def f(_, p, is_left): return (cmu_l if is_left else cmu_r) @ p
     return self.fold_down_tree(f, lam)
 
 def parse(fun_str, clip=None):

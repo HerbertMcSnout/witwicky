@@ -14,7 +14,7 @@ parser.add_argument('--num-preload', type=int, default=ac.DEFAULT_NUM_PRELOAD,
 parser.add_argument('--input-file', type=str, 
                     help='Input file if mode == translate')
 parser.add_argument('--model-file', type=str, required=False,
-                    help='Path to saved checkpoint if mode == translate or interactive')
+                    help='Path to saved checkpoint if mode == translate')
 parser.add_argument('--var-list', nargs='+',
                     help='List of model vars to extracted')
 parser.add_argument('--save-to', required='--var-list' in sys.argv,

@@ -16,20 +16,14 @@ class Model(nn.Module):
         self.config = config
         self.struct = self.config['struct']
         self.decoder_mask = None
-
         self.data_manager = DataManager(config, init_vocab=(not load_from))
+
         if load_from:
-            self.load_state_dict(torch.load(load_from, map_location=ut.get_device()))
+            self.load_state_dict(torch.load(load_from, map_location=ut.get_device()), do_init=True)
         else:
             self.init_embeddings()
             self.init_model()
-
-        self.struct_params = self.struct.get_params(self.config)
-        if self.config['learned_pos_src']:
-            self.struct_params = {name: Parameter(x) for name, x in self.struct_params.items()}
-            for name, x in self.struct_params.items():
-                if not name.endswith('__const__'):
-                    self.register_parameter(name, x)
+            self.add_struct_params()
 
         # dict where keys are data_ptrs to dicts of parameter options
         # see https://pytorch.org/docs/stable/optim.html#per-parameter-options
@@ -114,6 +108,15 @@ class Model(nn.Module):
                     init_func(p)
                 else:
                     nn.init.constant_(p, 0.)
+
+    def add_struct_params(self):
+        self.struct_params = self.struct.get_params(self.config)
+        if self.config['learned_pos_src']:
+            self.struct_params = {name: Parameter(x) for name, x in self.struct_params.items()}
+            for name, x in self.struct_params.items():
+                if not name.endswith('__const__'):
+                    self.register_parameter(name, x)
+
 
     def get_decoder_mask(self, size):
         if self.decoder_mask is None or self.decoder_mask.size()[-1] < size:
@@ -232,18 +235,22 @@ class Model(nn.Module):
         elif self.config['length_model'] == ac.NO_LENGTH_MODEL:
             length_model = lambda t, p: p
         else:
-            raise ValueError(f'invalid length_model {self.config[\'length_model\']}')
+            raise ValueError('invalid length_model ' + str(self.config[length_model]))
 
         return self.decoder.beam_decode(encoder_outputs, encoder_mask, get_trg_inp, logprob, length_model, ac.BOS_ID, ac.EOS_ID, max_lengths, beam_size=self.config['beam_size'])
 
-    def load_state_dict(self, loaded_dict):
+    def load_state_dict(self, loaded_dict, do_init=False):
         state_dict = loaded_dict['model']
         vocabs = loaded_dict['data_manager']
-        super().load_state_dict(state_dict)
         self.data_manager.load_state_dict(vocabs)
+        if do_init:
+            self.init_embeddings()
+            self.init_model()
+            self.add_struct_params()
+        super().load_state_dict(state_dict)
 
     def save(self, fp=None):
-        fp = fp or os.path.join(self.config['save_to'], '{self.config[\'model_name\']}.pth')
+        fp = fp or os.path.join(self.config['save_to'], self.config['model_name'] + '.pth')
         cpkt = {
             'model':self.state_dict(),
             'data_manager':self.data_manager.state_dict(),

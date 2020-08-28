@@ -97,7 +97,7 @@ class Trainer(object):
         train_true_perp = numpy.exp(train_true_perp) if train_true_perp < 300 else float('inf')
         self.train_true_perps.append(train_true_perp)
 
-        self.logger.info(f'    smooth, true perp: {float(train_smooth_perp):.2f}, {float(train_true_perp):.2f}'))
+        self.logger.info(f'    smooth, true perp: {float(train_smooth_perp):.2f}, {float(train_true_perp):.2f}')
 
 
     def clip_grad_values(self):
@@ -351,8 +351,9 @@ class Trainer(object):
                     self.logger.info(f'Past {metric} scores are {scores}')
                     # when don't use warmup, decay lr if dev not improve
                     if self.lr * self.config['lr_decay'] >= self.config['min_lr']:
-                        self.logger.info(f'Anneal the learning rate from {self.lr} to {self.lr * self.config['lr_decay']}')
-                        self.lr = self.lr * self.config['lr_decay']
+                        new_lr = self.lr * self.config['lr_decay']
+                        self.logger.info(f'Anneal the learning rate from {self.lr} to {new_lr}')
+                        self.lr = new_lr
                         for p in self.optimizer.param_groups:
                             p['lr'] = self.lr
         return self.is_patience_exhausted(self.config['early_stop_patience'])

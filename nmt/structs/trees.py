@@ -20,22 +20,21 @@ class SequenceTree(Struct):
   def set_clip_length(self, clip):
     self.data = self.data[:clip]
 
-  def get_pos_embedding(self, embed_dim, mu, lam, rho, eps):
+  def get_pos_embedding(self, embed_dim, mu, lam, rho):
     size = self.size()
     device = get_device()
 
     insides = torch.empty(size, embed_dim, device=device)
-    outsides = torch.empty(size, embed_dim, device=device)
     x = lam
     for i in range(size):
       insides[i, :] = x
       x = mu @ x
 
+    outsides = torch.empty(size, embed_dim, device=device)
     x = rho
-    for i in range(size):
+    for i in range(size - 1, -1, -1):
       outsides[i, :] = x
-      r = insides[i + 1, :] if i + 1 < size else eps
-      x = torch.einsum("i,ij,i->j", x, mu, r)
+      x = x @ mu
     
     return SequenceTree(insides * outsides * (embed_dim ** -0.5))
 
@@ -53,5 +52,4 @@ def get_params(config):
     mu  = tree_utils.init_tensor(embed_dim, embed_dim),
     lam = normalize(torch.nn.init.normal_(torch.empty(embed_dim, device=device), mean=0., std=1.)),
     rho = normalize(torch.nn.init.normal_(torch.empty(embed_dim, device=device), mean=0., std=1.)),
-    eps = normalize(torch.nn.init.normal_(torch.empty(embed_dim, device=device), mean=0., std=1.)),
   )
