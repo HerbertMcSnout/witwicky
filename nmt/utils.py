@@ -32,6 +32,14 @@ def ensure_dirs_exists(filepath):
         return False
     return True
 
+def remove_files_in_dir(file_dir):
+    "Removes all files in a directory (but not subdirs)"
+    if os.path.isdir(file_dir):
+        for fn in os.listdir(file_dir):
+            fp = os.path.join(file_dir, fn)
+            if os.path.isfile(fp) or os.path.islink(fp):
+                os.remove(fp)
+
 
 def get_logger(logfile='./DEBUG.log'):
     "Initializes (if necessary) logger, then returns it"

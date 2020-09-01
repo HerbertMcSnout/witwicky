@@ -47,6 +47,13 @@ class Tree(Struct):
     l = self.l.map(f) if self.l else None
     r = self.r.map(f) if self.r else None
     return self.new(v, l, r)
+  
+  def has_left(self):
+    return bool(self.l)
+  def has_right(self):
+    return bool(self.r)
+  def is_leaf(self):
+    return not (self.l or self.r)
 
   def flatten(self):
     stack = [self]

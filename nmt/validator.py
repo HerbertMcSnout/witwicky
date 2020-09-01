@@ -214,7 +214,7 @@ class Validator(object):
 
         basename = os.path.basename(input_file)
         basename = basename.rstrip(self.model.data_manager.src_lang) # remove '.src_lang' suffix
-        basename += '.' + self.model.data_manager.trg_lang # add '.trg_lang' suffix
+        basename += self.model.data_manager.trg_lang # add '.trg_lang' suffix
 
         base_fp = os.path.join(self.save_to, basename)
         best_fp_base = base_fp + '.best_trans'

@@ -18,6 +18,8 @@ class Trainer(object):
         self.num_preload = args.num_preload
         self.lr = self.config['lr']
 
+        ut.remove_files_in_dir(self.config['save_to'])
+
         self.logger = ut.get_logger(self.config['log_file'])
 
         self.train_smooth_perps = []
@@ -48,10 +50,6 @@ class Trainer(object):
 
         # Estimated number of batches per epoch
         self.est_batches = max(self.model.data_manager.training_tok_counts) // self.config['batch_size']
-        # Since the size of every batch is <= batch_size, and can't perfectly fill each batch,
-        # this is an underestimate of the true number of batches. Anecdotally, this seems to
-        # be about 75% of the true number of batches, so we multiply by 4/3
-        self.est_batches = 4 * self.est_batches // 3
         self.logger.info(f'Guessing around {self.est_batches:,} batches per epoch')
 
 

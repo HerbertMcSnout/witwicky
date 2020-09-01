@@ -340,6 +340,8 @@ java2doc_seq = java2doc_base.adapt(struct = struct.sequence)
 java2doc_rare = java2doc_base.adapt(struct = struct.sequence)
 java2doc_raw = java2doc_base.adapt(struct = struct.sequence)
 
+java2doc17u = java2doc17f.adapt(data_dir = 'nmt/data/java2doc_untagged')
+
 java2doc_c = java2doc_tree_base.adapt(struct = struct.tree17c, grad_clamp = 100.0)
 java2doc_ens = java2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True)
 java2doc_fix = java2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = True)
@@ -347,7 +349,9 @@ java2doc_fix2 = java2doc_tree_base.adapt(learned_pos_src = False, struct = struc
 java2doc_fsc = java2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True)
 java2doc_lsc = java2doc_tree_base.adapt(struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True, grad_clamp = 100.0)
 java2doc17v = java2doc_tree_base.adapt(struct = struct.tree17v, grad_clamp = 100.0)
-
+java2doc_abs = java2doc_tree_base.adapt(struct = struct.abs, add_sinusoidal_pe_src = True)
+java2doc_ab = java2doc_tree_base.adapt(struct = struct.abs, add_sinusoidal_pe_src = False)
+java2doc_abs_fav = java2doc_tree_base.adapt(struct = struct.abs_fav, add_sinusoidal_pe_src = True)
 
 java2doc_bpe = java2doc_base.adapt(struct = struct.tree, joint_vocab_size = 0)
 java2doc_sbpe = java2doc_bpe.adapt(struct = struct.sequence)
@@ -389,6 +393,8 @@ py2doc17s = py2doc17f.adapt(add_sinusoidal_pe_src = True)
 py2doc_seq = py2doc_base.adapt(struct = struct.sequence)
 py2doc_rare = py2doc_base.adapt(struct = struct.sequence)
 
+py2doc17u = py2doc17f.adapt(data_dir = 'nmt/data/py2doc_untagged')
+
 
 py2doc_c = py2doc_tree_base.adapt(struct = struct.tree17c, grad_clamp = 100.0, batch_size = 4096)
 py2doc_ens = py2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True)
@@ -396,6 +402,9 @@ py2doc_fix = py2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tre
 py2doc_fix2 = py2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = False)
 py2doc_fsc = py2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True)
 py2doc_lsc = py2doc_tree_base.adapt(struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True, grad_clamp = 100.0)
+py2doc_abs = py2doc_tree_base.adapt(struct = struct.abs, add_sinusoidal_pe_src = True)
+py2doc_ab = py2doc_tree_base.adapt(struct = struct.abs, add_sinusoidal_pe_src = False)
+py2doc_abs_fav = py2doc_tree_base.adapt(struct = struct.abs_fav, add_sinusoidal_pe_src = True)
 
 py2doc_bpe = py2doc_base.adapt(struct = struct.tree, joint_vocab_size = 0, grad_clamp = 100.0)
 py2doc_sbpe = py2doc_bpe.adapt(struct = struct.sequence)
@@ -423,3 +432,9 @@ en2vi_c = en2vi_base.adapt(struct = struct.tree17c, grad_clamp = 100.0, data_dir
 en2vi_ens = en2vi_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True, data_dir = 'nmt/data/en2vi_tree')
 en2vi_seq = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree3')
 en2vi_fix = en2vi_base.adapt(learned_pos_src = False, data_dir = 'nmt/data/en2vi_tree', struct = struct.tree17f, add_sinusoidal_pe_src = True)
+en2vi_fxs = en2vi_base.adapt(learned_pos_src = False, data_dir = 'nmt/data/en2vi_tree', struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True)
+en2vi_leaf1 = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.leaf, grad_clamp = 100.0, add_sinusoidal_pe_src = True, learned_pos_src = False)
+en2vi_leaf2 = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.leaf, grad_clamp = 100.0, add_sinusoidal_pe_src = True, learned_pos_src = True)
+en2vi_leaf4 = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.leaf, grad_clamp = 100.0, add_sinusoidal_pe_src = False, learned_pos_src = True)
+en2vi_abs = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.abs, add_sinusoidal_pe_src = True)
+en2vi_abs_leaf = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.abs_leaf, add_sinusoidal_pe_src = True)
