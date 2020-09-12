@@ -54,7 +54,7 @@ class Trainer(object):
 
 
         param_count = sum([numpy.prod(p.size()) for p in self.model.parameters()])
-        self.logger.info(f'Model has {param_count:,} parameters')
+        self.logger.info(f'Model has {int(param_count):,} parameters')
 
         # Set up parameter-specific options
         params = []
