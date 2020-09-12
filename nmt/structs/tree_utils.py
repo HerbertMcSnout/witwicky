@@ -65,6 +65,20 @@ class Tree(Struct):
       acc.append(node.v)
     return acc
 
+  def flatten_mask_left(self, i, size, acc):
+    nv = [1] * size
+    acc.append(nv)
+    if self.l:
+      j = self.l.flatten_mask_left(i + 1, size, acc)
+      acc[i][i : j] = [0] * (j - i)
+      i = j
+    else:
+      acc[i][i] = 0
+      i += 1
+    if self.r:
+      i = self.r.flatten_mask_left(i, size, acc)
+    return i
+
   def set_clip_length(self, clip):
     if clip is None:
       return -1, self
@@ -201,3 +215,18 @@ def reg_smooth2(x, eps):
 
 
 
+def get_enc_mask(toks, structs, num_heads):
+  # toks: [bsz, src_len]
+  bsz, src_len = toks.size()
+  masks = [] # [bsz, src_len, src_len]
+  for s in structs:
+    acc = [] # [src_len, src_len]
+    s.flatten_mask_left(0, src_len, acc)
+    for i in range(len(acc), src_len):
+      acc.append([-1]*src_len)
+    #masks.append(acc)
+    masks.append([acc]*num_heads)
+  head_masks = torch.tensor(masks, dtype=torch.int8, device=ut.get_device()) # [bsz, num_heads, src_len, src_len]
+  head_split = num_heads // 2
+  head_masks[:, head_split:, :, :] -= 1;
+  return head_masks == 0

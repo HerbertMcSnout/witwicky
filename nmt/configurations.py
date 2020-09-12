@@ -429,3 +429,6 @@ en2vi_fix = en2vi_base.adapt(learned_pos_src = False, data_dir = 'nmt/data/en2vi
 en2vi_fxs = en2vi_base.adapt(learned_pos_src = False, data_dir = 'nmt/data/en2vi_tree', struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True)
 en2vi_abs = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.abs, add_sinusoidal_pe_src = True)
 en2vi_sin = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.tree_sin, grad_clamp = 100.0, learned_pos_src = False)
+
+en2vi17a = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.tree17a, grad_clamp = 100.0)
+en2vi17as = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree_short', struct = struct.tree17a, grad_clamp = 100.0)

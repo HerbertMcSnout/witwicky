@@ -157,13 +157,22 @@ class Model(nn.Module):
         sinusoidal_pe = self.get_pos_embedding(max_len) if structs is not None and self.config['add_sinusoidal_pe_src'] else 0
         return word_embeds + sinusoidal_pe + pos_embeds * pe_scale, reg_penalty
 
-    def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
+    def get_encoder_masks(self, src_toks, src_structs):
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
+        if hasattr(self.struct, "get_enc_mask"):
+            encoder_mask_down = self.struct.get_enc_mask(src_toks, src_structs, self.config['num_enc_heads'])
+        else:
+            encoder_mask_down = encoder_mask
+        return encoder_mask, encoder_mask_down
+
+    def forward(self, src_toks, src_structs, trg_toks, targets, b=None, e=None):
+        encoder_mask, encoder_mask_down = self.get_encoder_masks(src_toks, src_structs)
+
         decoder_mask = self.get_decoder_mask(trg_toks.size()[-1])
 
         encoder_inputs, reg_penalty = self.get_input(src_toks, src_structs, calc_reg=hasattr(self.struct, "get_reg_penalty"))
         
-        encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
+        encoder_outputs = self.encoder(encoder_inputs, encoder_mask_down)
 
         decoder_inputs, _ = self.get_input(trg_toks)
         decoder_outputs = self.decoder(decoder_inputs, decoder_mask, encoder_outputs, encoder_mask)
@@ -207,9 +216,10 @@ class Model(nn.Module):
 
         Return: See encoders.Decoder.beam_decode
         """
-        encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
+        #encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
+        encoder_mask, encoder_mask_down = self.get_encoder_masks(src_toks, src_structs)
         encoder_inputs, _ = self.get_input(src_toks, src_structs)
-        encoder_outputs = self.encoder(encoder_inputs, encoder_mask)
+        encoder_outputs = self.encoder(encoder_inputs, encoder_mask_down)
         max_lengths1 = torch.sum(src_toks != ac.PAD_ID, dim=-1).type(src_toks.type()) + 50
         max_lengths2 = torch.tensor(self.config['max_trg_length']).type(src_toks.type())
         max_lengths = torch.min(max_lengths1, max_lengths2)
