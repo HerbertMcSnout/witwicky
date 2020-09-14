@@ -7,6 +7,7 @@ class Record(object):
     for k, v in kwargs.items():
       setattr(self, k, v)
 
+
 class Tree(Struct):
   
   def __init__(self, v, l=None, r=None):
@@ -64,20 +65,6 @@ class Tree(Struct):
       if node.l: stack.append(node.l)
       acc.append(node.v)
     return acc
-
-  def flatten_mask_left(self, i, size, acc):
-    nv = [1] * size
-    acc.append(nv)
-    if self.l:
-      j = self.l.flatten_mask_left(i + 1, size, acc)
-      acc[i][i : j] = [0] * (j - i)
-      i = j
-    else:
-      acc[i][i] = 0
-      i += 1
-    if self.r:
-      i = self.r.flatten_mask_left(i, size, acc)
-    return i
 
   def set_clip_length(self, clip):
     if clip is None:
@@ -214,19 +201,45 @@ def reg_smooth2(x, eps):
   return x * torch.tanh(eps * x)
 
 
+HEAD_PAD_ID    = 0 #  1
+HEAD_SELF_ID   = 1 #  2
+HEAD_CHILD_ID  = 2 #  4
+HEAD_OTHER_ID  = 3 #  8
+HEAD_PARENT_ID = 4 # 16
 
-def get_enc_mask(toks, structs, num_heads):
-  # toks: [bsz, src_len]
+def flatten_mask_left2(tree, i, mask):
+  mask[:, i, :] = 1 << HEAD_OTHER_ID
+  mask[:, i, i] = 1 << HEAD_SELF_ID
+  i += 1
+  if tree.l:
+    j = flatten_mask_left2(tree.l, i, mask)
+    mask[:, i - 1, i : j].bitwise_or_(torch.tensor(1 << HEAD_CHILD_ID))
+    mask[:, i : j, i - 1].bitwise_or_(torch.tensor(1 << HEAD_PARENT_ID))
+    i = j
+  if tree.r:
+    i = flatten_mask_left2(tree.r, i, mask)
+  return i
+
+def flatten_mask_left(tree, i, size, acc):
+  nv = [1 << HEAD_OTHER_ID] * size
+  nv[i] = 1 << HEAD_SELF_ID
+  acc.append(nv)
+  i += 1
+  if tree.l:
+    j = flatten_mask_left(tree.l, i, size, acc)
+    acc[i - 1][i : j] = [1 << HEAD_CHILD_ID] * (j - i)
+    i = j
+  if tree.r:
+    i = flatten_mask_left(tree.r, i, size, acc)
+  return i
+
+def get_enc_mask(toks, structs, heads):
   bsz, src_len = toks.size()
-  masks = [] # [bsz, src_len, src_len]
-  for s in structs:
-    acc = [] # [src_len, src_len]
-    s.flatten_mask_left(0, src_len, acc)
-    for i in range(len(acc), src_len):
-      acc.append([-1]*src_len)
-    #masks.append(acc)
-    masks.append([acc]*num_heads)
-  head_masks = torch.tensor(masks, dtype=torch.int8, device=ut.get_device()) # [bsz, num_heads, src_len, src_len]
-  head_split = num_heads // 2
-  head_masks[:, head_split:, :, :] -= 1;
-  return head_masks == 0
+  num_heads = len(heads)
+  masks = torch.full((bsz, num_heads, src_len, src_len), (1 << HEAD_PAD_ID), dtype=torch.int8, device=ut.get_device())
+  
+  for c in range(bsz):
+    flatten_mask_left2(structs[c], 0, masks[c, :, :, :])
+  for i in range(len(heads)):
+    masks[:, i, :, :].bitwise_and_(torch.tensor(heads[i]))
+  return torch.logical_not(masks.type(torch.bool))

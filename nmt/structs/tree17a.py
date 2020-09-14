@@ -19,4 +19,8 @@ def get_params(config):
     lam  = tree_utils.init_tensor(embed_dim),
   )
 
-get_enc_mask = tree_utils.get_enc_mask
+def get_enc_mask(toks, structs, num_heads):
+  heads = torch.zeros(num_heads, dtype=torch.int8)
+  heads[:num_heads//2 ] = (1 << tree_utils.HEAD_PARENT_ID) | (1 << tree_utils.HEAD_SELF_ID)
+  heads[ num_heads//2:] = (1 << tree_utils.HEAD_CHILD_ID) | (1 << tree_utils.HEAD_SELF_ID)
+  return tree_utils.get_enc_mask(toks, structs, heads)

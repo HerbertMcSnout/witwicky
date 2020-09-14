@@ -49,6 +49,8 @@ base_config = Config(
     data_dir = 'nmt/data/{model_name}',
     log_file = '{save_to}/DEBUG.log',
 
+    log_freq = 100,
+
     # Source and target languages
     # Input files should be named with these as extensions
     src_lang = 'src_lang',
@@ -343,6 +345,7 @@ java2doc_raw = java2doc_base.adapt(struct = struct.sequence)
 java2doc17u = java2doc17f.adapt(data_dir = 'nmt/data/java2doc_untagged')
 java2doc17fl = java2doc17f.adapt(struct = struct.tree17fl)
 java2doc_dt = java2doc17f.adapt(num_enc_layers = 10, num_dec_layers = 10)
+java2doc17a = java2doc17f.adapt(struct = struct.tree17a)
 
 java2doc_c = java2doc_tree_base.adapt(struct = struct.tree17c, grad_clamp = 100.0)
 java2doc_ens = java2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True)
@@ -388,6 +391,7 @@ py2doc17u = py2doc17f.adapt(data_dir = 'nmt/data/py2doc_untagged')
 py2doc17fl = py2doc17f.adapt(struct = struct.tree17fl)
 py2doc_c = py2doc_tree_base.adapt(struct = struct.tree17c, grad_clamp = 100.0)
 py2doc_dt = py2doc17f.adapt(num_enc_layers = 10, num_dec_layers = 10)
+py2doc17a = py2doc17f.adapt(struct = struct.tree17a)
 
 py2doc_ens = py2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True)
 py2doc_fix = py2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = True)
@@ -431,4 +435,5 @@ en2vi_abs = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.a
 en2vi_sin = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.tree_sin, grad_clamp = 100.0, learned_pos_src = False)
 
 en2vi17a = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.tree17a, grad_clamp = 100.0)
-en2vi17as = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree_short', struct = struct.tree17a, grad_clamp = 100.0)
+en2vi17a2 = en2vi17a.adapt()
+en2vi17as = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree_short', struct = struct.tree17a, grad_clamp = 100.0, log_freq = 5)

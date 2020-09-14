@@ -26,7 +26,7 @@ class Trainer(object):
         self.train_true_perps = []
 
         # For logging
-        self.log_freq = 100  # log train stat every this-many batches
+        self.log_freq = self.config['log_freq']  # log train stat every this-many batches
         self.log_train_loss = []
         self.log_nll_loss = []
         self.log_train_weights = []
@@ -77,8 +77,12 @@ class Trainer(object):
         self.logger.info(f'    avg sec/batch {self.epoch_time / batches:.2f}')
         self.logger.info(f'    {batches} batches')
 
-        train_smooth_perp = self.epoch_loss / self.epoch_weights
-        train_true_perp = self.epoch_nll_loss / self.epoch_weights
+        if self.epoch_weights:
+            train_smooth_perp = self.epoch_loss / self.epoch_weights
+            train_true_perp = self.epoch_nll_loss / self.epoch_weights
+        else:
+            train_smooth_perp = float('inf')
+            train_true_perp = float('inf')
 
         self.est_batches = batches
         self.epoch_time = 0.
