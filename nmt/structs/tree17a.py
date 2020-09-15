@@ -20,7 +20,10 @@ def get_params(config):
   )
 
 def get_enc_mask(toks, structs, num_heads):
-  heads = torch.zeros(num_heads, dtype=torch.int8)
-  heads[:num_heads//2 ] = (1 << tree_utils.HEAD_PARENT_ID) | (1 << tree_utils.HEAD_SELF_ID)
-  heads[ num_heads//2:] = (1 << tree_utils.HEAD_CHILD_ID) | (1 << tree_utils.HEAD_SELF_ID)
+  heads = torch.zeros(num_heads, dtype=torch.uint8)
+  heads[ : num_heads//2]                 = tree_utils.HEAD_PARENT_ID | tree_utils.HEAD_CHILD_ID | tree_utils.HEAD_SELF_ID
+  heads[num_heads//2 : (3*num_heads)//4] = tree_utils.HEAD_PARENT_ID | tree_utils.HEAD_SELF_ID
+  heads[(3*num_heads)//4 : ]             = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_CHILD_ID | tree_utils.HEAD_OTHER_ID | tree_utils.HEAD_PARENT_ID
+  #heads = torch.zeros(1, dtype=torch.uint8)
+  #heads[:] = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_CHILD_ID | tree_utils.HEAD_OTHER_ID | tree_utils.HEAD_PARENT_ID
   return tree_utils.get_enc_mask(toks, structs, heads)

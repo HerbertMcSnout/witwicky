@@ -201,45 +201,47 @@ def reg_smooth2(x, eps):
   return x * torch.tanh(eps * x)
 
 
-HEAD_PAD_ID    = 0 #  1
-HEAD_SELF_ID   = 1 #  2
-HEAD_CHILD_ID  = 2 #  4
-HEAD_OTHER_ID  = 3 #  8
-HEAD_PARENT_ID = 4 # 16
+#def flatten_mask_left(tree, i, size, acc):
+#  nv = [1 << HEAD_OTHER_ID] * size
+#  nv[i] = 1 << HEAD_SELF_ID
+#  acc.append(nv)
+#  i += 1
+#  if tree.l:
+#    j = flatten_mask_left(tree.l, i, size, acc)
+#    acc[i - 1][i : j] = [1 << HEAD_CHILD_ID] * (j - i)
+#    i = j
+#  if tree.r:
+#    i = flatten_mask_left(tree.r, i, size, acc)
+#  return i
+
+HEAD_PAD_ID    = 1 << 0 #  1
+HEAD_SELF_ID   = 1 << 1 #  2
+HEAD_CHILD_ID  = 1 << 2 #  4
+HEAD_OTHER_ID  = 1 << 3 #  8
+HEAD_PARENT_ID = 1 << 4 # 16
 
 def flatten_mask_left2(tree, i, mask):
-  mask[:, i, :] = 1 << HEAD_OTHER_ID
-  mask[:, i, i] = 1 << HEAD_SELF_ID
+  mask[:, i, :] = HEAD_OTHER_ID
+  mask[:, i, i] = HEAD_SELF_ID
   i += 1
   if tree.l:
     j = flatten_mask_left2(tree.l, i, mask)
-    mask[:, i - 1, i : j].bitwise_or_(torch.tensor(1 << HEAD_CHILD_ID))
-    mask[:, i : j, i - 1].bitwise_or_(torch.tensor(1 << HEAD_PARENT_ID))
+    mask[:, i - 1, i : j] = HEAD_CHILD_ID #.bitwise_or_(torch.tensor(HEAD_CHILD_ID))
+    mask[:, i : j, i - 1] = HEAD_PARENT_ID #.bitwise_or_(torch.tensor(HEAD_PARENT_ID))
     i = j
   if tree.r:
     i = flatten_mask_left2(tree.r, i, mask)
   return i
 
-def flatten_mask_left(tree, i, size, acc):
-  nv = [1 << HEAD_OTHER_ID] * size
-  nv[i] = 1 << HEAD_SELF_ID
-  acc.append(nv)
-  i += 1
-  if tree.l:
-    j = flatten_mask_left(tree.l, i, size, acc)
-    acc[i - 1][i : j] = [1 << HEAD_CHILD_ID] * (j - i)
-    i = j
-  if tree.r:
-    i = flatten_mask_left(tree.r, i, size, acc)
-  return i
-
 def get_enc_mask(toks, structs, heads):
   bsz, src_len = toks.size()
   num_heads = len(heads)
-  masks = torch.full((bsz, num_heads, src_len, src_len), (1 << HEAD_PAD_ID), dtype=torch.int8, device=ut.get_device())
+  masks = torch.full((bsz, num_heads, src_len, src_len), (HEAD_PAD_ID), dtype=torch.int8, device=ut.get_device())
   
   for c in range(bsz):
-    flatten_mask_left2(structs[c], 0, masks[c, :, :, :])
+    size = structs[c].size()
+    flatten_mask_left2(structs[c], 0, masks[c, :, :size, :size])
+    masks[c, :, size:, :] = HEAD_SELF_ID
   for i in range(len(heads)):
     masks[:, i, :, :].bitwise_and_(torch.tensor(heads[i]))
   return torch.logical_not(masks.type(torch.bool))
