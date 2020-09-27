@@ -366,11 +366,11 @@ class DataManager(object):
                         self.logger.info('  Line {:>{},} / {:,}, {:.4f} sec/line'.format(count, num_sents_digits, num_sents, (time.time() - last) / notify_every))
                         last = now
 
-            remaining = (count - 1) % num_preload
+            remaining = count % num_preload
             if best_output_stream:
-                best_output_stream.write('\n'.join(best_trans_cache[:remaining]))
+                best_output_stream.write('\n'.join(best_trans_cache[:remaining]) + '\n')
             if beam_output_stream:
-                beam_output_stream.write('\n\n'.join(beam_trans_cache[:remaining]))
+                beam_output_stream.write('\n\n'.join(beam_trans_cache[:remaining]) + '\n')
 
         if input_file:
             input_stream.close()
