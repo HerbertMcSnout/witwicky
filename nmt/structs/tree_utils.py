@@ -214,11 +214,14 @@ def reg_smooth2(x, eps):
 #    i = flatten_mask_left(tree.r, i, size, acc)
 #  return i
 
-HEAD_PAD_ID    = 1 << 0 #  1
-HEAD_SELF_ID   = 1 << 1 #  2
-HEAD_CHILD_ID  = 1 << 2 #  4
-HEAD_OTHER_ID  = 1 << 3 #  8
-HEAD_PARENT_ID = 1 << 4 # 16
+HEAD_PAD_ID        = 1 << 0
+HEAD_SELF_ID       = 1 << 1
+HEAD_OTHER_ID      = 1 << 2
+HEAD_CHILD_ID      = 1 << 3
+HEAD_PARENT_ID     = 1 << 4
+#HEAD_ANCESTOR_ID   = 1 << 5
+#HEAD_DESCENDANT_ID = 1 << 6
+HEAD_IDS = [HEAD_PAD_ID, HEAD_SELF_ID, HEAD_OTHER_ID, HEAD_CHILD_ID, HEAD_PARENT_ID]#, HEAD_ANCESTOR_ID, HEAD_DESCENDANT_ID]
 
 def flatten_mask_left2(tree, i, mask):
   mask[:, i, :] = HEAD_OTHER_ID
@@ -226,22 +229,22 @@ def flatten_mask_left2(tree, i, mask):
   i += 1
   if tree.l:
     j = flatten_mask_left2(tree.l, i, mask)
-    mask[:, i - 1, i : j] = HEAD_CHILD_ID #.bitwise_or_(torch.tensor(HEAD_CHILD_ID))
-    mask[:, i : j, i - 1] = HEAD_PARENT_ID #.bitwise_or_(torch.tensor(HEAD_PARENT_ID))
+    mask[:, i - 1, i : j] = HEAD_CHILD_ID
+    mask[:, i : j, i - 1] = HEAD_PARENT_ID
     i = j
   if tree.r:
     i = flatten_mask_left2(tree.r, i, mask)
   return i
 
-def get_enc_mask(toks, structs, heads):
+def get_enc_mask(toks, structs, num_heads):
   bsz, src_len = toks.size()
-  num_heads = len(heads)
   masks = torch.full((bsz, num_heads, src_len, src_len), (HEAD_PAD_ID), dtype=torch.int8, device=ut.get_device())
   
   for c in range(bsz):
     size = structs[c].size()
     flatten_mask_left2(structs[c], 0, masks[c, :, :size, :size])
     masks[c, :, size:, :] = HEAD_SELF_ID
-  for i in range(len(heads)):
-    masks[:, i, :, :].bitwise_and_(torch.tensor(heads[i]))
-  return torch.logical_not(masks.type(torch.bool))
+  #for i in range(len(heads)):
+  #  masks[:, i, :, :].bitwise_and_(heads[i])
+  #return torch.logical_not(masks.type(torch.bool))
+  return masks

@@ -1,6 +1,7 @@
 import torch
 from nmt.structs.struct import Struct
 import nmt.structs.tree_utils as tree_utils
+import nmt.utils as ut
 
 class Tree(tree_utils.Tree):
 
@@ -19,11 +20,12 @@ def get_params(config):
     lam  = tree_utils.init_tensor(embed_dim),
   )
 
-def get_enc_mask(toks, structs, num_heads):
-  heads = torch.zeros(num_heads, dtype=torch.uint8)
-  heads[ : num_heads//2]                 = tree_utils.HEAD_PARENT_ID | tree_utils.HEAD_CHILD_ID | tree_utils.HEAD_SELF_ID
-  heads[num_heads//2 : (3*num_heads)//4] = tree_utils.HEAD_PARENT_ID | tree_utils.HEAD_SELF_ID
-  heads[(3*num_heads)//4 : ]             = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_CHILD_ID | tree_utils.HEAD_OTHER_ID | tree_utils.HEAD_PARENT_ID
-  #heads = torch.zeros(1, dtype=torch.uint8)
-  #heads[:] = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_CHILD_ID | tree_utils.HEAD_OTHER_ID | tree_utils.HEAD_PARENT_ID
-  return tree_utils.get_enc_mask(toks, structs, heads)
+def get_enc_mask(toks, structs, num_heads, mu_l, mu_r, lam):
+  
+  heads = torch.zeros(num_heads, dtype=torch.uint8, device=ut.get_device()) # [num_heads]
+  heads[:num_heads//2] = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_CHILD_ID
+  heads[num_heads//2:] = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_PARENT_ID
+  #heads[:] = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_CHILD_ID
+  masks = tree_utils.get_enc_mask(toks, structs, num_heads) # [bsz, num_heads, src_len, src_len]
+  masks.bitwise_and_(heads.unsqueeze(0).unsqueeze(2).unsqueeze(3))
+  return torch.logical_not(masks)

@@ -110,7 +110,7 @@ class Model(nn.Module):
                     nn.init.constant_(p, 0.)
 
     def add_struct_params(self):
-        self.struct_params = self.struct.get_params(self.config)
+        self.struct_params = self.struct.get_params(self.config) if hasattr(self.struct, "get_params") else {}
         if self.config['learned_pos_src']:
             self.struct_params = {name: Parameter(x) for name, x in self.struct_params.items()}
             for name, x in self.struct_params.items():
@@ -160,7 +160,7 @@ class Model(nn.Module):
     def get_encoder_masks(self, src_toks, src_structs):
         encoder_mask = (src_toks == ac.PAD_ID).unsqueeze(1).unsqueeze(2) # [bsz, 1, 1, max_src_len]
         if hasattr(self.struct, "get_enc_mask"):
-            encoder_mask_down = self.struct.get_enc_mask(src_toks, src_structs, self.config['num_enc_heads'])
+            encoder_mask_down = self.struct.get_enc_mask(src_toks, src_structs, self.config['num_enc_heads'], **self.struct_params)
         else:
             encoder_mask_down = encoder_mask
         return encoder_mask, encoder_mask_down
