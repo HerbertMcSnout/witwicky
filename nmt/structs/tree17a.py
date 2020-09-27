@@ -21,11 +21,11 @@ def get_params(config):
   )
 
 def get_enc_mask(toks, structs, num_heads, mu_l, mu_r, lam):
-  
-  heads = torch.zeros(num_heads, dtype=torch.uint8, device=ut.get_device()) # [num_heads]
-  heads[:num_heads//2] = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_CHILD_ID
-  heads[num_heads//2:] = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_PARENT_ID
-  #heads[:] = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_CHILD_ID
+  heads = torch.zeros(num_heads, dtype=torch.int, device=ut.get_device()) # [num_heads]
+  heads[:num_heads//4] =               tree_utils.HEAD_BASE_IDS | tree_utils.HEAD_CHILD_ID
+  heads[num_heads//4:num_heads//2] =   tree_utils.HEAD_BASE_IDS | tree_utils.HEAD_PARENT_ID
+  heads[num_heads//2:3*num_heads//4] = tree_utils.HEAD_BASE_IDS | tree_utils.HEAD_SIB_ID
+  heads[3*num_heads//4:] =             tree_utils.HEAD_BASE_IDS | tree_utils.HEAD_DESC_ID
   masks = tree_utils.get_enc_mask(toks, structs, num_heads) # [bsz, num_heads, src_len, src_len]
   masks.bitwise_and_(heads.unsqueeze(0).unsqueeze(2).unsqueeze(3))
-  return torch.logical_not(masks)
+  return torch.logical_not(masks)#.transpose(2, 3)

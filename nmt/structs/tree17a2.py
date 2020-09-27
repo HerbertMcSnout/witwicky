@@ -23,13 +23,13 @@ def get_params(config):
 
 def get_enc_mask(toks, structs, num_heads, mu_l, mu_r, lam, self_attn_weights):
   # 17a
-  #heads = torch.zeros(num_heads, dtype=torch.uint8)
+  #heads = torch.zeros(num_heads, dtype=torch.uint16)
   #heads[ : num_heads//2]                 = tree_utils.HEAD_PARENT_ID | tree_utils.HEAD_CHILD_ID | tree_utils.HEAD_SELF_ID
   #heads[num_heads//2 : (3*num_heads)//4] = tree_utils.HEAD_PARENT_ID | tree_utils.HEAD_SELF_ID
   #heads[(3*num_heads)//4 : ]             = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_CHILD_ID | tree_utils.HEAD_OTHER_ID | tree_utils.HEAD_PARENT_ID
   
   # 17b
-  #heads = torch.zeros(1, dtype=torch.uint8)
+  #heads = torch.zeros(1, dtype=torch.uint16)
   #heads[:] = tree_utils.HEAD_SELF_ID | tree_utils.HEAD_CHILD_ID | tree_utils.HEAD_PARENT_ID
   #return tree_utils.get_enc_mask(toks, structs, heads)
   

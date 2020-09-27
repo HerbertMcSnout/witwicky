@@ -214,37 +214,46 @@ def reg_smooth2(x, eps):
 #    i = flatten_mask_left(tree.r, i, size, acc)
 #  return i
 
-HEAD_PAD_ID        = 1 << 0
-HEAD_SELF_ID       = 1 << 1
-HEAD_OTHER_ID      = 1 << 2
-HEAD_CHILD_ID      = 1 << 3
-HEAD_PARENT_ID     = 1 << 4
-#HEAD_ANCESTOR_ID   = 1 << 5
-#HEAD_DESCENDANT_ID = 1 << 6
-HEAD_IDS = [HEAD_PAD_ID, HEAD_SELF_ID, HEAD_OTHER_ID, HEAD_CHILD_ID, HEAD_PARENT_ID]#, HEAD_ANCESTOR_ID, HEAD_DESCENDANT_ID]
+HEAD_IDS = [1 << x for x in range(9)]
+HEAD_PAD_ID, HEAD_SELF_ID, HEAD_OTHER_ID, HEAD_CHILD_ID, HEAD_PARENT_ID, HEAD_SIB_ID, HEAD_ANCE_ID, HEAD_DESC_ID, HEAD_EXTRA_ID = HEAD_IDS
+
+HEAD_BASE_IDS = HEAD_SELF_ID | HEAD_EXTRA_ID
 
 def flatten_mask_left2(tree, i, mask):
-  mask[:, i, :] = HEAD_OTHER_ID
-  mask[:, i, i] = HEAD_SELF_ID
+  k = i
   i += 1
+  mask[:, k, :] = HEAD_OTHER_ID
+  mask[:, k, k] = HEAD_SELF_ID
+
   if tree.l:
     j = flatten_mask_left2(tree.l, i, mask)
-    mask[:, i - 1, i : j] = HEAD_CHILD_ID
-    mask[:, i : j, i - 1] = HEAD_PARENT_ID
+    mask[:, k, i : j] = HEAD_DESC_ID
+    mask[:, i : j, k] = HEAD_ANCE_ID
+    children = mask[:, i, :].squeeze(1).squeeze(0).bitwise_and(HEAD_SELF_ID | HEAD_SIB_ID).nonzero()
+    mask[:, k, children] = HEAD_CHILD_ID
+    mask[:, children, k] = HEAD_PARENT_ID
     i = j
+
   if tree.r:
-    i = flatten_mask_left2(tree.r, i, mask)
+    j = flatten_mask_left2(tree.r, i, mask)
+    siblings = mask[:, i, :].squeeze(1).squeeze(0).bitwise_and(HEAD_SELF_ID | HEAD_SIB_ID).nonzero()
+    mask[:, k, siblings] = HEAD_SIB_ID
+    mask[:, siblings, k] = HEAD_SIB_ID
+    i = j
   return i
 
 def get_enc_mask(toks, structs, num_heads):
   bsz, src_len = toks.size()
-  masks = torch.full((bsz, num_heads, src_len, src_len), (HEAD_PAD_ID), dtype=torch.int8, device=ut.get_device())
+  masks = torch.full((bsz, num_heads, src_len, src_len), (HEAD_PAD_ID), dtype=torch.int, device=ut.get_device())
   
   for c in range(bsz):
     size = structs[c].size()
     flatten_mask_left2(structs[c], 0, masks[c, :, :size, :size])
-    masks[c, :, size:, :] = HEAD_SELF_ID
-  #for i in range(len(heads)):
-  #  masks[:, i, :, :].bitwise_and_(heads[i])
-  #return torch.logical_not(masks.type(torch.bool))
+    masks[c, :, size:, :] = HEAD_EXTRA_ID
   return masks
+
+#def test(tree_str, num_heads=1):
+#  tree = parse(tree_str)
+#  print(tree)
+#  toks = torch.Tensor(num_heads, tree.size())
+#  print(get_enc_mask(toks, [tree], num_heads))
