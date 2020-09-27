@@ -24,11 +24,11 @@ class Validator(object):
         self.save_to = config['save_to']
         self.grad_clamp = bool(config['grad_clamp'])
 
-        self.get_cpkt_path = lambda score: os.path.join(self.save_to, f'{self.model_name}-{score}.pth')
+        self.get_cpkt_path = lambda score: os.path.join(self.save_to, f'{self.model_name}-{score:.2f}.pth')
         self.n_best = config['n_best']
 
         scriptdir = os.path.dirname(os.path.abspath(__file__))
-        self.bleu_script = f'{scriptdir}/../scripts/multi-bleu.perl'
+        self.bleu_script = config['bleu_script']
         if not os.path.exists(self.bleu_script):
             raise FileNotFoundError(self.bleu_script)
 
@@ -107,8 +107,8 @@ class Validator(object):
 
         self.model.train()
         self.logger.info(f'smooth, true dev perp: {smooth_perp}, {perp}')
-        if self.grad_clamp: self.logger.info(f'{finite} finite, {infinite} infinite perp batches')
-        self.logger.info('Calculating dev perp took ' + ut.format_time(time.time() - start_time))
+        if self.grad_clamp and infinite: self.logger.info(f'{finite} finite, {infinite} infinite perp batches')
+        self.logger.info('Finished validation, took ' + ut.format_time(time.time() - start_time))
 
     def evaluate_bleu(self):
         self.model.eval()
