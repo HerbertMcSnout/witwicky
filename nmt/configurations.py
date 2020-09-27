@@ -17,8 +17,10 @@ class Config(dict):
         return self.__class__(**self)
     
     def adapt(self, **kwargs):
+        warn = ('warn_new_option' in   self and   self['warn_new_option']) \
+            or ('warn_new_option' in kwargs and kwargs['warn_new_option'])
         for k in kwargs:
-            if k not in self:
+            if warn and k not in self:
                 raise KeyError(k)
         return self.__class__(**{k:v for k,v in list(self.items()) + list(kwargs.items())})
 
@@ -145,6 +147,8 @@ base_config = Config(
     # How many of the best models to save
     n_best = 1,
 
+    bleu_script = 'scripts/multi-bleu.perl',
+
     ### Length model
 
     # Choices are:
@@ -161,6 +165,9 @@ base_config = Config(
 
     ### Decoding options
     beam_size = 4,
+
+    # Warn if an adaptation introduces a new option (as it may be a typo)
+    warn_new_option = True,
 )
 
 fun2com_base = base_config.adapt(
@@ -435,5 +442,16 @@ en2vi_abs = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.a
 en2vi_sin = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.tree_sin, grad_clamp = 100.0, learned_pos_src = False)
 
 en2vi17a = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.tree17a, grad_clamp = 100.0)
-en2vi17a2 = en2vi17a.adapt()
-en2vi17as = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree_short', struct = struct.tree17a, grad_clamp = 100.0, log_freq = 5)
+en2vi17u = en2vi17a.adapt(data_dir = 'nmt/data/en2vi_untagged')
+en2vi17b = en2vi17a.adapt(struct = struct.tree17a2)
+en2vi17c = en2vi17a.adapt()#data_dir = 'nmt/data/en2vi_tree_short')
+en2vi17as = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree_short', struct = struct.tree17a2, grad_clamp = 100.0, log_freq = 5)
+#en2vi17a3 = en2vi17a.adapt(warn_new_option = False, tree_attention_heads = [()])
+en2vi_abs_sin = en2vi_base.adapt(learned_pos_src = False, struct = struct.abs_sin, data_dir = 'nmt/data/en2vi_tree')
+
+tree2rel = base_config.adapt(src_lang = 'tree', trg_lang = 'rel', early_stop_patience = 0, max_trg_length = 2, log_freq = 25, restore_segments = False, beam_size = 1, max_epochs = 300, bleu_script = 'scripts/one-gram.sh', lr = 1e-4)
+tree2rel2 = tree2rel.adapt(learned_pos_src = True, data_dir = 'nmt/data/tree2rel', struct = struct.tree17f, grad_clamp = 100.0, max_trg_length = 2)
+tree2rel3 = tree2rel2.adapt(struct = struct.tree17a, max_epochs = 1)
+tree2rel4 = tree2rel2.adapt(struct = struct.tree1444f)
+tree2rel5 = tree2rel2.adapt(struct = struct.tree17f, learned_pos_src = False)
+tree2rel_bow = tree2rel2.adapt(struct = struct.bow, max_trg_length = 2)
