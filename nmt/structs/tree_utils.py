@@ -222,35 +222,35 @@ HEAD_BASE_IDS = HEAD_SELF_ID | HEAD_EXTRA_ID
 def flatten_mask_left2(tree, i, mask):
   k = i
   i += 1
-  mask[:, k, :] = HEAD_OTHER_ID
-  mask[:, k, k] = HEAD_SELF_ID
+  mask[k, :] = HEAD_OTHER_ID
+  mask[k, k] = HEAD_SELF_ID
 
   if tree.l:
     j = flatten_mask_left2(tree.l, i, mask)
-    mask[:, k, i : j] = HEAD_DESC_ID
-    mask[:, i : j, k] = HEAD_ANCE_ID
-    children = mask[:, i, :].squeeze(1).squeeze(0).bitwise_and(HEAD_SELF_ID | HEAD_SIB_ID).nonzero()
-    mask[:, k, children] = HEAD_CHILD_ID
-    mask[:, children, k] = HEAD_PARENT_ID
+    mask[k, i : j] = HEAD_DESC_ID
+    mask[i : j, k] = HEAD_ANCE_ID
+    children = mask[i, :].bitwise_and(HEAD_SELF_ID | HEAD_SIB_ID).nonzero()
+    mask[k, children] = HEAD_CHILD_ID
+    mask[children, k] = HEAD_PARENT_ID
     i = j
 
   if tree.r:
     j = flatten_mask_left2(tree.r, i, mask)
-    siblings = mask[:, i, :].squeeze(1).squeeze(0).bitwise_and(HEAD_SELF_ID | HEAD_SIB_ID).nonzero()
-    mask[:, k, siblings] = HEAD_SIB_ID
-    mask[:, siblings, k] = HEAD_SIB_ID
+    siblings = mask[i, :].bitwise_and(HEAD_SELF_ID | HEAD_SIB_ID).nonzero()
+    mask[k, siblings] = HEAD_SIB_ID
+    mask[siblings, k] = HEAD_SIB_ID
     i = j
   return i
 
 def get_enc_mask(toks, structs, num_heads):
   bsz, src_len = toks.size()
-  masks = torch.full((bsz, num_heads, src_len, src_len), (HEAD_PAD_ID), dtype=torch.int, device=ut.get_device())
+  masks = torch.full((bsz, src_len, src_len), HEAD_PAD_ID, dtype=torch.int, device=ut.get_device())
   
   for c in range(bsz):
     size = structs[c].size()
-    flatten_mask_left2(structs[c], 0, masks[c, :, :size, :size])
-    masks[c, :, size:, :] = HEAD_EXTRA_ID
-  return masks
+    flatten_mask_left2(structs[c], 0, masks[c, :size, :size])
+    masks[c, size:, :] = HEAD_EXTRA_ID
+  return masks.unsqueeze(1).expand(-1, num_heads, -1, -1).clone()
 
 #def test(tree_str, num_heads=1):
 #  tree = parse(tree_str)
