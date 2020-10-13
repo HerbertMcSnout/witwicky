@@ -32,7 +32,7 @@ class Attention(nn.Module):
             q : bsz x src_len x embed_dim
             k : bsz x trg_len x embed_dim
             v : bsz x trg_len x embed_dim
-            mask : src_len x trg_len
+            mask : (bsz x num_heads x) src_len x trg_len
         """
         if do_proj:
             q, k, v = self.linear_projection(q, k, v)
@@ -72,15 +72,11 @@ class Attention(nn.Module):
         att_weights = torch.bmm(q, k.transpose(1, 2)) * self.scaling
         bsz_x_num_heads, src_len, trg_len = att_weights.size()
         att_weights = att_weights.reshape(bsz_x_num_heads // self.num_heads, self.num_heads, src_len, trg_len)
-        
-        #print(att_weights.std(), att_weights.norm(), att_weights.mean(), att_weights.size())
-        #import random
-        #random.seed(280)
-        #if random.random() < 0.1: raise Exception
 
         if mask is not None and (mask.dtype == torch.int or mask.dtype == torch.bool):
             att_weights.masked_fill_(mask, float('-inf'))
         elif mask is not None and mask.dtype == torch.float:
+            #att_weights = att_weights * mask
             att_weights.masked_fill_(torch.logical_not(mask.type(torch.bool)), float('-inf'))
             att_weights = att_weights - torch.exp(mask)
 

@@ -218,6 +218,9 @@ HEAD_IDS = [1 << x for x in range(9)]
 HEAD_PAD_ID, HEAD_SELF_ID, HEAD_OTHER_ID, HEAD_CHILD_ID, HEAD_PARENT_ID, HEAD_SIB_ID, HEAD_ANCE_ID, HEAD_DESC_ID, HEAD_EXTRA_ID = HEAD_IDS
 
 HEAD_BASE_IDS = HEAD_SELF_ID | HEAD_EXTRA_ID
+HEAD_ALL_IDS = 0
+for HEAD_ID in HEAD_IDS[1:]:
+  HEAD_ALL_IDS |= HEAD_ID
 
 def flatten_mask_left2(tree, i, mask):
   k = i
@@ -229,18 +232,19 @@ def flatten_mask_left2(tree, i, mask):
     j = flatten_mask_left2(tree.l, i, mask)
     mask[k, i : j] = HEAD_DESC_ID
     mask[i : j, k] = HEAD_ANCE_ID
-    children = mask[i, :].bitwise_and(HEAD_SELF_ID | HEAD_SIB_ID).nonzero()
-    mask[k, children] = HEAD_CHILD_ID
-    mask[children, k] = HEAD_PARENT_ID
+    children = (mask[i, :] & (HEAD_SELF_ID | HEAD_SIB_ID)).type(torch.bool)
+    mask[k, :].masked_fill_(children, HEAD_CHILD_ID)
+    mask[:, k].masked_fill_(children, HEAD_PARENT_ID)
     i = j
 
   if tree.r:
     j = flatten_mask_left2(tree.r, i, mask)
-    siblings = mask[i, :].bitwise_and(HEAD_SELF_ID | HEAD_SIB_ID).nonzero()
-    mask[k, siblings] = HEAD_SIB_ID
-    mask[siblings, k] = HEAD_SIB_ID
+    siblings = (mask[i, :] & (HEAD_SELF_ID | HEAD_SIB_ID)).type(torch.bool)
+    mask[k, :].masked_fill_(siblings, HEAD_SIB_ID)
+    mask[:, k].masked_fill_(siblings, HEAD_SIB_ID)
     i = j
   return i
+
 
 def get_enc_mask(toks, structs, num_heads):
   bsz, src_len = toks.size()
@@ -250,10 +254,12 @@ def get_enc_mask(toks, structs, num_heads):
     size = structs[c].size()
     flatten_mask_left2(structs[c], 0, masks[c, :size, :size])
     masks[c, size:, :] = HEAD_EXTRA_ID
-  return masks.unsqueeze(1).expand(-1, num_heads, -1, -1).clone()
 
-#def test(tree_str, num_heads=1):
-#  tree = parse(tree_str)
-#  print(tree)
-#  toks = torch.Tensor(num_heads, tree.size())
-#  print(get_enc_mask(toks, [tree], num_heads))
+  if num_heads == 1: return masks.unsqueeze(1)
+  else: return masks.unsqueeze(1).expand(-1, num_heads, -1, -1).clone()
+
+def test(tree_str, num_heads=1):
+  tree = parse(tree_str)
+  print(tree)
+  toks = torch.Tensor(num_heads, tree.size())
+  print(get_enc_mask(toks, [tree], num_heads))

@@ -183,8 +183,10 @@ class Model(nn.Module):
         targets = targets.reshape(-1, 1)
         non_pad_mask = targets != ac.PAD_ID
         nll_loss = -neglprobs.gather(dim=-1, index=targets)
-        nll_loss = nll_loss[non_pad_mask]
-        smooth_loss = -neglprobs.sum(dim=-1, keepdim=True)[non_pad_mask]
+        #nll_loss = nll_loss[non_pad_mask] # speed
+        nll_loss = nll_loss * non_pad_mask
+        #smooth_loss = -neglprobs.sum(dim=-1, keepdim=True)[non_pad_mask]
+        smooth_loss = -neglprobs.sum(dim=-1, keepdim=True) * non_pad_mask
 
         nll_loss = nll_loss.sum()
         smooth_loss = smooth_loss.sum()
@@ -206,7 +208,8 @@ class Model(nn.Module):
         softmax_weight = self.out_embedding if not self.config['fix_norm'] else ut.normalize(self.out_embedding, scale=True)
         logits = F.linear(decoder_output, softmax_weight, bias=self.out_bias)
         logits = logits.reshape(-1, logits.size()[-1])
-        logits[:, ~self.trg_vocab_mask] = -1e9
+        #logits[:, ~self.trg_vocab_mask] = -1e9 # speed
+        logits.masked_fill_(~self.trg_vocab_mask.unsqueeze(0), -3e38) #-1e9)
         return logits
 
     def beam_decode(self, src_toks, src_structs):
