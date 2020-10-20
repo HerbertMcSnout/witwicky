@@ -73,12 +73,13 @@ class Attention(nn.Module):
         bsz_x_num_heads, src_len, trg_len = att_weights.size()
         att_weights = att_weights.reshape(bsz_x_num_heads // self.num_heads, self.num_heads, src_len, trg_len)
 
-        if mask is not None and (mask.dtype == torch.int or mask.dtype == torch.bool):
-            att_weights.masked_fill_(mask, float('-inf'))
-        elif mask is not None and mask.dtype == torch.float:
+        if mask is not None and type(mask) == tuple:
+            fmask, bmask = mask
             #att_weights = att_weights * mask
-            att_weights.masked_fill_(torch.logical_not(mask.type(torch.bool)), float('-inf'))
-            att_weights = att_weights - torch.exp(mask)
+            att_weights.masked_fill_(torch.logical_not(bmask), float('-inf'))
+            att_weights = att_weights - torch.exp(fmask)
+        elif mask is not None:
+            att_weights.masked_fill_(mask, float('-inf'))
 
         att_weights = att_weights.reshape(bsz_x_num_heads, src_len, trg_len)
         att_weights = F.softmax(att_weights, dim=-1)

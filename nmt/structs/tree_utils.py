@@ -7,6 +7,12 @@ class Record(object):
     for k, v in kwargs.items():
       setattr(self, k, v)
 
+  def get(self, attr, default=None):
+    if default:
+      return getattr(self, attr) if hasattr(self, attr) else default
+    else:
+      return getattr(self, attr)
+
 
 class Tree(Struct):
   
