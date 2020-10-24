@@ -109,39 +109,50 @@ class Tree(Struct):
     return self.new(v, l, r)
 
 def parse_clean(fun_str, remove_parens=True):
-  # fun_str\n -> fun_str
-  if fun_str[-1] == "\n": fun_str = fun_str[:-1]
-
+  fun_str.rstrip('\n')
   fun_str = fun_str.strip()
 
   # (fun_str) -> fun_str
-  if fun_str[0] == "(" and fun_str[-1] == ")" and remove_parens:
-    fun_str = fun_str[1:-1].strip()
-
-  return fun_str
-
+  if fun_str[0] == '(' and remove_parens:
+    if fun_str[-1] == ')': return fun_str[1:-1].strip()
+    else: return None
+  else: return fun_str
 
 def parse_lc_rs_h(fun_str):
+  if not fun_str: return None, 0
+  orig_len = len(fun_str)
+  fun_str = fun_str.lstrip()
+  if not fun_str or fun_str[0] == '(': return None, orig_len
+  t, i = parse_lc_rs_h2(fun_str)
+  return t, i + orig_len - len(fun_str)
+
+def parse_lc_rs_h2(fun_str):
   children = []
   start = 0
   pos = 0
   while pos < len(fun_str):
     c = fun_str[pos]
     pos += 1
-    if c == " " or c == "(" or c == ")":
+    if c in [' ', '(', ')']:
       if start != pos - 1:
         children.append(fun_str[start:pos - 1])
-      if c == "(":
+      if c == '(':
         child, end = parse_lc_rs_h(fun_str[pos:])
         children.append(child)
+        if not child or pos + end == len(fun_str) or fun_str[pos + end] != ')':
+          return None, len(fun_str)
+        end += 1
         start = pos = pos + end
-      elif c == ")": return children, pos
+      elif c == ')': return children, pos - 1
       else: start = pos
 
   if start != pos:
     children.append(fun_str[start:pos])
 
   return children, pos
+
+#def parse_no_binarization(fun_str):
+#  return parse_lc_rs_h(parse_clean(fun_str))[0]
 
 
 def construct_tree(tree, cls=Tree):
@@ -179,10 +190,10 @@ def maybe_clip(tree, clip):
   return tree.set_clip_length(clip)[1] if clip else tree
 
 def parse(fun_str, cls=Tree, clip=None):
-  return maybe_clip(construct_tree(parse_lc_rs_h(parse_clean(fun_str))[0], cls=cls), clip)
-
-def parse_no_binarization(fun_str):
-  return parse_lc_rs_h(parse_clean(fun_str))[0]
+  cleaned = parse_clean(fun_str)
+  tree, end = parse_lc_rs_h(cleaned)
+  if tree and end == len(cleaned):
+    return maybe_clip(construct_tree(tree, cls=cls), clip)
 
 def init_tensor(*size):
   device = ut.get_device()
@@ -207,47 +218,49 @@ def reg_smooth2(x, eps):
   return x * torch.tanh(eps * x)
 
 
-#def flatten_mask_left(tree, i, size, acc):
-#  nv = [1 << HEAD_OTHER_ID] * size
-#  nv[i] = 1 << HEAD_SELF_ID
-#  acc.append(nv)
-#  i += 1
-#  if tree.l:
-#    j = flatten_mask_left(tree.l, i, size, acc)
-#    acc[i - 1][i : j] = [1 << HEAD_CHILD_ID] * (j - i)
-#    i = j
-#  if tree.r:
-#    i = flatten_mask_left(tree.r, i, size, acc)
-#  return i
-
-HEAD_IDS = [1 << x for x in range(9)]
-HEAD_PAD_ID, HEAD_SELF_ID, HEAD_OTHER_ID, HEAD_CHILD_ID, HEAD_PARENT_ID, HEAD_SIB_ID, HEAD_ANCE_ID, HEAD_DESC_ID, HEAD_EXTRA_ID = HEAD_IDS
+HEAD_IDS = [1 << x for x in range(11)]
+HEAD_PAD_ID, HEAD_SELF_ID, HEAD_OTHERL_ID, HEAD_OTHERR_ID, \
+HEAD_PARENT_ID, HEAD_CHILD_ID, HEAD_SIBL_ID, HEAD_SIBR_ID, \
+HEAD_ANCE_ID, HEAD_DESC_ID, HEAD_EXTRA_ID = HEAD_IDS
+# pad    =    1
+# self   =    2
+# otherl =    4
+# otherr =    8
+# parent =   16
+# child  =   32
+# sibl   =   64
+# sibr   =  128
+# ance   =  256
+# desc   =  512
+# extra  = 1024
 
 HEAD_BASE_IDS = HEAD_SELF_ID | HEAD_EXTRA_ID
 HEAD_ALL_IDS = 0
 for HEAD_ID in HEAD_IDS[1:]:
   HEAD_ALL_IDS |= HEAD_ID
 
-def flatten_mask_left2(tree, i, mask):
+def flatten_mask_left(tree, i, mask):
   k = i
   i += 1
-  mask[k, :] = HEAD_OTHER_ID
+  #mask[k, :] = HEAD_OTHER_ID
+  mask[k, :k] = HEAD_OTHERL_ID
+  mask[k, k+1:] = HEAD_OTHERR_ID
   mask[k, k] = HEAD_SELF_ID
 
   if tree.l:
-    j = flatten_mask_left2(tree.l, i, mask)
+    j = flatten_mask_left(tree.l, i, mask)
     mask[k, i : j] = HEAD_DESC_ID
     mask[i : j, k] = HEAD_ANCE_ID
-    children = (mask[i, :] & (HEAD_SELF_ID | HEAD_SIB_ID)).type(torch.bool)
+    children = (mask[i, :] & (HEAD_SELF_ID | HEAD_SIBR_ID)).type(torch.bool)
     mask[k, :].masked_fill_(children, HEAD_CHILD_ID)
     mask[:, k].masked_fill_(children, HEAD_PARENT_ID)
     i = j
 
   if tree.r:
-    j = flatten_mask_left2(tree.r, i, mask)
-    siblings = (mask[i, :] & (HEAD_SELF_ID | HEAD_SIB_ID)).type(torch.bool)
-    mask[k, :].masked_fill_(siblings, HEAD_SIB_ID)
-    mask[:, k].masked_fill_(siblings, HEAD_SIB_ID)
+    j = flatten_mask_left(tree.r, i, mask)
+    siblings = (mask[i, :] & (HEAD_SELF_ID | HEAD_SIBR_ID)).type(torch.bool)
+    mask[k, :].masked_fill_(siblings, HEAD_SIBR_ID)
+    mask[:, k].masked_fill_(siblings, HEAD_SIBL_ID)
     i = j
   return i
 
@@ -258,7 +271,7 @@ def get_enc_mask(toks, structs, num_heads):
   
   for c in range(bsz):
     size = structs[c].size()
-    flatten_mask_left2(structs[c], 0, masks[c, :size, :size])
+    flatten_mask_left(structs[c], 0, masks[c, :size, :size])
     masks[c, size:, :] = HEAD_EXTRA_ID
 
   if num_heads == 1: return masks.unsqueeze(1)

@@ -206,6 +206,7 @@ java2doc17a2 = java2doc17a.adapt(struct = struct.tree17a2)
 
 java2doc17a_small = java2doc17a.adapt(data_dir = 'nmt/data/java2doc_small')
 java2doc17a2_small = java2doc17a2.adapt(data_dir = 'nmt/data/java2doc_small')
+java2doc17_small = java2doc17a2_small.adapt(struct = struct.tree17c)
 java2doc_seq_small = java2doc_seq.adapt()
 
 
@@ -228,6 +229,7 @@ py2doc17a2 = py2doc17a.adapt(struct = struct.tree17a2)
 
 py2doc17a_small = py2doc17a.adapt(data_dir = 'nmt/data/py2doc_small')
 py2doc17a2_small = py2doc17a2.adapt(data_dir = 'nmt/data/py2doc_small')
+py2doc17_small = py2doc_c.adapt(data_dir = 'nmt/data/py2doc_small')
 py2doc_seq_small = py2doc_seq.adapt()
 
 
@@ -237,24 +239,43 @@ py2doc_seq_small = py2doc_seq.adapt()
 en2vi_base = base_config.adapt(src_lang = 'en', trg_lang = 'vi', early_stop_patience = 0, learned_pos_src = True)
 en2vi = en2vi_base.adapt()
 en2vi_tree = en2vi_base.adapt(struct = struct.tree17c, grad_clamp = 100.0)
-en2vi17a = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.tree17a, grad_clamp = 100.0)
-en2vi17a2 = en2vi17a.adapt(struct = struct.tree17a2)
+en2vi17a_base = en2vi_base.adapt(struct = struct.tree17a, grad_clamp = 100.0)
+en2vi17a2_base = en2vi17a_base.adapt(struct = struct.tree17a2)
+en2vi17a = en2vi17a_base.adapt(data_dir = 'nmt/data/en2vi_tree')
+en2vi17a2 = en2vi17a2_base.adapt(data_dir = 'nmt/data/en2vi_tree')
 
 en2vi17a2_small = en2vi17a2.adapt(data_dir = 'nmt/data/en2vi_tree_small')
 en2vi17a_small = en2vi17a.adapt(data_dir = 'nmt/data/en2vi_tree_small')
-en2vi_small = en2vi.adapt(data_dir = 'nmt/data/en2vi_seq_small')
+en2vi17_small = en2vi_tree.adapt(data_dir = 'nmt/data/en2vi_tree_small')
+en2vi_small = en2vi
+en2vi_seq_small = en2vi
+en2vi_seq_50k = en2vi
+en2vi_seq_10k = en2vi
+en2vi_10k = en2vi17a2_base
+en2vi_50k = en2vi17a2_base
 
 ##########################
 
 py2tree = base_config.adapt(
-    max_src_length = 1000,
+    max_src_length = 500,
+    max_trg_length = 600,
     max_epochs = 100,
     early_stop_patience = 0,
     validate_freq = 1,
     dropout = 0.2,
     lr = 1e-4,
     restore_segments = False,
+    src_lang = 'py',
+    trg_lang = 'tree',
+    bleu_script = 'scripts/parens.py',
 )
+
+java2tree = py2tree.adapt(
+    src_lang = 'java',
+)
+
+py2tree_20k = py2tree
+java2tree_20k = java2tree
 
 ##########################
 
