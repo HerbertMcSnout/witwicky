@@ -104,9 +104,12 @@ class DataManager(object):
             self.vocab_masks[self.src_lang] = ut.process_mask(numpy.ones([len(self.src_vocab)], dtype=numpy.float32))
             self.vocab_masks[self.trg_lang] = ut.process_mask(numpy.ones([len(self.trg_vocab)], dtype=numpy.float32))        
 
-    def clip_vocab(self, vocab, size):
+    def clip_vocab(self, vocab, size, name=None):
         size = size - len(ac._START_VOCAB) if size else None
         words = [k for k in ac._START_VOCAB] + [k for k, v in vocab.most_common(size) if v]
+        if name:
+            if size: self.logger.info(f'{name} vocab clipped from {len(vocab.elements())} to {size} words')
+            else: self.logger.info(f'{name} vocab has {len(vocab.elements())} words')
         return {k:v for v, k in enumerate(words)}, words
 
     def get_mask(self, vocab, joint_vocab):

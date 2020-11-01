@@ -114,14 +114,14 @@ def process_mask(mask):
     return torch.from_numpy(mask).type(torch.bool).to(get_device())
 
 
-position_encoding_cached = None
-position_encoding_len_cached = None
+position_embedding_cached = None
+position_embedding_len_cached = None
 
-def get_position_encoding(dim, sentence_length):
-    "Returns sequence-to-sequence position encoding [sentence_length, dim]"
-    global position_encoding_cached, position_encoding_len_cached
-    if position_encoding_cached is not None and sentence_length <= position_encoding_len_cached:
-        return position_encoding_cached[:sentence_length, :]
+def get_position_embedding(dim, sentence_length):
+    "Returns sequence-to-sequence position embedding [sentence_length, dim]"
+    global position_embedding_cached, position_embedding_len_cached
+    if position_embedding_cached is not None and sentence_length <= position_embedding_len_cached:
+        return position_embedding_cached[:sentence_length, :]
     else:
         div_term = numpy.power(10000.0, - (numpy.arange(dim) // 2).astype(numpy.float32) * 2.0 / dim)
         div_term = div_term.reshape(1, -1)
@@ -131,9 +131,9 @@ def get_position_encoding(dim, sentence_length):
         encoded_vec[:, 1::2] = numpy.cos(encoded_vec[:, 1::2])
 
         dtype = get_float_type()
-        position_encoding_cached = torch.from_numpy(encoded_vec.reshape([sentence_length, dim])).type(dtype)
-        position_encoding_len_cached = sentence_length
-        return position_encoding_cached
+        position_embedding_cached = torch.from_numpy(encoded_vec.reshape([sentence_length, dim])).type(dtype)
+        position_embedding_len_cached = sentence_length
+        return position_embedding_cached
 
 
 def normalize(x, scale=True):

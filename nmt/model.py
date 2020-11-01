@@ -40,7 +40,7 @@ class Model(nn.Module):
 
         # get trg positonal embedding
         if not self.config['learned_pos_trg']:
-            self.pos_embedding_trg = ut.get_position_encoding(embed_dim, max_trg_len)
+            self.pos_embedding_trg = ut.get_position_embedding(embed_dim, max_trg_len)
         else:
             self.pos_embedding_trg = Parameter(torch.empty(max_trg_len, embed_dim, dtype=torch.float, device=device))
             nn.init.normal_(self.pos_embedding_trg, mean=0, std=embed_dim ** -0.5)
@@ -127,7 +127,8 @@ class Model(nn.Module):
 
     def get_pos_embedding_h(self, x):
         embed_dim = self.config['embed_dim']
-        pe = x.get_pos_embedding(embed_dim, **self.struct_params).flatten()
+        pe = x.get_pos_embedding(embed_dim, **self.struct_params)
+        if isinstance(pe, type(x)): pe = pe.flatten()
         return pe if torch.is_tensor(pe) else torch.stack(pe) # [bsz, embed_dim]
     
     def get_pos_embedding(self, max_len, structs=None):

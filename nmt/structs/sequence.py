@@ -1,5 +1,5 @@
 import torch
-from nmt.utils import get_position_encoding, get_float_type
+from nmt.utils import get_position_embedding, get_float_type
 from nmt.structs.struct import Struct
 
 class SequenceStruct(Struct):
@@ -22,7 +22,7 @@ class SequenceStruct(Struct):
   def get_pos_embedding(self, embed_dim, pos_seq=None):
     size = self.size()
     if pos_seq is None:
-      return SequenceStruct(get_position_encoding(embed_dim, size) * ((embed_dim / 2) ** -0.5))
+      return SequenceStruct(get_position_embedding(embed_dim, size) * ((embed_dim / 2) ** -0.5))
     else:
       return SequenceStruct(pos_seq[:size, :])
 
