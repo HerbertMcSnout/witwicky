@@ -91,7 +91,7 @@ class DataManager(object):
             self.logger.info('Using one embedding so use joint vocab')
             joint_vocab = src_vocab + trg_vocab
             size = self.vocab_sizes['joint'] or None
-            joint_vocab, joint_ivocab = self.clip_vocab(joint_vocab, size)
+            joint_vocab, joint_ivocab = self.clip_vocab(joint_vocab, size, 'joint')
             self.src_vocab = joint_vocab
             self.trg_vocab = joint_vocab
             self.src_ivocab = joint_ivocab
@@ -99,8 +99,8 @@ class DataManager(object):
             self.vocab_masks[self.src_lang] = ut.process_mask(self.get_mask(self.src_vocab, joint_vocab))
             self.vocab_masks[self.trg_lang] = ut.process_mask(self.get_mask(self.trg_vocab, joint_vocab))
         else:
-            self.src_vocab, self.src_ivocab = self.clip_vocab(src_vocab, self.vocab_sizes[self.src_lang])
-            self.trg_vocab, self.trg_ivocab = self.clip_vocab(trg_vocab, self.vocab_sizes[self.trg_lang])
+            self.src_vocab, self.src_ivocab = self.clip_vocab(src_vocab, self.vocab_sizes[self.src_lang], 'src')
+            self.trg_vocab, self.trg_ivocab = self.clip_vocab(trg_vocab, self.vocab_sizes[self.trg_lang], 'trg')
             self.vocab_masks[self.src_lang] = ut.process_mask(numpy.ones([len(self.src_vocab)], dtype=numpy.float32))
             self.vocab_masks[self.trg_lang] = ut.process_mask(numpy.ones([len(self.trg_vocab)], dtype=numpy.float32))        
 
