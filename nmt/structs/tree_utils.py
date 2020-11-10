@@ -233,6 +233,7 @@ HEAD_ANCE_ID, HEAD_DESC_ID, HEAD_EXTRA_ID = HEAD_IDS
 # ance   =  256
 # desc   =  512
 # extra  = 1024
+HEAD_NAMES = ['pad', 'self', 'left-other', 'right-other', 'parent', 'child', 'left-sibling', 'right-sibling', 'ancestor', 'descendent', 'extra']
 
 HEAD_BASE_IDS = HEAD_SELF_ID | HEAD_EXTRA_ID
 HEAD_ALL_IDS = 0
