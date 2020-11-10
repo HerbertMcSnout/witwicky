@@ -108,8 +108,11 @@ class DataManager(object):
         size = size - len(ac._START_VOCAB) if size else None
         words = [k for k in ac._START_VOCAB] + [k for k, v in vocab.most_common(size) if v]
         if name:
-            if size: self.logger.info(f'{name} vocab clipped from {len(vocab.elements())} to {size} words')
-            else: self.logger.info(f'{name} vocab has {len(vocab.elements())} words')
+            orig_size = len(vocab)
+            if size:
+                new_size = size + len(ac._START_VOCAB)
+                self.logger.info(f'{name} vocab clipped from {orig_size} to {new_size} words')
+            else: self.logger.info(f'{name} vocab has {orig_size} words')
         return {k:v for v, k in enumerate(words)}, words
 
     def get_mask(self, vocab, joint_vocab):
