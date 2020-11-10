@@ -37,18 +37,8 @@ def get_enc_mask(toks, structs, num_heads, attL, attR):
   bsz, src_len = toks.size()
   device = get_device()
 
-  bmask = torch.zeros(bsz, src_len, dtype=torch.bool, device=device)
-  for line in range(bsz):
-    bmask[line, :structs[line].size()] = True
-
-  fmask = torch.zeros(bsz, num_heads, src_len, src_len, dtype=torch.float, device=device)
-  for head in range(num_heads):
-    for line in range(bsz):
-      size = structs[line].size()
-      for word in range(size):
-        if word > 0:
-          fmask[line, head, word, word - 1] = attL[head]
-        if word + 1 < size:
-          fmask[line, head, word, word + 1] = attR[head]
-  
-  return fmask, bmask.unsqueeze(1).unsqueeze(2)
+  diagL = torch.diag(torch.ones(src_len, dtype=torch.float, device=device), diagonal=-1)[:src_len, :src_len]
+  diagR = torch.diag(torch.ones(src_len, dtype=torch.float, device=device), diagonal=1)[:src_len, :src_len]
+  maskL = (diagL.unsqueeze(0) * attL.reshape(-1, 1, 1)).unsqueeze(0)
+  maskR = (diagR.unsqueeze(0) * attR.reshape(-1, 1, 1)).unsqueeze(0)
+  return maskL + maskR, toks.type(torch.bool).unsqueeze(1).unsqueeze(2)
