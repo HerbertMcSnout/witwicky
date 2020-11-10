@@ -143,7 +143,7 @@ def draw_tree(acc, tree, depth, theta1, theta2, max_depth, has_left, has_right):
         draw_tree(acc, tree.r, depth + 1, theta3, theta2, max_depth, tree.l, has_right)
 
 
-def plot_tree(ax, tree, cm="cividis", median=None):
+def plot_tree(ax, tree, cm="cividis", median=None, diverging_cm=None):
 
     def maybe_expand(x):
         a = np.asanyarray(x)
@@ -154,6 +154,8 @@ def plot_tree(ax, tree, cm="cividis", median=None):
     min_v, max_v, depth = tree.min(), tree.max(), tree.depth()
     extra_ticks = [min_v, max_v]
     min_v, max_v = get_value_range(median, min_v, max_v)
+    if max_v + min_v == 2 * median and diverging_cm:
+      cm = diverging_cm
 
     # Normalize tree values to [0, 1]
     rng = max_v - min_v
