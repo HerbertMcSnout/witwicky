@@ -35,19 +35,20 @@ def get_params(config):
 
 def get_enc_mask(toks, structs, num_heads, attL, attR):
   bsz, src_len = toks.size()
+  device = get_device()
 
-  bmask = torch.zeros(bsz, src_len, dtype=torch.bool)
+  bmask = torch.zeros(bsz, src_len, dtype=torch.bool, device=device)
   for line in range(bsz):
     bmask[line, :structs[line].size()] = True
 
-  fmask = torch.zeros(num_heads, bsz, src_len, src_len, dtype=torch.float)
+  fmask = torch.zeros(bsz, num_heads, src_len, src_len, dtype=torch.float, device=device)
   for head in range(num_heads):
     for line in range(bsz):
       size = structs[line].size()
       for word in range(size):
         if word > 0:
-          fmask[head, line, word, word - 1] = attL[head]
+          fmask[line, head, word, word - 1] = attL[head]
         if word + 1 < size:
-          fmask[head, line, word, word + 1] = attR[head]
+          fmask[line, head, word, word + 1] = attR[head]
   
-  return fmask, bmask
+  return fmask, bmask.unsqueeze(1).unsqueeze(2)

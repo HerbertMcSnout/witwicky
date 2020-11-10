@@ -289,6 +289,7 @@ en2vi17a2_10k = en2vi17a2_base.adapt(data_dir = 'nmt/data/en2vi_tree_10k')
 en2vi17a2_20k = en2vi17a2_base.adapt(data_dir = 'nmt/data/en2vi_tree_20k')
 en2vi17a2_50k = en2vi17a2_base.adapt(data_dir = 'nmt/data/en2vi_tree_50k')
 
+en2viLR = en2vi.adapt(data_dir = 'nmt/data/en2vi', struct = struct.attLR)
 
 ##########################
 en2tu_base = base_config.adapt(src_lang = 'en', trg_lang = 'tu', early_stop_patience = 0, learned_pos_src = True)
@@ -323,6 +324,7 @@ py2tree = base_config.adapt(
     src_lang = 'py',
     trg_lang = 'tree',
     bleu_script = 'scripts/parens.py',
+    learned_pos_src = True,
 )
 
 java2tree = py2tree.adapt(
