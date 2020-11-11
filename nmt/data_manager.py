@@ -111,7 +111,10 @@ class DataManager(object):
             orig_size = len(vocab)
             if size:
                 new_size = size + len(ac._START_VOCAB)
-                self.logger.info(f'{name} vocab clipped from {orig_size} to {new_size} words')
+                if new_size < orig_size:
+                    self.logger.info(f'{name} vocab clipped from {orig_size} to {new_size} words')
+                else:
+                    self.logger.info(f'{name} vocab has {orig_size} words, no need to clip to {new_size} words')
             else: self.logger.info(f'{name} vocab has {orig_size} words')
         return {k:v for v, k in enumerate(words)}, words
 
