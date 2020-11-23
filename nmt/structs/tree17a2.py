@@ -22,16 +22,23 @@ def get_params(config):
     lam  = tree_utils.init_tensor(embed_dim),
     c_l = tree_utils.init_tensor(),
     c_r = tree_utils.init_tensor(),
-    self_attn_weights = 0.0*torch.ones(len(tree_utils.HEAD_IDS[1:]), config['num_enc_heads'], device=ut.get_device()), # 0.1*...
+    self_attn_weights = torch.zeros(len(tree_utils.HEAD_IDS[1:]), config['num_enc_heads'], dtype=torch.float, device=ut.get_device()),
   )
 
-def get_enc_mask(toks, structs, num_heads, mu_l, mu_r, lam, c_l, c_r, self_attn_weights):
-  masks = tree_utils.get_enc_mask(toks, structs, 1)  # [bsz, 1, src_len, src_len]
-  heads = torch.zeros_like(masks, dtype=torch.float) # [bsz, 1, src_len, src_len]
-  mask = masks.squeeze(1) # [bsz, src_len, src_len]
-  heads = heads.expand(-1, num_heads, -1, -1).clone() # [bsz, num_heads, src_len, src_len]
-
-  for head_num in range(num_heads):
-    for i, hid in enumerate(tree_utils.HEAD_IDS[1:]):
-      heads[:, head_num] += self_attn_weights[i, head_num] * mask.bitwise_and(hid).type(torch.bool)
+def get_enc_mask(toks, # [bsz, src_len]
+                 structs, # list of structs
+                 num_heads, # integer
+                 mu_l, # [embed_dim, embed_dim]
+                 mu_r, # [embed_dim, embed_dim]
+                 lam, # [embed_dim]
+                 c_l, # scalar
+                 c_r, # scalar
+                 self_attn_weights, # [NUM_HEAD_IDS, num_heads]
+                 ):
+  bsz, src_len = toks.size()
+  masks = tree_utils.get_enc_mask(toks, structs, 1).unsqueeze(1)  # [bsz, 1, src_len, src_len]
+  heads = torch.zeros(bsz, num_heads, src_len, src_len, dtype=torch.float, device=toks.device) # [bsz, num_heads, src_len, src_len]
+  self_attn = self_attn_weights.view(self_attn_weights.size()[0], 1, -1, 1, 1)
+  for i, hid in enumerate(tree_utils.HEAD_IDS[1:]):
+    heads += self_attn[i] * masks.bitwise_and(hid).type(torch.bool)
   return heads, masks.type(torch.bool)

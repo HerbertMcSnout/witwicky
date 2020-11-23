@@ -218,7 +218,8 @@ def reg_smooth2(x, eps):
   return x * torch.tanh(eps * x)
 
 
-HEAD_IDS = [1 << x for x in range(11)]
+NUM_HEAD_IDS = 11
+HEAD_IDS = [1 << x for x in range(NUM_HEAD_IDS)]
 HEAD_PAD_ID, HEAD_SELF_ID, HEAD_OTHERL_ID, HEAD_OTHERR_ID, \
 HEAD_PARENT_ID, HEAD_CHILD_ID, HEAD_SIBL_ID, HEAD_SIBR_ID, \
 HEAD_ANCE_ID, HEAD_DESC_ID, HEAD_EXTRA_ID = HEAD_IDS
@@ -233,7 +234,7 @@ HEAD_ANCE_ID, HEAD_DESC_ID, HEAD_EXTRA_ID = HEAD_IDS
 # ance   =  256
 # desc   =  512
 # extra  = 1024
-HEAD_NAMES = ['pad', 'self', 'left-other', 'right-other', 'parent', 'child', 'left-sibling', 'right-sibling', 'ancestor', 'descendent', 'extra']
+HEAD_NAMES = ['pad', 'self', 'left-other', 'right-other', 'parent', 'child', 'left-sib', 'right-sib', 'anc', 'desc', 'extra']
 
 HEAD_BASE_IDS = HEAD_SELF_ID | HEAD_EXTRA_ID
 HEAD_ALL_IDS = 0
@@ -266,7 +267,7 @@ def flatten_mask_left(tree, i, mask):
   return i
 
 
-def get_enc_mask(toks, structs, num_heads):
+def get_enc_mask(toks, structs, num_heads=1):
   bsz, src_len = toks.size()
   masks = torch.full((bsz, src_len, src_len), HEAD_PAD_ID, dtype=torch.int, device=ut.get_device())
   
@@ -275,7 +276,7 @@ def get_enc_mask(toks, structs, num_heads):
     flatten_mask_left(structs[c], 0, masks[c, :size, :size])
     masks[c, size:, :] = HEAD_EXTRA_ID
 
-  if num_heads == 1: return masks.unsqueeze(1)
+  if num_heads == 1: return masks#.unsqueeze(1)
   else: return masks.unsqueeze(1).expand(-1, num_heads, -1, -1).clone()
 
 def test(tree_str, num_heads=1):
