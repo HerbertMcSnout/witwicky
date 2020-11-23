@@ -188,78 +188,12 @@ second_base = base_config.adapt(
 )
 
 
-#######################################################################
-
-java2doc_base = second_base.adapt(
-    src_lang = 'java',
-    trg_lang = 'doc',
-    save_to = 'nmt/java2doc_models/{model_name}',
-    joint_vocab_size = 32000,
-)
-
-java2doc_tree_base = java2doc_base.adapt(data_dir = 'nmt/data/java2doc')
-java2doc_seq = java2doc_base.adapt(struct = struct.sequence, data_dir = 'nmt/data/java2doc')
-java2doc_rare = java2doc_base.adapt(struct = struct.sequence)
-java2doc_raw = java2doc_base.adapt(struct = struct.sequence)
-java2doc17a = java2doc_tree_base.adapt(struct = struct.tree17a, grad_clamp = 100.0)
-java2doc17a2 = java2doc17a.adapt(struct = struct.tree17a2)
-
-java2doc17 = java2doc_tree_base.adapt(struct = struct.tree17c, grad_clamp = 100.0)
-
-java2doc17a_20k = java2doc17a.adapt(data_dir = 'nmt/data/java2doc_20k')
-java2doc17a2_20k = java2doc17a2.adapt(data_dir = 'nmt/data/java2doc_20k')
-java2doc17_20k = java2doc17a2_20k.adapt(struct = struct.tree17c)
-java2doc_seq_20k = java2doc_seq.adapt(data_dir = 'nmt/data/java2doc_20k')
-
-java2doc_10k = java2doc17a2_20k.adapt(data_dir = 'nmt/data/java2doc_10k')
-java2doc_seq_10k = java2doc_seq_20k.adapt(data_dir = 'nmt/data/java2doc_10k')
-
-java2doc_att_sin = java2doc_base.adapt(data_dir = 'nmt/data/java2doc', struct = struct.att_sin, add_sinusoidal_pe_src = True)
-java2doc_att_sin_10k = java2doc_att_sin.adapt(data_dir = 'nmt/data/java2doc_10k')
-java2doc_att_sin_20k = java2doc_att_sin.adapt(data_dir = 'nmt/data/java2doc_20k')
-
-#######################################################################
-
-py2doc_base = second_base.adapt(
-    src_lang = 'py',
-    trg_lang = 'doc',
-    save_to = 'nmt/py2doc_models/{model_name}',
-    joint_vocab_size = 32000,
-)
-
-py2doc_tree_base = py2doc_base.adapt(data_dir = 'nmt/data/py2doc2')
-
-
-py2doc_rare = py2doc_base.adapt(struct = struct.sequence)
-py2doc_c = py2doc_tree_base.adapt(struct = struct.tree17c, grad_clamp = 100.0)
-py2doc17a = py2doc_tree_base.adapt(struct = struct.tree17a, grad_clamp = 100.0)
-
-#py2doc17a_20k = py2doc17a.adapt(data_dir = 'nmt/data/py2doc_20k')
-#py2doc17_20k = py2doc_c.adapt(data_dir = 'nmt/data/py2doc_20k')
-
-py2doc17 = py2doc_c
-
-py2doc17a2 = py2doc17a.adapt(struct = struct.tree17a2)
-py2doc_10k = py2doc17a2.adapt(data_dir = 'nmt/data/py2doc_10k')
-py2doc_20k = py2doc17a2.adapt(data_dir = 'nmt/data/py2doc_20k')
-py2doc_50k = py2doc17a2.adapt(data_dir = 'nmt/data/py2doc_50k')
-
-py2doc_seq = py2doc_base.adapt(struct = struct.sequence, data_dir = 'nmt/data/py2doc2')
-py2doc_seq_10k = py2doc_seq.adapt(data_dir = 'nmt/data/py2doc_10k')
-py2doc_seq_20k = py2doc_seq.adapt(data_dir = 'nmt/data/py2doc_20k')
-py2doc_seq_50k = py2doc_seq.adapt(data_dir = 'nmt/data/py2doc_50k')
-
-py2doc_att_sin = py2doc_base.adapt(data_dir = 'nmt/data/py2doc2', struct = struct.att_sin, add_sinusoidal_pe_src = True)
-py2doc_att_sin_10k = py2doc_att_sin.adapt(data_dir = 'nmt/data/py2doc_10k')
-py2doc_att_sin_20k = py2doc_att_sin.adapt(data_dir = 'nmt/data/py2doc_20k')
-py2doc_att_sin_50k = py2doc_att_sin.adapt(data_dir = 'nmt/data/py2doc_50k')
-
-
 ##########################
 
 # Untagging doesn't really work for this dataset
 en2vi_base = base_config.adapt(src_lang = 'en', trg_lang = 'vi', early_stop_patience = 0, learned_pos_src = True)
 en2vi17a2_base = en2vi_base.adapt(struct = struct.tree17a2, grad_clamp = 100.0)
+en2vi_tree_nomask_base = en2vi_base.adapt(struct = struct.tree17c, grad_clamp = 100.0)
 #en2vi_tree = en2vi_base.adapt(struct = struct.tree17c, grad_clamp = 100.0)
 #en2vi17a_base = en2vi_base.adapt(struct = struct.tree17a, grad_clamp = 100.0)
 #en2vi17a = en2vi17a_base.adapt(data_dir = 'nmt/data/en2vi_tree')
@@ -289,165 +223,112 @@ en2vi17a2_10k = en2vi17a2_base.adapt(data_dir = 'nmt/data/en2vi_tree_10k')
 en2vi17a2_20k = en2vi17a2_base.adapt(data_dir = 'nmt/data/en2vi_tree_20k')
 en2vi17a2_50k = en2vi17a2_base.adapt(data_dir = 'nmt/data/en2vi_tree_50k')
 
+en2vi_tree_nomask     = en2vi_tree_nomask_base.adapt(data_dir = 'nmt/data/en2vi_tree')
+en2vi_tree_nomask_10k = en2vi_tree_nomask_base.adapt(data_dir = 'nmt/data/en2vi_tree_10k')
+en2vi_tree_nomask_20k = en2vi_tree_nomask_base.adapt(data_dir = 'nmt/data/en2vi_tree_20k')
+en2vi_tree_nomask_50k = en2vi_tree_nomask_base.adapt(data_dir = 'nmt/data/en2vi_tree_50k')
+
 en2viLR = en2vi.adapt(data_dir = 'nmt/data/en2vi', struct = struct.attLR)
 
 ##########################
 en2tu_base = base_config.adapt(src_lang = 'en', trg_lang = 'tu', early_stop_patience = 0, learned_pos_src = True)
-en2tu17a2_base = en2tu_base.adapt(struct = struct.tree17a2, grad_clamp = 100.0)
-
 en2tu = en2tu_base
-en2tu_seq = en2tu.adapt(data_dir = 'nmt/data/en2tu_tree')
-en2tu17a2 = en2tu17a2_base.adapt(data_dir = 'nmt/data/en2tu_tree')
+en2tu_seq = en2tu_base.adapt(data_dir = 'nmt/data/en2tu_tree')
+en2tu17a2 = en2tu_base.adapt(data_dir = 'nmt/data/en2tu_tree', struct = struct.tree17a2, grad_clamp = 100.0)
+en2tu_tree_nomask = en2tu_base.adapt(data_dir = 'nmt/data/en2tu_tree', struct = struct.tree17c, grad_clamp = 100.0)
 en2tu_att_sin = en2tu_base.adapt(data_dir = 'nmt/data/en2tu_tree', struct = struct.att_sin, add_sinusoidal_pe_src = True)
 
 ##########################
 en2ha_base = base_config.adapt(src_lang = 'en', trg_lang = 'ha', early_stop_patience = 0, learned_pos_src = True)
-en2ha17a2_base = en2ha_base.adapt(struct = struct.tree17a2, grad_clamp = 100.0)
-
 en2ha = en2ha_base
-en2ha_seq = en2ha.adapt(data_dir = 'nmt/data/en2ha_tree')
-en2ha17a2 = en2ha17a2_base.adapt(data_dir = 'nmt/data/en2ha_tree')
+en2ha_seq = en2ha_base.adapt(data_dir = 'nmt/data/en2ha_tree')
+en2ha17a2 = en2ha_base.adapt(data_dir = 'nmt/data/en2ha_tree', struct = struct.tree17a2, grad_clamp = 100.0)
+en2ha_tree_nomask = en2ha_base.adapt(data_dir = 'nmt/data/en2ha_tree', struct = struct.tree17c, grad_clamp = 100.0)
 en2ha_att_sin = en2ha_base.adapt(data_dir = 'nmt/data/en2ha_tree', struct = struct.att_sin, add_sinusoidal_pe_src = True)
 
- 
 ##########################
+en2ur_base = base_config.adapt(src_lang = 'en', trg_lang = 'ur', early_stop_patience = 0, learned_pos_src = True)
+en2ur = en2ur_base
+en2ur_seq = en2ur_base.adapt(data_dir = 'nmt/data/en2ur_tree')
+en2ur17a2 = en2ur_base.adapt(data_dir = 'nmt/data/en2ur_tree', struct = struct.tree17a2, grad_clamp = 100.0)
+en2ur_tree_nomask = en2ur_base.adapt(data_dir = 'nmt/data/en2ur_tree', struct = struct.tree17c, grad_clamp = 100.0)
+en2ur_att_sin = en2ur_base.adapt(data_dir = 'nmt/data/en2ur_tree', struct = struct.att_sin, add_sinusoidal_pe_src = True)
 
-py2tree = base_config.adapt(
-    max_src_length = 500,
-    max_trg_length = 600,
-    max_epochs = 100,
-    early_stop_patience = 0,
-    validate_freq = 1,
-    dropout = 0.2,
-    lr = 1e-4,
-    restore_segments = False,
-    src_lang = 'py',
-    trg_lang = 'tree',
-    bleu_script = 'scripts/parens.py',
-    learned_pos_src = True,
-)
-
-java2tree = py2tree.adapt(
-    src_lang = 'java',
-)
-
-py2tree_20k = py2tree
-java2tree_20k = java2tree
 
 ##########################
 
-#en2vi2 = en2vi_base.adapt(data_dir = 'nmt/data/en2vi', struct = struct.sequence2)
-#en2vi3 = en2vi_base.adapt(data_dir = 'nmt/data/en2vi', struct = struct.trees, grad_clamp = 100.0)
-#en2vi4 = en2vi_base.adapt(data_dir = 'nmt/data/en2vi', struct = struct.trees_sum, grad_clamp = 100.0)
-#en2vi_forward = en2vi3.adapt(struct = struct.treesf)
-#en2vi_backward = en2vi3.adapt(struct = struct.treesb)
-#en2vi_dt = en2vi_tree.adapt(data_dir = 'nmt/data/en2vi_tree', num_enc_layers = 10, num_dec_layers = 10)
-#en2vi14 = en2vi_base.adapt(struct = struct.tree1444f, grad_clamp = 100.0, data_dir = 'nmt/data/en2vi_tree')
-#en2vi_tree = en2vi_base.adapt(struct = struct.tree17c, grad_clamp = 100.0)
-#en2vi_c = en2vi_base.adapt(struct = struct.tree17c, grad_clamp = 100.0, data_dir = 'nmt/data/en2vi_tree')
-#en2vi17v = en2vi_base.adapt(struct = struct.tree17v, grad_clamp = 100.0, data_dir='nmt/data/en2vi_tree')
-#en2vi_ens = en2vi_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True, data_dir = 'nmt/data/en2vi_tree')
-#en2vi_seq2 = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree')
-#en2vi_fix = en2vi_base.adapt(learned_pos_src = False, data_dir = 'nmt/data/en2vi_tree', struct = struct.tree17f, add_sinusoidal_pe_src = True)
-#en2vi_fxs = en2vi_base.adapt(learned_pos_src = False, data_dir = 'nmt/data/en2vi_tree', struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True)
-#en2vi_abs = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.abs, add_sinusoidal_pe_src = True)
-#en2vi_sin = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree', struct = struct.tree_sin, grad_clamp = 100.0, learned_pos_src = False)
-#en2vi17w = en2vi17a.adapt(num_enc_heads = 32)
-#en2vi17W = en2vi17a.adapt(num_enc_heads = 16)
-#en2vi_leaf_att = en2vi17a.adapt(struct = struct.leaf_att)
-#en2vi17u = en2vi17a.adapt(data_dir = 'nmt/data/en2vi_untagged')
-#en2vi17c = en2vi17a.adapt()#data_dir = 'nmt/data/en2vi_tree_short')
-#en2vi17as = en2vi_base.adapt(data_dir = 'nmt/data/en2vi_tree_short', struct = struct.tree17a2, grad_clamp = 100.0, log_freq = 5)
-#en2vi17a3 = en2vi17a.adapt(warn_new_option = False, tree_attention_heads = [()])
-#en2vi_abs_sin = en2vi_base.adapt(learned_pos_src = False, struct = struct.abs_sin, data_dir = 'nmt/data/en2vi_tree')
-#tree2rel = base_config.adapt(src_lang = 'tree', trg_lang = 'rel', early_stop_patience = 0, max_trg_length = 2, log_freq = 25, restore_segments = False, beam_size = 1, max_epochs = 300, bleu_script = 'scripts/one-gram.sh', lr = 1e-4)
-#tree2rel2 = tree2rel.adapt(learned_pos_src = True, data_dir = 'nmt/data/tree2rel', struct = struct.tree17f, grad_clamp = 100.0, max_trg_length = 2)
-#tree2rel3 = tree2rel2.adapt(struct = struct.tree17a, max_epochs = 1)
-#tree2rel4 = tree2rel2.adapt(struct = struct.tree1444f)
-#tree2rel_io = tree2rel2.adapt(struct = struct.tree14a, max_epochs = 1)
-#tree2rel5 = tree2rel2.adapt(struct = struct.tree17f, learned_pos_src = False)
-#tree2rel_bow = tree2rel2.adapt(struct = struct.bow, max_trg_length = 2)
-#en2vi14a = en2vi_base.adapt(struct = struct.tree14a, grad_clamp = 100.0, data_dir = 'nmt/data/en2vi_tree')
-#en2vi_att_sin = en2vi17a.adapt(struct = struct.att_sin, add_sinusoidal_pe_src = True)
+de2en_base = base_config.adapt(src_lang = 'de', trg_lang = 'en', early_stop_patience = 10, learned_pos_src = True)
+de2en = de2en_base
+de2en_seq = de2en_base.adapt(data_dir = 'nmt/data/de2en_tree')
+de2en17a2 = de2en_base.adapt(data_dir = 'nmt/data/de2en_tree', struct = struct.tree17a2, grad_clamp = 100.0)
+de2en_tree_nomask = de2en_base.adapt(data_dir = 'nmt/data/de2en_tree', struct = struct.tree17c, grad_clamp = 100.0)
+de2en_att_sin = de2en_base.adapt(data_dir = 'nmt/data/de2en_tree', struct = struct.att_sin, add_sinusoidal_pe_src = True)
 
-#py2doc14 = py2doc_tree_base.adapt(struct = struct.tree1444f, grad_clamp = 100.0)
-#py2doc17 = py2doc_tree_base.adapt(struct = struct.tree)
-#py2doc17f = py2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0)
-#py2doc17s = py2doc17f.adapt(add_sinusoidal_pe_src = True)
-#py2doc17u = py2doc17f.adapt(data_dir = 'nmt/data/py2doc_untagged')
-#py2doc17fl = py2doc17f.adapt(struct = struct.tree17fl)
-#py2doc_dt = py2doc17f.adapt(num_enc_layers = 10, num_dec_layers = 10)
-#py2doc17c = py2doc17a.adapt()
-#py2doc_ens = py2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True)
-#py2doc_fix = py2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = True)
-#py2doc_fix2 = py2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = False)
-#py2doc_fsc = py2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True)
-#py2doc_lsc = py2doc_tree_base.adapt(struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True, grad_clamp = 100.0)
-#py2doc_abs = py2doc_tree_base.adapt(struct = struct.abs, add_sinusoidal_pe_src = True)
-#py2doc_ab = py2doc_tree_base.adapt(struct = struct.abs, add_sinusoidal_pe_src = False)
-#py2doc_abs_fav = py2doc_tree_base.adapt(struct = struct.abs_fav, add_sinusoidal_pe_src = True)
-#py2doc_sin = py2doc_tree_base.adapt(struct = struct.tree_sin, grad_clamp = 100.0, learned_pos_src = False)
+de2en_100k = de2en_base
+de2en_seq_100k = de2en_seq.adapt(data_dir = 'nmt/data/de2en_tree_100k')
+de2en17a2_100k = de2en17a2.adapt(data_dir = 'nmt/data/de2en_tree_100k')
+de2en_tree_nomask_100k = de2en_tree_nomask.adapt(data_dir = 'nmt/data/de2en_tree_100k')
+de2en_att_sin_100k = de2en_att_sin.adapt(data_dir = 'nmt/data/de2en_tree_100k')
 
-#java2doc14 = java2doc_tree_base.adapt(struct = struct.tree1444f, grad_clamp = 100.0)
-#java2doc17 = java2doc_tree_base.adapt(struct = struct.tree)
-#java2doc17f = java2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0)
-#java2doc17s = java2doc17f.adapt(add_sinusoidal_pe_src = True)
-#java2doc17g = java2doc17f.adapt(grad_clip_pe = 1.0)
-#java2doc17e = java2doc17s.adapt(grad_clip_pe = 1.0)
-#java2doc17e2 = java2doc17s.adapt(grad_clip_pe = 1.0)
-#java2doc17u = java2doc17f.adapt(data_dir = 'nmt/data/java2doc_untagged')
-#java2doc17fl = java2doc17f.adapt(struct = struct.tree17fl)
-#java2doc_dt = java2doc17f.adapt(num_enc_layers = 10, num_dec_layers = 10)
-#java2doc17a3 = java2doc17a2.adapt()
-#java2doc_c = java2doc_tree_base.adapt(struct = struct.tree17c, grad_clamp = 100.0)
-#java2doc_ens = java2doc_tree_base.adapt(struct = struct.tree17f, grad_clamp = 100.0, grad_clip_pe = 1.0, add_sinusoidal_pe_src = True)
-#java2doc_fix = java2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = True)
-#java2doc_fix2 = java2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = False)
-#java2doc_fsc = java2doc_tree_base.adapt(learned_pos_src = False, struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True)
-#java2doc_lsc = java2doc_tree_base.adapt(struct = struct.tree17f, add_sinusoidal_pe_src = True, learn_pos_scale = True, separate_embed_scales = True, grad_clamp = 100.0)
-#java2doc17v = java2doc_tree_base.adapt(struct = struct.tree17v, grad_clamp = 100.0)
-#java2doc_abs = java2doc_tree_base.adapt(struct = struct.abs, add_sinusoidal_pe_src = True)
-#java2doc_ab = java2doc_tree_base.adapt(struct = struct.abs, add_sinusoidal_pe_src = False)
-#java2doc_abs_fav = java2doc_tree_base.adapt(struct = struct.abs_fav, add_sinusoidal_pe_src = True)
-#java2doc_sin = java2doc_tree_base.adapt(struct = struct.tree_sin, grad_clamp = 100.0, learned_pos_src = False)
+de2en_500k = de2en_base
+de2en_seq_500k = de2en_seq.adapt(data_dir = 'nmt/data/de2en_tree_500k')
+de2en17a2_500k = de2en17a2.adapt(data_dir = 'nmt/data/de2en_tree_500k')
+de2en_tree_nomask_500k = de2en_tree_nomask.adapt(data_dir = 'nmt/data/de2en_tree_500k')
+de2en_att_sin_500k = de2en_att_sin.adapt(data_dir = 'nmt/data/de2en_tree_500k')
 
-#fun2com_base = base_config.adapt(
-#    src_lang = 'fun',
-#    trg_lang = 'com',
-#    learned_pos_src = True,
-#    max_epochs = 30,
-#    batch_size = 3072,
-#    max_trg_length = 25,
-#    restore_segments = False,
-#    warmup_style = ac.ORG_WARMUP,
-#)
-#
-#fun2com_tree_base = fun2com_base.adapt(data_dir = 'nmt/data/fun2com')
-#fun2com18 = fun2com_tree_base.adapt(struct = struct.tree18,)
-#fun2com17 = fun2com_tree_base.adapt(struct = struct.tree,)
-#fun2com17_all = fun2com_base.adapt(    struct = struct.tree,)
-#fun2com172_all = fun2com_base.adapt(    data_dir = 'nmt/data/fun2com17_all',    struct = struct.tree172,)
-#fun2com16 = fun2com_tree_base.adapt(    struct = struct.tree2,)
-#fun2com15 = fun2com_tree_base.adapt(    struct = struct.tree15,)
-#fun2com14 = fun2com_tree_base.adapt(    struct = struct.tree14,)
-#fun2com142 = fun2com_tree_base.adapt(    struct = struct.tree142,)
-#fun2com143 = fun2com_tree_base.adapt(    struct = struct.tree143,)
-#fun2com144 = fun2com_tree_base.adapt(    struct = struct.tree144,)
-#fun2com1442 = fun2com_tree_base.adapt(    struct = struct.tree1442,)
-#fun2com1443 = fun2com_tree_base.adapt(    struct = struct.tree1443,)
-#fun2com1444 = fun2com_tree_base.adapt(    struct = struct.tree1444,)
-#fun2com1445 = fun2com_tree_base.adapt(    struct = struct.tree1445,)
-#fun2com145 = fun2com_tree_base.adapt(    struct = struct.tree144,    embed_dim = 256,    ff_dim = 256 * 4,)
-#fun2com146 = fun2com_tree_base.adapt(    struct = struct.tree144,    embed_dim = 128,    ff_dim = 128 * 4,)
-#fun2com147 = fun2com_tree_base.adapt(    struct = struct.tree144,    embed_dim = 64,    ff_dim = 64 * 4,)
-#fun2com148 = fun2com_tree_base.adapt(    struct = struct.tree144,    embed_dim = 32,    ff_dim = 32 * 4,)
-#fun2com_3d = fun2com_tree_base.adapt(    struct = struct.tree14_3d,    embed_dim = 64,    ff_dim = 64 * 4,)
-#fun2com_seq = fun2com_base.adapt(    struct = struct.sequence,)
-#fun2com_seq2 = fun2com_base.adapt(    struct = struct.sequence2,)
-#fun2com_rdr = fun2com_base.adapt(    struct = struct.sequence,)
-#fun2com_src = fun2com_base.adapt(    struct = struct.sequence,)
-#fun2com_sbt = fun2com_base.adapt(    max_src_length = 2000,    struct = struct.sequence,)
-#fun2com_all = fun2com_base.adapt(    max_src_length = 2000,    struct = struct.sequence,)
-#fun2com_rdr_all = fun2com_base.adapt(    struct = struct.sequence,)
-#fun2com_seq_all = fun2com_base.adapt(    struct = struct.sequence,)
-#fun2com_seq_all2 = fun2com_base.adapt(    struct = struct.sequence2,)
+de2en_20k = de2en_base
+de2en_seq_20k = de2en_seq.adapt(data_dir = 'nmt/data/de2en_tree_20k')
+de2en17a2_20k = de2en17a2.adapt(data_dir = 'nmt/data/de2en_tree_20k')
+de2en_tree_nomask_20k = de2en_tree_nomask.adapt(data_dir = 'nmt/data/de2en_tree_20k')
+de2en_att_sin_20k = de2en_att_sin.adapt(data_dir = 'nmt/data/de2en_tree_20k')
+
+de2en_10k = de2en_base
+de2en_seq_10k = de2en_seq.adapt(data_dir = 'nmt/data/de2en_tree_10k')
+de2en17a2_10k = de2en17a2.adapt(data_dir = 'nmt/data/de2en_tree_10k')
+de2en_tree_nomask_10k = de2en_tree_nomask.adapt(data_dir = 'nmt/data/de2en_tree_10k')
+de2en_att_sin_10k = de2en_att_sin.adapt(data_dir = 'nmt/data/de2en_tree_10k')
+
+de2en_50k = de2en_base
+de2en_seq_50k = de2en_seq.adapt(data_dir = 'nmt/data/de2en_tree_50k')
+de2en17a2_50k = de2en17a2.adapt(data_dir = 'nmt/data/de2en_tree_50k')
+de2en_tree_nomask_50k = de2en_tree_nomask.adapt(data_dir = 'nmt/data/de2en_tree_50k')
+de2en_att_sin_50k = de2en_att_sin.adapt(data_dir = 'nmt/data/de2en_tree_50k')
+
+##########################
+
+en2de_base = base_config.adapt(src_lang = 'en', trg_lang = 'de', early_stop_patience = 10, learned_pos_src = True)
+en2de = en2de_base
+en2de_seq = en2de_base.adapt(data_dir = 'nmt/data/en2de_tree')
+en2de17a2 = en2de_base.adapt(data_dir = 'nmt/data/en2de_tree', struct = struct.tree17a2, grad_clamp = 100.0)
+en2de_tree_nomask = en2de_base.adapt(data_dir = 'nmt/data/en2de_tree', struct = struct.tree17c, grad_clamp = 100.0)
+en2de_att_sin = en2de_base.adapt(data_dir = 'nmt/data/en2de_tree', struct = struct.att_sin, add_sinusoidal_pe_src = True)
+
+en2de_100k = en2de_base
+en2de_seq_100k = en2de_seq.adapt(data_dir = 'nmt/data/en2de_tree_100k')
+en2de17a2_100k = en2de17a2.adapt(data_dir = 'nmt/data/en2de_tree_100k')
+en2de_tree_nomask_100k = en2de_tree_nomask.adapt(data_dir = 'nmt/data/en2de_tree_100k')
+en2de_att_sin_100k = en2de_att_sin.adapt(data_dir = 'nmt/data/en2de_tree_100k')
+
+en2de_500k = en2de_base
+en2de_seq_500k = en2de_seq.adapt(data_dir = 'nmt/data/en2de_tree_500k')
+en2de17a2_500k = en2de17a2.adapt(data_dir = 'nmt/data/en2de_tree_500k')
+en2de_tree_nomask_500k = en2de_tree_nomask.adapt(data_dir = 'nmt/data/en2de_tree_500k')
+en2de_att_sin_500k = en2de_att_sin.adapt(data_dir = 'nmt/data/en2de_tree_500k')
+
+en2de_20k = en2de_base
+en2de_seq_20k = en2de_seq.adapt(data_dir = 'nmt/data/en2de_tree_20k')
+en2de17a2_20k = en2de17a2.adapt(data_dir = 'nmt/data/en2de_tree_20k')
+en2de_tree_nomask_20k = en2de_tree_nomask.adapt(data_dir = 'nmt/data/en2de_tree_20k')
+en2de_att_sin_20k = en2de_att_sin.adapt(data_dir = 'nmt/data/en2de_tree_20k')
+
+en2de_10k = en2de_base
+en2de_seq_10k = en2de_seq.adapt(data_dir = 'nmt/data/en2de_tree_10k')
+en2de17a2_10k = en2de17a2.adapt(data_dir = 'nmt/data/en2de_tree_10k')
+en2de_tree_nomask_10k = en2de_tree_nomask.adapt(data_dir = 'nmt/data/en2de_tree_10k')
+en2de_att_sin_10k = en2de_att_sin.adapt(data_dir = 'nmt/data/en2de_tree_10k')
+
+en2de_50k = en2de_base
+en2de_seq_50k = en2de_seq.adapt(data_dir = 'nmt/data/en2de_tree_50k')
+en2de17a2_50k = en2de17a2.adapt(data_dir = 'nmt/data/en2de_tree_50k')
+en2de_tree_nomask_50k = en2de_tree_nomask.adapt(data_dir = 'nmt/data/en2de_tree_50k')
+en2de_att_sin_50k = en2de_att_sin.adapt(data_dir = 'nmt/data/en2de_tree_50k')
